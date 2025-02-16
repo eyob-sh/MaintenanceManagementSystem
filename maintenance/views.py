@@ -5,7 +5,28 @@ from django.http import HttpResponse
 from django.http import Http404
 
 from django.contrib.auth import authenticate, login, logout
+
+from .models import *
 # Create your views here.
+
+
+DEPARTMENT_CHOICES = [
+    ('MD', 'Maintenance Department'),
+    ('CD', 'Chemicals Department'),
+    
+]
+
+# Define choices for roles
+ROLE_CHOICES = [
+    ('MD manager', 'Maintenance Department Manager'),
+    ('TEC', 'Technician'),
+    ('MO', 'Maintenance Oversight'),
+    ('CO', 'Chemical oversight'),
+    ('CL', 'Client'),
+    
+]
+
+
 
 
 def custom_404_view(request, exception):
@@ -53,6 +74,16 @@ def Add_User(request):
     return render(request,'register_page.html')
 
 
+def add_branch_page(request):
+    return render(request,'branch.html')
+
+def add_branch(request):
+    if request.method == 'POST':
+        branch_name = request.POST.get('name')  # Get the branch name from the form
+        if branch_name:
+            Branch.objects.create(name=branch_name)  # Create a new Branch object
+            messages.success(request, 'Branch added successfully')
+    return render(request, 'branch.html')  # Render the form if GET request
 
 @login_required()
 def dashboard(request):

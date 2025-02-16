@@ -359,6 +359,14 @@
 
 
       <li class="nav-item">
+        <a class="nav-link " href="{% url 'add_branch_page' %}">
+          <i class="bi bi-grid"></i>
+          <span>Add Branch</span>
+        </a>
+      </li><!-- End Add Branch Nav -->
+
+
+      <li class="nav-item">
         <a class="nav-link collapsed" href="{% url 'logout' %}">
           <i class="bi bi-box-arrow-in-right"></i>
           <span>Log Out</span>
@@ -371,15 +379,20 @@
 
   </aside><!-- End Sidebar-->
 
+  <!-- Messages Block -->
+  {% if messages %}
+  <div class="text-danger text-center mb-2">
+    {% for message in messages %}
+    {{ message }} <!-- Display the first message -->
+    {% endfor %}
+  </div>
+  {% endif %}
+  <!-- End Messages Block -->
+
+
   {% block content %}
 
-  {% if messages %}
-  <ul class="messages">
-    {% for message in messages %}
-    <li{% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}</li>
-      {% endfor %}
-  </ul>
-  {% endif %}
+
 
 
   {% endblock %}
