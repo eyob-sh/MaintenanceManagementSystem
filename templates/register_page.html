@@ -25,16 +25,19 @@
             <h5 class="card-title"></h5>
 
             <!-- General Form Elements -->
-            <form>
+            <form method="post" ,autocomplete="off" , action="{% url 'add_user' %}">
+              <input autocomplete="false" name="hidden" type="text" style="display:none;">
+
+              {% csrf_token %}
               <!-- First Name and Last Name -->
               <div class="row mb-3">
                 <div class="col-md-6">
                   <label for="validationDefault01" class="form-label">First name</label>
-                  <input type="text" class="form-control" id="validationDefault01" value="John" required>
+                  <input type="text" class="form-control" id="validationDefault01" name='firstName' required>
                 </div>
                 <div class="col-md-6">
                   <label for="validationDefault02" class="form-label">Last name</label>
-                  <input type="text" class="form-control" id="validationDefault02" value="Doe" required>
+                  <input type="text" class="form-control" id="validationDefault02" name='lastName' required>
                 </div>
               </div>
 
@@ -43,11 +46,11 @@
                 <div class="col-md-6">
                   <label for="validationDefaultUsername" class="form-label">Username</label>
                   <input type="text" class="form-control" id="validationDefaultUsername"
-                    aria-describedby="inputGroupPrepend2" disabled>
+                    aria-describedby="inputGroupPrepend2" name="Username" readonly>
                 </div>
                 <div class="col-md-6">
                   <label for="inputEmail" class="form-label">Email</label>
-                  <input type="email" class="form-control" id="inputEmail" required>
+                  <input type="email" class="form-control" name="email" id="inputEmail" autocomplete="off">
                 </div>
               </div>
 
@@ -75,38 +78,22 @@
               <div class="row mb-3">
                 <div class="col-md-6">
                   <label for="inputPassword" class="form-label">Password</label>
-                  <input type="password" class="form-control" id="inputPassword" required>
+                  <div class="input-group">
+                    <input type="password" class="form-control" id="inputPassword" name="password" required
+                      autocomplete="new-password">
+                    <span class="input-group-text" id="togglePassword">
+                      <i class="bi bi-eye"></i> <!-- Bootstrap eye icon -->
+                    </span>
+                  </div>
                 </div>
                 <div class="col-md-6">
                   <label for="inputConfirmPassword" class="form-label">Confirm Password</label>
-                  <input type="password" class="form-control" id="inputConfirmPassword" required>
-                </div>
-              </div>
-
-
-              <!-- Branch -->
-              <div class="row mb-3">
-                <label class="col-sm-2 col-form-label">Branch</label>
-                <div class="col-sm-7">
-                  <select class="form-select" aria-label="Default select example">
-                    <option selected disabled></option>
-                    {% for branch in branches %}
-                    <option value="{{ branch.id }}">{{ branch.name }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-              </div>
-
-
-              <!-- Department -->
-              <div class="row mb-3">
-                <label class="col-sm-2 col-form-label">Department</label>
-                <div class="col-sm-7">
-                  <select class="form-select" aria-label="Default select example">
-                    <option selected disabled></option>
-                    <option value="MD">Maintenance Department</option>
-                    <option value="CD">Chemicals Department</option>
-                  </select>
+                  <div class="input-group">
+                    <input type="password" class="form-control" id="inputConfirmPassword" required>
+                    <span class="input-group-text" id="toggleConfirmPassword">
+                      <i class="bi bi-eye"></i> <!-- Bootstrap eye icon -->
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -114,17 +101,155 @@
               <div class="row mb-3">
                 <label class="col-sm-2 col-form-label">Role</label>
                 <div class="col-sm-7">
-                  <select class="form-select" aria-label="Default select example">
-                    <option selected></option>
+                  <select id="role" class="form-select" aria-label="Default select example" required>
+                    <option selected required></option>
                     <option value="MD manager">Maintenance Department Manager</option>
                     <option value="TEC">Technician</option>
                     <option value="MO">Maintenance Oversight</option>
                     <option value="CO">Chemical Oversight</option>
                     <option value="CL">Client</option>
+                    <option value="ADMIN">Admin</option>
                   </select>
                 </div>
               </div>
 
+              <!-- Department -->
+              <div class="row mb-3" id="departmentField">
+                <label class="col-sm-2 col-form-label">Department</label>
+                <div class="col-sm-7">
+                  <select id="department" class="form-select" aria-label="Default select example" required>
+                    <option selected></option>
+                    <option value="MD">Maintenance Department</option>
+                    <option value="CD">Chemicals Department</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Branch -->
+              <div class="row mb-3" id="branchField">
+                <label class="col-sm-2 col-form-label">Branch</label>
+                <div class="col-sm-7">
+                  <select id="branch" class="form-select" aria-label="Default select example" required>
+                    <option selected></option>
+                    {% for branch in branches %}
+                    <option value="{{ branch.id }}">{{ branch.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <script>
+
+
+
+                document.getElementById('role').addEventListener('change', function () {
+                  const role = this.value;
+                  const departmentField = document.getElementById('departmentField');
+                  const branchField = document.getElementById('branchField');
+                  const departmentDropdown = document.getElementById('department');
+                  const branchDropdown = document.getElementById('branch');
+
+                  // Default: Show both Department and Branch fields
+                  departmentField.style.display = 'flex';
+                  branchField.style.display = 'flex';
+                  departmentDropdown.disabled = false; // Enable department dropdown
+
+                  // Handle Admin role
+                  if (role === 'ADMIN') {
+                    departmentField.style.display = 'none';
+                    branchField.style.display = 'none';
+
+                    // Remove 'required' attribute from the <select> elements
+                    departmentDropdown.removeAttribute('required');
+                    branchDropdown.removeAttribute('required');
+                  } else {
+                    // Re-add 'required' attribute for non-Admin roles
+                    departmentDropdown.setAttribute('required', 'true');
+                    branchDropdown.setAttribute('required', 'true');
+                  }
+
+                  // Handle specific roles
+                  const maintenanceRoles = ['MD manager', 'TEC', 'MO', 'CL'];
+                  if (maintenanceRoles.includes(role)) {
+                    departmentDropdown.value = 'MD'; // Default to Maintenance Department
+                    departmentDropdown.disabled = true; // Disable department selection
+                  }
+
+                  // Handle Chemical Oversight role
+                  if (role === 'CO') {
+                    departmentDropdown.value = 'CD'; // Default to Chemicals Department
+                    departmentDropdown.disabled = true; // Disable department selection
+                  }
+                });
+
+                // Add the existing Department-Role logic
+                document.getElementById('department').addEventListener('change', function () {
+                  const department = this.value;
+                  const roleDropdown = document.getElementById('role');
+
+                  // Clear all options except the first one
+                  roleDropdown.innerHTML = '<option selected>Select Role</option>';
+
+                  // Define roles for each department
+                  if (department === 'MD') {
+                    const maintenanceRoles = [
+                      { value: 'MD manager', text: 'Maintenance Department Manager' },
+                      { value: 'TEC', text: 'Technician' },
+                      { value: 'MO', text: 'Maintenance Oversight' },
+                      { value: 'CL', text: 'Client' }
+                    ];
+                    maintenanceRoles.forEach(role => {
+                      const option = document.createElement('option');
+                      option.value = role.value;
+                      option.text = role.text;
+                      roleDropdown.appendChild(option);
+                    });
+                  } else if (department === 'CD') {
+                    const chemicalRoles = [
+                      { value: 'CO', text: 'Chemical Oversight' }
+                    ];
+                    chemicalRoles.forEach(role => {
+                      const option = document.createElement('option');
+                      option.value = role.value;
+                      option.text = role.text;
+                      roleDropdown.appendChild(option);
+                    });
+                  }
+                });
+
+
+                document.getElementById('togglePassword').addEventListener('click', function () {
+                  const passwordInput = document.getElementById('inputPassword');
+                  const icon = this.querySelector('i');
+
+                  if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.classList.remove('bi-eye');
+                    icon.classList.add('bi-eye-slash');
+                  } else {
+                    passwordInput.type = 'password';
+                    icon.classList.remove('bi-eye-slash');
+                    icon.classList.add('bi-eye');
+                  }
+                });
+
+                document.getElementById('toggleConfirmPassword').addEventListener('click', function () {
+                  const confirmPasswordInput = document.getElementById('inputConfirmPassword');
+                  const icon = this.querySelector('i');
+
+                  if (confirmPasswordInput.type === 'password') {
+                    confirmPasswordInput.type = 'text';
+                    icon.classList.remove('bi-eye');
+                    icon.classList.add('bi-eye-slash');
+                  } else {
+                    confirmPasswordInput.type = 'password';
+                    icon.classList.remove('bi-eye-slash');
+                    icon.classList.add('bi-eye');
+                  }
+                });
+              </script>
+
+
+              </script>
 
               <!-- Submit Button -->
               <div class="row mb-3">
@@ -133,6 +258,16 @@
                   <button type="submit" class="btn btn-primary">Submit</button>
                 </div>
               </div>
+
+              <script>
+                document.querySelector('form').addEventListener('submit', function (event) {
+                  // Re-enable disabled fields before submission
+                  const disabledFields = document.querySelectorAll('select[disabled]');
+                  disabledFields.forEach(field => {
+                    field.disabled = false;
+                  });
+              </script>
+
             </form><!-- End General Form Elements -->
           </div>
         </div>

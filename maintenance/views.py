@@ -23,8 +23,10 @@ ROLE_CHOICES = [
     ('MO', 'Maintenance Oversight'),
     ('CO', 'Chemical oversight'),
     ('CL', 'Client'),
+    ('AD', 'Admin'),
     
 ]
+
 
 
 
@@ -67,11 +69,43 @@ def logoutUser(request):
 
 
 def register(request):
-    return render(request,'register_page.html')
+    branches = Branch.objects.all
+    return render (request, 'register_page.html', {'branches': branches})
 
 
-def Add_User(request):
-    return render(request,'register_page.html')
+def add_user(request):
+    if request.method == 'POST':
+        first_name = request.POST.get('firstName')
+        last_name = request.POST.get('lastName')
+        username = request.POST.get('Username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        role = request.POST.get('role')  # Now this is a string
+        department = request.POST.get('department')
+        branch_id = request.POST.get('branch')
+
+        # Create the User
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name
+        )
+
+        # Create UserProfile
+        user_profile = UserProfile(
+            user=user,
+            branch_id=branch_id,
+            department=department,
+            role=role  # Store the role as a string
+        )
+        user_profile.save()
+
+        return redirect('dashboard')  # Redirect to a success page or user list
+
+    # For GET requests, render the register page
+    return render(request, 'register_page.html')
 
 
 def add_branch_page(request):
