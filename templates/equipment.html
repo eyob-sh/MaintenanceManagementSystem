@@ -1,128 +1,185 @@
 {% extends 'index.html' %}
 {% load static %}
 
-
 {% block content %}
+
 
 
 <main id="main" class="main">
 
     <div class="pagetitle">
-        <h1>Equipments</h1>
-        <nav>
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="index.html">Home</a></li>
-                <li class="breadcrumb-item">Equipments</li>
-                <!-- <li class="breadcrumb-item active">Data</li> -->
-            </ol>
-        </nav>
+        <h1>Add Equipment</h1>
     </div><!-- End Page Title -->
 
     <section class="section">
         <div class="row">
-            <div class="col-lg-12">
-
+            <div class="col-lg-8 mx-auto">
                 <div class="card">
                     <div class="card-body">
-                        <!-- <h5 class="card-title">Datatables</h5>
-                        <p>Add lightweight datatables to your project with using the <a
-                                href="https://github.com/fiduswriter/Simple-DataTables" target="_blank">Simple
-                                DataTables</a> library. Just add <code>.datatable</code> class name to any table you
-                            wish to conver to a datatable. Check for <a
-                                href="https://fiduswriter.github.io/simple-datatables/demos/" target="_blank">more
-                                examples</a>.</p> -->
+                        <h5 class="card-title"></h5>
 
-                        <!-- Table with stripped rows -->
-                        <table class="table datatable">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        <b>N</b>ame
-                                    </th>
-                                    <th>Ext.</th>
-                                    <th>City</th>
-                                    <th data-type="date" data-format="YYYY/DD/MM">Start Date</th>
-                                    <th>Completion</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Unity Pugh</td>
-                                    <td>9958</td>
-                                    <td>Curicó</td>
-                                    <td>2005/02/11</td>
-                                    <td>37%</td>
-                                </tr>
-                                <tr>
-                                    <td>Theodore Duran</td>
-                                    <td>8971</td>
-                                    <td>Dhanbad</td>
-                                    <td>1999/04/07</td>
-                                    <td>97%</td>
-                                </tr>
-                                <tr>
-                                    <td>Kylie Bishop</td>
-                                    <td>3147</td>
-                                    <td>Norman</td>
-                                    <td>2005/09/08</td>
-                                    <td>63%</td>
-                                </tr>
-                                <tr>
-                                    <td>Willow Gilliam</td>
-                                    <td>3497</td>
-                                    <td>Amqui</td>
-                                    <td>2009/29/11</td>
-                                    <td>30%</td>
-                                </tr>
-                                <tr>
-                                    <td>Blossom Dickerson</td>
-                                    <td>5018</td>
-                                    <td>Kempten</td>
-                                    <td>2006/11/09</td>
-                                    <td>17%</td>
-                                </tr>
-                                <tr>
-                                    <td>Elliott Snyder</td>
-                                    <td>3925</td>
-                                    <td>Enines</td>
-                                    <td>2006/03/08</td>
-                                    <td>57%</td>
-                                </tr>
-                                <tr>
-                                    <td>Castor Pugh</td>
-                                    <td>9488</td>
-                                    <td>Neath</td>
-                                    <td>2014/23/12</td>
-                                    <td>93%</td>
-                                </tr>
-                                <tr>
-                                    <td>Pearl Carlson</td>
-                                    <td>6231</td>
-                                    <td>Cobourg</td>
-                                    <td>2014/31/08</td>
-                                    <td>100%</td>
-                                </tr>
+                        <!-- General Form Elements -->
+                        <form method="POST" action="{% url 'add_equipment' %}">
+                            {% csrf_token %}
 
-                                <tr>
-                                    <td>Alisa Horn</td>
-                                    <td>9853</td>
-                                    <td>Ucluelet</td>
-                                    <td>2007/01/11</td>
-                                    <td>39%</td>
-                                </tr>
+                            <!-- Equipment Name -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="equipmentName" class="form-label">Equipment Name</label>
+                                    <input type="text" class="form-control" id="equipmentName" name="name" required>
+                                </div>
+                            </div>
 
-                            </tbody>
-                        </table>
-                        <!-- End Table with stripped rows -->
+                            <!-- Equipment Type -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="equipmentType" class="form-label">Equipment Type</label>
+                                    <input type="text" class="form-control" id="equipmentType" name="equipment_type"
+                                        required>
+                                </div>
+                            </div>
 
+                            <!-- Manufacturer -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="manufacturer" class="form-label">Manufacturer</label>
+                                    <select class="form-select" id="manufacturer" name="manufacturer" required>
+                                        <option selected disabled>Select Manufacturer</option>
+                                        {% for manufacturer in manufacturers %}
+                                        <option value="{{ manufacturer.id }}">{{ manufacturer.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Model Number -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="modelNumber" class="form-label">Model Number</label>
+                                    <input type="text" class="form-control" id="modelNumber" name="model_number"
+                                        required>
+                                </div>
+                            </div>
+
+                            <!-- Serial Number -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="serialNumber" class="form-label">Serial Number</label>
+                                    <input type="text" class="form-control" id="serialNumber" name="serial_number"
+                                        required>
+                                </div>
+                            </div>
+
+                            <!-- Branch -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="branch" class="form-label">Branch</label>
+                                    <select class="form-select" id="branch" name="branch" required>
+                                        <option selected disabled>Select Branch</option>
+                                        {% for branch in branches %}
+                                        <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Location -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" id="location" name="location" required>
+                                </div>
+                            </div>
+
+                            <!-- Installation Date -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="installationDate" class="form-label">Installation Date</label>
+                                    <input type="date" class="form-control" id="installationDate"
+                                        name="installation_date" required>
+                                </div>
+                            </div>
+
+                            <!-- Maintenance Intervals -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label for="maintenanceYears" class="form-label">Maintenance Interval
+                                        (Years)</label>
+                                    <input type="number" class="form-control" id="maintenanceYears"
+                                        name="maintenance_interval_years" value="0" min="0">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="maintenanceMonths" class="form-label">Maintenance Interval
+                                        (Months)</label>
+                                    <input type="number" class="form-control" id="maintenanceMonths"
+                                        name="maintenance_interval_months" value="0" min="0">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="maintenanceWeeks" class="form-label">Maintenance Interval
+                                        (Weeks)</label>
+                                    <input type="number" class="form-control" id="maintenanceWeeks"
+                                        name="maintenance_interval_weeks" value="0" min="0">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="maintenanceDays" class="form-label">Maintenance Interval (Days)</label>
+                                    <input type="number" class="form-control" id="maintenanceDays"
+                                        name="maintenance_interval_days" value="0" min="0">
+                                </div>
+                            </div>
+
+                            <!-- Last Maintenance Date -->
+                            <!-- <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="lastMaintenanceDate" class="form-label">Last Maintenance Date</label>
+                                    <input type="date" class="form-control" id="lastMaintenanceDate"
+                                        name="last_maintenance_date">
+                                </div>
+                            </div> -->
+
+                            <!-- Next Maintenance Date -->
+                            <!-- <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="nextMaintenanceDate" class="form-label">Next Maintenance Date</label>
+                                    <input type="date" class="form-control" id="nextMaintenanceDate"
+                                        name="next_maintenance_date">
+                                </div>
+                            </div> -->
+
+                            <!-- Status -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-select" id="status" name="status" required>
+                                        <option selected disabled>Select Status</option>
+                                        <option value="operational">Operational</option>
+                                        <option value="non_operational">Non Operational</option>
+                                        <option value="under_maintenance">Under Maintenance</option>
+                                        <option value="decommissioned">Decommissioned</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Remark -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="remark" class="form-label">Remark</label>
+                                    <textarea class="form-control" id="remark" name="remark" rows="3"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="row mb-3">
+                                <label class="col-sm-2 col-form-label"></label>
+                                <div class="col-sm-10">
+                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                </div>
+                            </div>
+                        </form><!-- End General Form Elements -->
                     </div>
                 </div>
-
             </div>
         </div>
     </section>
 
 </main><!-- End #main -->
-
-
 {% endblock %}

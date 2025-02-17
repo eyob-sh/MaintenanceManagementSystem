@@ -202,7 +202,7 @@
                       option.value = role.value;
                       option.text = role.text;
                       roleDropdown.appendChild(option);
-                    });
+                    }); e
                   } else if (department === 'CD') {
                     const chemicalRoles = [
                       { value: 'CO', text: 'Chemical Oversight' }
@@ -265,7 +265,8 @@
                   const disabledFields = document.querySelectorAll('select[disabled]');
                   disabledFields.forEach(field => {
                     field.disabled = false;
-                  });
+                  }); // Close the forEach loop
+                }); // Close the addEventListener callback and function
               </script>
 
             </form><!-- End General Form Elements -->

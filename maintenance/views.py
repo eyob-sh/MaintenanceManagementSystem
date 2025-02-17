@@ -119,6 +119,116 @@ def add_branch(request):
             messages.success(request, 'Branch added successfully')
     return render(request, 'branch.html')  # Render the form if GET request
 
+
+def add_manufacturer_page(request):
+        return render(request,'manufacturer.html')
+
+def add_manufacturer(request):
+    if request.method == 'POST':
+        # Get form data from the POST request
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+        contact_email = request.POST.get('contact_email')
+        contact_phone_number = request.POST.get('contact_phone_number')
+        address = request.POST.get('address')
+
+        # Validate required fields (e.g., name is required)
+        if not name:
+            messages.error(request, 'Manufacturer name is required.')
+            return redirect('add_manufacturer')  # Redirect back to the form
+
+        # Create and save the Manufacturer object
+        try:
+            Manufacturer.objects.create(
+                name=name,
+                description=description,
+                contact_email=contact_email,
+                contact_phone_number=contact_phone_number,
+                address=address
+            )
+            messages.success(request, 'Manufacturer added successfully!')
+            return redirect('manufacturer_list.html')  # Redirect to a success page or manufacturer list
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            return redirect('manufacturer.html')  # Redirect back to the form on error
+
+# For GET requests, render the form
+    return render(request, 'manufacturer.html')
+
+def add_equipment_page(request):
+    manufacturers = Manufacturer.objects.all()
+    branches = Branch.objects.all()
+    return render (request, 'equipment.html', {
+                'manufacturers': manufacturers,
+                'branches': branches,
+            })
+
+
+def add_equipment(request):
+    # Fetch all manufacturers and branches
+    
+
+    if request.method == 'POST':
+        # Get form data
+        name = request.POST.get('name')
+        equipment_type = request.POST.get('equipment_type')
+        manufacturer_id = request.POST.get('manufacturer')
+        model_number = request.POST.get('model_number')
+        serial_number = request.POST.get('serial_number')
+        branch_id = request.POST.get('branch')
+        location = request.POST.get('location')
+        installation_date = request.POST.get('installation_date')
+        maintenance_interval_years = request.POST.get('maintenance_interval_years')
+        maintenance_interval_months = request.POST.get('maintenance_interval_months')
+        maintenance_interval_weeks = request.POST.get('maintenance_interval_weeks')
+        maintenance_interval_days = request.POST.get('maintenance_interval_days')
+       
+        status = request.POST.get('status')
+        remark = request.POST.get('remark')
+
+        # Validate required fields
+        if not name or not equipment_type or not manufacturer_id or not model_number or not serial_number or not branch_id or not location or not installation_date or not status:
+            messages.error(request, 'Please fill out all required fields.')
+            return render(request, 'add_equipment.html', )
+
+        try:
+            # Convert dates from string to date objects
+            installation_date = datetime.strptime(installation_date, '%Y-%m-%d').date()
+            # last_maintenance_date = datetime.strptime(last_maintenance_date, '%Y-%m-%d').date() if last_maintenance_date else None
+            # next_maintenance_date = datetime.strptime(next_maintenance_date, '%Y-%m-%d').date() if next_maintenance_date else None
+
+            # Create and save the Equipment object
+            Equipment.objects.create(
+                name=name,
+                equipment_type=equipment_type,
+                manufacturer_id=manufacturer_id,
+                model_number=model_number,
+                serial_number=serial_number,
+                branch_id=branch_id,
+                location=location,
+                installation_date=installation_date,
+                maintenance_interval_years=maintenance_interval_years,
+                maintenance_interval_months=maintenance_interval_months,
+                maintenance_interval_weeks=maintenance_interval_weeks,
+                maintenance_interval_days=maintenance_interval_days,
+                # last_maintenance_date=last_maintenance_date,
+                # next_maintenance_date=next_maintenance_date,
+                status=status,
+                remark=remark
+            )
+            messages.success(request, 'Equipment added successfully!')
+            return redirect('equipment_list.html')  # Redirect to a success page or equipment list
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            return render(request, 'equipment.html', )
+
+    # For GET requests, render the form with manufacturers and branches
+    return render(request, 'equipment.html', )
+
+
+
+
+
 @login_required()
 def dashboard(request):
     return render(request, 'dashboard.html')
