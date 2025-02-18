@@ -1,8 +1,10 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.http import Http404
+from datetime import datetime
+from .forms.EquipmentForm import EquipmentForm
 
 from django.contrib.auth import authenticate, login, logout
 
@@ -155,6 +157,18 @@ def add_manufacturer(request):
 # For GET requests, render the form
     return render(request, 'manufacturer.html')
 
+
+def equipment_list(request):
+    equipments = Equipment.objects.all()  # Fetch all equipment
+    context = {
+        'title': 'Equipments',
+        'item_list': equipments,
+        'edit_url': 'edit_equipment',  # Assuming you have an edit view set up
+    }
+    return render(request, 'equipment_list.html', context)
+
+
+
 def add_equipment_page(request):
     manufacturers = Manufacturer.objects.all()
     branches = Branch.objects.all()
@@ -166,8 +180,9 @@ def add_equipment_page(request):
 
 def add_equipment(request):
     # Fetch all manufacturers and branches
+    manufacturers = Manufacturer.objects.all()
+    branches = Branch.objects.all()
     
-
     if request.method == 'POST':
         # Get form data
         name = request.POST.get('name')
@@ -178,24 +193,34 @@ def add_equipment(request):
         branch_id = request.POST.get('branch')
         location = request.POST.get('location')
         installation_date = request.POST.get('installation_date')
-        maintenance_interval_years = request.POST.get('maintenance_interval_years')
-        maintenance_interval_months = request.POST.get('maintenance_interval_months')
-        maintenance_interval_weeks = request.POST.get('maintenance_interval_weeks')
-        maintenance_interval_days = request.POST.get('maintenance_interval_days')
-       
+        
+        # Use .get() with a default value for maintenance intervals
+        maintenance_interval_years = request.POST.get('maintenance_interval_years', '0')
+        maintenance_interval_months = request.POST.get('maintenance_interval_months', '0')
+        maintenance_interval_weeks = request.POST.get('maintenance_interval_weeks', '0')
+        maintenance_interval_days = request.POST.get('maintenance_interval_days', '0')
+        
         status = request.POST.get('status')
         remark = request.POST.get('remark')
-
+        
         # Validate required fields
         if not name or not equipment_type or not manufacturer_id or not model_number or not serial_number or not branch_id or not location or not installation_date or not status:
             messages.error(request, 'Please fill out all required fields.')
-            return render(request, 'add_equipment.html', )
+            context = {
+                'manufacturers': manufacturers,
+                'branches': branches,
+            }
+            return render(request, 'equipment.html', context)
 
         try:
             # Convert dates from string to date objects
             installation_date = datetime.strptime(installation_date, '%Y-%m-%d').date()
-            # last_maintenance_date = datetime.strptime(last_maintenance_date, '%Y-%m-%d').date() if last_maintenance_date else None
-            # next_maintenance_date = datetime.strptime(next_maintenance_date, '%Y-%m-%d').date() if next_maintenance_date else None
+
+            # Convert maintenance intervals to integers
+            maintenance_interval_years = int(maintenance_interval_years)
+            maintenance_interval_months = int(maintenance_interval_months)
+            maintenance_interval_weeks = int(maintenance_interval_weeks)
+            maintenance_interval_days = int(maintenance_interval_days)
 
             # Create and save the Equipment object
             Equipment.objects.create(
@@ -211,19 +236,74 @@ def add_equipment(request):
                 maintenance_interval_months=maintenance_interval_months,
                 maintenance_interval_weeks=maintenance_interval_weeks,
                 maintenance_interval_days=maintenance_interval_days,
-                # last_maintenance_date=last_maintenance_date,
-                # next_maintenance_date=next_maintenance_date,
                 status=status,
                 remark=remark
             )
             messages.success(request, 'Equipment added successfully!')
-            return redirect('equipment_list.html')  # Redirect to a success page or equipment list
+            return redirect('equipment_list')  # Redirect to a success page or equipment list
+        except ValueError as e:
+            messages.error(request, f'Invalid date format: {str(e)}')
+            context = {
+                'manufacturers': manufacturers,
+                'branches': branches,
+            }
+            return render(request, 'equipment.html', context)
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
-            return render(request, 'equipment.html', )
+            context = {
+                'manufacturers': manufacturers,
+                'branches': branches,
+            }
+            return render(request, 'equipment.html', context)
 
     # For GET requests, render the form with manufacturers and branches
-    return render(request, 'equipment.html', )
+    context = {
+        'manufacturers': manufacturers,
+        'branches': branches,
+    }
+    return render(request, 'equipment.html', context)
+
+
+
+def edit_equipment(request, id):
+    equipment = get_object_or_404(Equipment, id=id)  # Fetch the equipment instance
+
+    if request.method == 'POST':
+        form = EquipmentForm(request.POST, instance=equipment)
+        if form.is_valid():
+            form.save()  # Save the changes to the database
+            messages.success(request, 'Equipment changed successfully')
+
+
+            return redirect('equipment_list')  # Redirect to the equipment list after saving
+    else:
+        form = EquipmentForm(instance=equipment)  # Pre-fill the form with the current data
+
+    return render(request, 'edit_equipment.html', {'form': form, 'equipment': equipment})
+
+
+
+def spare_part_list(request):
+    spare_parts = SparePart.objects.all()  # Fetch all sparepart
+    context = {
+        'title': 'Spare Parts',
+        'item_list': spare_parts,
+        # 'edit_url': 'edit_spare_part',  # Assuming you have an edit view set up
+    }
+    return render(request, 'spare_part_list.html', context)
+
+def add_spare_part_page(request):
+    branches = Branch.objects.all()
+    return render (request, 'add_spare_part.html', {
+                'branches': branches,
+            })
+
+def add_spare_part(request):
+    return render(request, 'dashboard.html')
+
+def edit_spare_part(request, id):
+        return render(request, 'spare_part_list')
+
 
 
 

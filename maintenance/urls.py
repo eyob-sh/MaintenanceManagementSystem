@@ -15,6 +15,16 @@ urlpatterns = [
     path('add_equipment_page/', views.add_equipment_page, name = "add_equipment_page"),
 
     path('add_equipment/', views.add_equipment, name = "add_equipment"),
+    
+    path('equipments/', views.equipment_list, name='equipment_list'),
+    path('equipments/edit/<int:id>/', views.edit_equipment, name='edit_equipment'),
+
+    path('add_spare_part_page/', views.add_spare_part_page, name = "add_spare_part_page"),
+
+    path('add_spare_part/', views.add_spare_part, name = "add_spare_part"),
+    
+    path('spare_parts/', views.spare_part_list, name='spare_part_list'),
+    path('spare_parts/edit/<int:id>/', views.edit_spare_part, name='edit_spare_part'),
 
 
 

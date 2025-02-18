@@ -3,9 +3,19 @@
 
 {% block content %}
 
-
-
 <main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
 
     <div class="pagetitle">
         <h1>Add Equipment</h1>
@@ -13,90 +23,132 @@
 
     <section class="section">
         <div class="row">
-            <div class="col-lg-8 mx-auto">
+            <div class="col-lg-12">
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title"></h5>
 
                         <!-- General Form Elements -->
-                        <form method="POST" action="{% url 'add_equipment' %}">
+                        <form method="POST" action="{% url 'add_equipment' %}" id="equipmentForm" novalidate>
                             {% csrf_token %}
 
-                            <!-- Equipment Name -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="equipmentName" class="form-label">Equipment Name</label>
-                                    <input type="text" class="form-control" id="equipmentName" name="name" required>
-                                </div>
-                            </div>
+                            <div class="row">
+                                <!-- Left Column -->
+                                <div class="col-md-6">
+                                    <!-- Equipment Name -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="equipmentName" class="form-label">Equipment Name</label>
+                                            <input type="text" class="form-control" id="equipmentName" name="name"
+                                                required>
+                                            <div class="invalid-feedback">Please enter the equipment name.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Equipment Type -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="equipmentType" class="form-label">Equipment Type</label>
-                                    <input type="text" class="form-control" id="equipmentType" name="equipment_type"
-                                        required>
-                                </div>
-                            </div>
+                                    <!-- Equipment Type -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="equipmentType" class="form-label">Equipment Type</label>
+                                            <input type="text" class="form-control" id="equipmentType"
+                                                name="equipment_type" required>
+                                            <div class="invalid-feedback">Please enter the equipment type.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Manufacturer -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="manufacturer" class="form-label">Manufacturer</label>
-                                    <select class="form-select" id="manufacturer" name="manufacturer" required>
-                                        <option selected disabled>Select Manufacturer</option>
-                                        {% for manufacturer in manufacturers %}
-                                        <option value="{{ manufacturer.id }}">{{ manufacturer.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
+                                    <!-- Manufacturer -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="manufacturer" class="form-label">Manufacturer</label>
+                                            <select class="form-select" id="manufacturer" name="manufacturer" required>
+                                                <option selected disabled value="">Select Manufacturer</option>
+                                                {% for manufacturer in manufacturers %}
+                                                <option value="{{ manufacturer.id }}">{{ manufacturer.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="invalid-feedback">Please select a manufacturer.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Model Number -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="modelNumber" class="form-label">Model Number</label>
-                                    <input type="text" class="form-control" id="modelNumber" name="model_number"
-                                        required>
-                                </div>
-                            </div>
+                                    <!-- Model Number -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="modelNumber" class="form-label">Model Number</label>
+                                            <input type="text" class="form-control" id="modelNumber" name="model_number"
+                                                required>
+                                            <div class="invalid-feedback">Please enter the model number.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Serial Number -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="serialNumber" class="form-label">Serial Number</label>
-                                    <input type="text" class="form-control" id="serialNumber" name="serial_number"
-                                        required>
+                                    <!-- Serial Number -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="serialNumber" class="form-label">Serial Number</label>
+                                            <input type="text" class="form-control" id="serialNumber"
+                                                name="serial_number" required>
+                                            <div class="invalid-feedback">Please enter the serial number.</div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <!-- Branch -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="branch" class="form-label">Branch</label>
-                                    <select class="form-select" id="branch" name="branch" required>
-                                        <option selected disabled>Select Branch</option>
-                                        {% for branch in branches %}
-                                        <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
+                                <!-- Right Column -->
+                                <div class="col-md-6">
+                                    <!-- Branch -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="branch" class="form-label">Branch</label>
+                                            <select class="form-select" id="branch" name="branch" required>
+                                                <option selected disabled value="">Select Branch</option>
+                                                {% for branch in branches %}
+                                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="invalid-feedback">Please select a branch.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Location -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" id="location" name="location" required>
-                                </div>
-                            </div>
+                                    <!-- Location -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="location" class="form-label">Location</label>
+                                            <input type="text" class="form-control" id="location" name="location"
+                                                required>
+                                            <div class="invalid-feedback">Please enter the location.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Installation Date -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="installationDate" class="form-label">Installation Date</label>
-                                    <input type="date" class="form-control" id="installationDate"
-                                        name="installation_date" required>
+                                    <!-- Installation Date -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="installationDate" class="form-label">Installation Date</label>
+                                            <input type="date" class="form-control" id="installationDate"
+                                                name="installation_date" required>
+                                            <div class="invalid-feedback">Please select an installation date.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Status -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="status" class="form-label">Status</label>
+                                            <select class="form-select" id="status" name="status" required>
+                                                <option selected disabled value="">Select Status</option>
+                                                <option value="operational">Operational</option>
+                                                <option value="non_operational">Non Operational</option>
+                                                <option value="under_maintenance">Under Maintenance</option>
+                                                <option value="decommissioned">Decommissioned</option>
+                                            </select>
+                                            <div class="invalid-feedback">Please select a status.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Remark -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="remark" class="form-label">Remark</label>
+                                            <textarea class="form-control" id="remark" name="remark"
+                                                rows="3"></textarea>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -127,50 +179,9 @@
                                 </div>
                             </div>
 
-                            <!-- Last Maintenance Date -->
-                            <!-- <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="lastMaintenanceDate" class="form-label">Last Maintenance Date</label>
-                                    <input type="date" class="form-control" id="lastMaintenanceDate"
-                                        name="last_maintenance_date">
-                                </div>
-                            </div> -->
-
-                            <!-- Next Maintenance Date -->
-                            <!-- <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="nextMaintenanceDate" class="form-label">Next Maintenance Date</label>
-                                    <input type="date" class="form-control" id="nextMaintenanceDate"
-                                        name="next_maintenance_date">
-                                </div>
-                            </div> -->
-
-                            <!-- Status -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="status" class="form-label">Status</label>
-                                    <select class="form-select" id="status" name="status" required>
-                                        <option selected disabled>Select Status</option>
-                                        <option value="operational">Operational</option>
-                                        <option value="non_operational">Non Operational</option>
-                                        <option value="under_maintenance">Under Maintenance</option>
-                                        <option value="decommissioned">Decommissioned</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Remark -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="remark" class="form-label">Remark</label>
-                                    <textarea class="form-control" id="remark" name="remark" rows="3"></textarea>
-                                </div>
-                            </div>
-
                             <!-- Submit Button -->
                             <div class="row mb-3">
-                                <label class="col-sm-2 col-form-label"></label>
-                                <div class="col-sm-10">
+                                <div class="col-md-12 text-center">
                                     <button type="submit" class="btn btn-primary">Submit</button>
                                 </div>
                             </div>
@@ -182,4 +193,25 @@
     </section>
 
 </main><!-- End #main -->
+
+<!-- Add JavaScript for Front-End Validation -->
+<script>
+    (function () {
+        'use strict';
+
+        // Fetch the form element
+        const form = document.getElementById('equipmentForm');
+
+        // Add event listener for form submission
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            form.classList.add('was-validated');
+        }, false);
+    })();
+</script>
+
 {% endblock %}

@@ -65,7 +65,7 @@ h6 {
   font-size: 24px;
   margin-bottom: 0;
   font-weight: 600;
-  color: #012970;
+  color: rgb(35, 34, 34);
 }
 
 /*--------------------------------------------------------------
@@ -237,7 +237,7 @@ h6 {
   padding: 20px 0 15px 0;
   font-size: 18px;
   font-weight: 500;
-  color: #012970;
+  color: black;
   font-family: "Poppins", sans-serif;
 }
 
@@ -283,7 +283,7 @@ h6 {
 }
 
 .accordion-button:not(.collapsed) {
-  color: #012970;
+  color: green;
   background-color: #f6f9ff;
 }
 
@@ -295,7 +295,7 @@ h6 {
 
 .accordion-flush .accordion-button:not(.collapsed) {
   box-shadow: none;
-  color: #4154f1;
+  color: lightgreen;
 }
 
 .accordion-flush .accordion-body {

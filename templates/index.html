@@ -11,7 +11,7 @@
   <meta content="" name="keywords">
 
   <!-- Favicons -->
-  <link href="{% static 'img/favicon.png' %}" rel="icon">
+  <link href="{% static 'img/ipdc_minimized_logo.png' %}" rel="icon">
   <link href="{% static 'img/apple-touch-icon.png' %}" rel="apple-touch-icon">
 
   <!-- Google Fonts -->
@@ -294,7 +294,7 @@
       <li class="nav-heading">Asset Management</li>
 
       <li class="nav-item">
-        <a class="nav-link collapsed" href="{% url 'equipment' %}">
+        <a class="nav-link collapsed" href="{% url 'equipment_list' %}">
           <i class="bi bi-grid"></i>
           <span>Equipments</span>
         </a>
@@ -336,14 +336,14 @@
       </li><!-- End Manufacturer Nav -->
 
       <li class="nav-item">
-        <a class="nav-link " href="">
+        <a class="nav-link " href="{% url 'spare_part_list' %}">
           <i class="bi bi-grid"></i>
           <span>Spare Parts</span>
         </a>
       </li><!-- End Spare Parts Nav -->
 
       <li class="nav-item">
-        <a class="nav-link " href="">
+        <a class="nav-link " href="{% url 'spare_part_list' %}">
           <i class="bi bi-grid"></i>
           <span>Spare Part Usage</span>
         </a>
@@ -394,15 +394,7 @@
 
   </aside><!-- End Sidebar-->
 
-  <!-- Messages Block -->
-  {% if messages %}
-  <div class="text-danger text-center mb-2">
-    {% for message in messages %}
-    {{ message }} <!-- Display the first message -->
-    {% endfor %}
-  </div>
-  {% endif %}
-  <!-- End Messages Block -->
+
 
 
   {% block content %}

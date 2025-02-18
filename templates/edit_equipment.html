@@ -1,0 +1,153 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
+
+    <div class="pagetitle">
+        <h1>Edit Equipment: {{ equipment.name }}</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"></h5>
+
+                        <!-- General Form Elements -->
+                        <form method="POST" action="{% url 'edit_equipment' equipment.id %}">
+                            {% csrf_token %}
+
+                            <!-- Equipment Name -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="equipmentName" class="form-label">Equipment Name</label>
+                                    {{ form.name }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Equipment Type -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="equipmentType" class="form-label">Equipment Type</label>
+                                    {{ form.equipment_type }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Manufacturer -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="manufacturer" class="form-label">Manufacturer</label>
+                                    {{ form.manufacturer }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Model Number -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="modelNumber" class="form-label">Model Number</label>
+                                    {{ form.model_number }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Serial Number -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="serialNumber" class="form-label">Serial Number</label>
+                                    {{ form.serial_number }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Branch -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="branch" class="form-label">Branch</label>
+                                    {{ form.branch }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Location -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="location" class="form-label">Location</label>
+                                    {{ form.location }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Installation Date -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="installationDate" class="form-label">Installation Date</label>
+                                    {{ form.installation_date }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Maintenance Intervals -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label for="maintenanceYears" class="form-label">Maintenance Interval
+                                        (Years)</label>
+                                    {{ form.maintenance_interval_years }} <!-- No add_class filter needed -->
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="maintenanceMonths" class="form-label">Maintenance Interval
+                                        (Months)</label>
+                                    {{ form.maintenance_interval_months }} <!-- No add_class filter needed -->
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="maintenanceWeeks" class="form-label">Maintenance Interval
+                                        (Weeks)</label>
+                                    {{ form.maintenance_interval_weeks }} <!-- No add_class filter needed -->
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="maintenanceDays" class="form-label">Maintenance Interval (Days)</label>
+                                    {{ form.maintenance_interval_days }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Status -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="status" class="form-label">Status</label>
+                                    {{ form.status }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Remark -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="remark" class="form-label">Remark</label>
+                                    {{ form.remark }} <!-- No add_class filter needed -->
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="row mb-3">
+                                <label class="col-sm-2 col-form-label"></label>
+                                <div class="col-sm-10">
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                </div>
+                            </div>
+                        </form><!-- End General Form Elements -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main><!-- End #main -->
+{% endblock %}

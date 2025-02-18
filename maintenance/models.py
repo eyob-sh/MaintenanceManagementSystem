@@ -76,8 +76,8 @@ class Equipment(models.Model):
     model_number = models.CharField(max_length=50)
     serial_number = models.CharField(max_length=50, unique=True)
     branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
-    Location = models.CharField(max_length=50)
-    Installation_date = models.DateField()
+    location = models.CharField(max_length=50)
+    installation_date = models.DateField()
     maintenance_interval_years = models.PositiveIntegerField(default=0)
     maintenance_interval_months = models.PositiveIntegerField(default=0)
     maintenance_interval_weeks = models.PositiveIntegerField(default=0)
@@ -93,3 +93,21 @@ class Equipment(models.Model):
     def __str__(self):
         return f"{self.name} ({self.equipment_type} -- {self.serial_number}) "
     
+
+class SparePart(models.Model):
+    name = models.CharField(max_length=255)     # Name of the spare part
+    branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
+
+    store = models.CharField(max_length=255)     # Store name
+    quantity = models.IntegerField()              # Quantity left in stock
+    description = models.TextField(blank=True)    # Description of the spare part
+    part_number = models.CharField(max_length=100)  # Unique part identifier
+    price = models.DecimalField(max_digits=10, decimal_places=2)  # Price of the spare part
+    date_added = models.DateField(auto_now_add=True)  # Date when the part was added
+    last_updated = models.DateField(auto_now=True)  # Date when the part was last updated
+    
+    class Meta:
+        unique_together = ('part_number', 'branch')
+
+    def __str__(self):
+        return f"{self.name} ({self.quantity} left) - {self.store}"
