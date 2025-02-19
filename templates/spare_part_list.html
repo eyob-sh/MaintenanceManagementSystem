@@ -50,10 +50,14 @@
                                 </tr>
                             </thead>
                             <tbody>
+
+                                
                                 {% if item_list %}
                                 {% for spare_part in item_list %}
                                 <tr>
-                                    <td>{{ spare_part.name }}</td>
+                                    <td>
+                                        <a href="{% url edit_url spare_part.id %}">{{ spare_part.name }} </a>
+                                    </td>
                                     <td>{{ spare_part.branch }}</td>
                                     <td>{{ spare_part.store }}</td>
                                     <td>{{ spare_part.quantity }}</td>

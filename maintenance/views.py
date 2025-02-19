@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.http import Http404
 from datetime import datetime
-from .forms.EquipmentForm import EquipmentForm
+from .Forms import EquipmentForm, SparePartForm
 
 from django.contrib.auth import authenticate, login, logout
 
@@ -288,7 +288,7 @@ def spare_part_list(request):
     context = {
         'title': 'Spare Parts',
         'item_list': spare_parts,
-        # 'edit_url': 'edit_spare_part',  # Assuming you have an edit view set up
+        'edit_url': 'edit_spare_part',  # Assuming you have an edit view set up
     }
     return render(request, 'spare_part_list.html', context)
 
@@ -299,10 +299,85 @@ def add_spare_part_page(request):
             })
 
 def add_spare_part(request):
-    return render(request, 'dashboard.html')
+    
+    # Fetch all branches
+    branches = Branch.objects.all()
 
+    if request.method == 'POST':
+        # Get form data
+        name = request.POST.get('name')
+        branch_id = request.POST.get('branch')
+        store = request.POST.get('store')
+        quantity = request.POST.get('quantity')
+        part_number = request.POST.get('part_number')
+        price = request.POST.get('price')
+        description = request.POST.get('description')
+
+        # Validate required fields
+        if not name or not branch_id or not store or not quantity or not part_number or not price:
+            messages.error(request, 'Please fill out all required fields.')
+            context = {
+                'branches': branches,
+            }
+            return render(request, 'add_spare_part.html', context)
+
+        try:
+            # Convert quantity and price to appropriate types
+            quantity = int(quantity)
+            price = float(price)
+
+            # Check if the part number already exists for the selected branch
+            if SparePart.objects.filter(part_number=part_number, branch_id=branch_id).exists():
+                messages.error(request, 'A spare part with this part number already exists in the selected branch.')
+                context = {
+                    'branches': branches,
+                }
+                return render(request, 'add_spare_part.html', context)
+
+            # Create and save the SparePart object
+            SparePart.objects.create(
+                name=name,
+                branch_id=branch_id,
+                store=store,
+                quantity=quantity,
+                part_number=part_number,
+                price=price,
+                description=description
+            )
+            messages.success(request, 'Spare part added successfully!')
+            return redirect('spare_part_list')  # Redirect to a success page or spare part list
+        except ValueError as e:
+            messages.error(request, f'Invalid input: {str(e)}')
+            context = {
+                'branches': branches,
+            }
+            return render(request, 'add_spare_part.html', context)
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            context = {
+                'branches': branches,
+            }
+            return render(request, 'add_spare_part.html', context)
+
+    # For GET requests, render the form with branches
+    context = {
+        'branches': branches,
+    }
+    return render(request, 'add_spare_part.html', context)
+    
 def edit_spare_part(request, id):
-        return render(request, 'spare_part_list')
+    spare_part = get_object_or_404(SparePart, id=id)  # Fetch the spare part instance
+
+    if request.method == 'POST':
+        form = SparePartForm(request.POST, instance=spare_part)
+        if form.is_valid():
+            form.save()  # Save the changes to the database
+            messages.success(request, 'Spare part updated successfully!')
+            return redirect('spare_part_list')  # Redirect to the spare part list after saving
+    else:
+        form = SparePartForm(instance=spare_part)  # Pre-fill the form with the current data
+
+    return render(request, 'edit_spare_part.html', {'form': form, 'spare_part': spare_part})
 
 
 

@@ -23,122 +23,135 @@
 
     <section class="section">
         <div class="row">
-            <div class="col-lg-8 mx-auto">
+            <div class="col-lg-12">
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title"></h5>
 
                         <!-- General Form Elements -->
-                        <form method="POST" action="{% url 'edit_equipment' equipment.id %}">
+                        <form method="POST" id="equipmentForm" novalidate>
                             {% csrf_token %}
 
-                            <!-- Equipment Name -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="equipmentName" class="form-label">Equipment Name</label>
-                                    {{ form.name }} <!-- No add_class filter needed -->
-                                </div>
-                            </div>
+                            <div class="row">
+                                <!-- Left Column -->
+                                <div class="col-md-6">
+                                    <!-- Equipment Name -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_name" class="form-label">Equipment Name</label>
+                                            {{ form.name }}
+                                            <div class="invalid-feedback">Please enter the equipment name.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Equipment Type -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="equipmentType" class="form-label">Equipment Type</label>
-                                    {{ form.equipment_type }} <!-- No add_class filter needed -->
-                                </div>
-                            </div>
+                                    <!-- Equipment Type -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_equipment_type" class="form-label">Equipment Type</label>
+                                            {{ form.equipment_type }}
+                                            <div class="invalid-feedback">Please enter the equipment type.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Manufacturer -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="manufacturer" class="form-label">Manufacturer</label>
-                                    {{ form.manufacturer }} <!-- No add_class filter needed -->
-                                </div>
-                            </div>
+                                    <!-- Manufacturer -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_manufacturer" class="form-label">Manufacturer</label>
+                                            {{ form.manufacturer }}
+                                            <div class="invalid-feedback">Please select a manufacturer.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Model Number -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="modelNumber" class="form-label">Model Number</label>
-                                    {{ form.model_number }} <!-- No add_class filter needed -->
-                                </div>
-                            </div>
+                                    <!-- Model Number -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_model_number" class="form-label">Model Number</label>
+                                            {{ form.model_number }}
+                                            <div class="invalid-feedback">Please enter the model number.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Serial Number -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="serialNumber" class="form-label">Serial Number</label>
-                                    {{ form.serial_number }} <!-- No add_class filter needed -->
+                                    <!-- Serial Number -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_serial_number" class="form-label">Serial Number</label>
+                                            {{ form.serial_number }}
+                                            <div class="invalid-feedback">Please enter the serial number.</div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <!-- Branch -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="branch" class="form-label">Branch</label>
-                                    {{ form.branch }} <!-- No add_class filter needed -->
-                                </div>
-                            </div>
+                                <!-- Right Column -->
+                                <div class="col-md-6">
+                                    <!-- Branch -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_branch" class="form-label">Branch</label>
+                                            {{ form.branch }}
+                                            <div class="invalid-feedback">Please select a branch.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Location -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="location" class="form-label">Location</label>
-                                    {{ form.location }} <!-- No add_class filter needed -->
-                                </div>
-                            </div>
+                                    <!-- Location -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_location" class="form-label">Location</label>
+                                            {{ form.location }}
+                                            <div class="invalid-feedback">Please enter the location.</div>
+                                        </div>
+                                    </div>
 
-                            <!-- Installation Date -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="installationDate" class="form-label">Installation Date</label>
-                                    {{ form.installation_date }} <!-- No add_class filter needed -->
+                                    <!-- Installation Date -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_installation_date" class="form-label">Installation Date</label>
+                                            {{ form.installation_date }}
+                                            <div class="invalid-feedback">Please select an installation date.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Status -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_status" class="form-label">Status</label>
+                                            {{ form.status }}
+                                            <div class="invalid-feedback">Please select a status.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Remark -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_remark" class="form-label">Remark</label>
+                                            {{ form.remark }}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Maintenance Intervals -->
                             <div class="row mb-3">
                                 <div class="col-md-3">
-                                    <label for="maintenanceYears" class="form-label">Maintenance Interval
-                                        (Years)</label>
-                                    {{ form.maintenance_interval_years }} <!-- No add_class filter needed -->
+                                    <label for="id_maintenance_interval_years" class="form-label">Maintenance Interval (Years)</label>
+                                    {{ form.maintenance_interval_years }}
                                 </div>
                                 <div class="col-md-3">
-                                    <label for="maintenanceMonths" class="form-label">Maintenance Interval
-                                        (Months)</label>
-                                    {{ form.maintenance_interval_months }} <!-- No add_class filter needed -->
+                                    <label for="id_maintenance_interval_months" class="form-label">Maintenance Interval (Months)</label>
+                                    {{ form.maintenance_interval_months }}
                                 </div>
                                 <div class="col-md-3">
-                                    <label for="maintenanceWeeks" class="form-label">Maintenance Interval
-                                        (Weeks)</label>
-                                    {{ form.maintenance_interval_weeks }} <!-- No add_class filter needed -->
+                                    <label for="id_maintenance_interval_weeks" class="form-label">Maintenance Interval (Weeks)</label>
+                                    {{ form.maintenance_interval_weeks }}
                                 </div>
                                 <div class="col-md-3">
-                                    <label for="maintenanceDays" class="form-label">Maintenance Interval (Days)</label>
-                                    {{ form.maintenance_interval_days }} <!-- No add_class filter needed -->
-                                </div>
-                            </div>
-
-                            <!-- Status -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="status" class="form-label">Status</label>
-                                    {{ form.status }} <!-- No add_class filter needed -->
-                                </div>
-                            </div>
-
-                            <!-- Remark -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="remark" class="form-label">Remark</label>
-                                    {{ form.remark }} <!-- No add_class filter needed -->
+                                    <label for="id_maintenance_interval_days" class="form-label">Maintenance Interval (Days)</label>
+                                    {{ form.maintenance_interval_days }}
                                 </div>
                             </div>
 
                             <!-- Submit Button -->
                             <div class="row mb-3">
-                                <label class="col-sm-2 col-form-label"></label>
-                                <div class="col-sm-10">
+                                <div class="col-md-12 text-center">
                                     <button type="submit" class="btn btn-primary">Save Changes</button>
                                 </div>
                             </div>
@@ -150,4 +163,25 @@
     </section>
 
 </main><!-- End #main -->
+
+<!-- Add JavaScript for Front-End Validation -->
+<script>
+    (function () {
+        'use strict';
+
+        // Fetch the form element
+        const form = document.getElementById('equipmentForm');
+
+        // Add event listener for form submission
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            form.classList.add('was-validated');
+        }, false);
+    })();
+</script>
+
 {% endblock %}

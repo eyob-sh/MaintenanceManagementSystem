@@ -111,3 +111,8 @@ class SparePart(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.quantity} left) - {self.store}"
+    
+    # class SparePartUsage(models.Model):
+    #     maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE)
+    #     spare_part = models.ForeignKey(SparePart, on_delete=models.CASCADE)
+    #     quantity_used = models.IntegerField()  # Quantity of the spare part used

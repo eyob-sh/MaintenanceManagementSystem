@@ -1,0 +1,150 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
+
+    <div class="pagetitle">
+        <h1>Add Spare Part</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"></h5>
+
+                        <!-- General Form Elements -->
+                        <form method="POST" action="{% url 'add_spare_part' %}" id="sparePartForm" novalidate>
+                            {% csrf_token %}
+
+                            <div class="row">
+                                <!-- Left Column -->
+                                <div class="col-md-6">
+                                    <!-- Spare Part Name -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="sparePartName" class="form-label">Spare Part Name</label>
+                                            <input type="text" class="form-control" id="sparePartName" name="name"
+                                                required>
+                                            <div class="invalid-feedback">Please enter the spare part name.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Branch -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="branch" class="form-label">Branch</label>
+                                            <select class="form-select" id="branch" name="branch" required>
+                                                <option selected disabled value="">Select Branch</option>
+                                                {% for branch in branches %}
+                                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="invalid-feedback">Please select a branch.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Store -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="store" class="form-label">Store</label>
+                                            <input type="text" class="form-control" id="store" name="store" required>
+                                            <div class="invalid-feedback">Please enter the store name.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quantity -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="quantity" class="form-label">Quantity</label>
+                                            <input type="number" class="form-control" id="quantity" name="quantity"
+                                                required min="0">
+                                            <div class="invalid-feedback">Please enter a valid quantity.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column -->
+                                <div class="col-md-6">
+                                    <!-- Part Number -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="partNumber" class="form-label">Part Number</label>
+                                            <input type="text" class="form-control" id="partNumber" name="part_number"
+                                                required>
+                                            <div class="invalid-feedback">Please enter the part number.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Price -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="price" class="form-label">Price</label>
+                                            <input type="number" class="form-control" id="price" name="price" required
+                                                step="0.01" min="0">
+                                            <div class="invalid-feedback">Please enter a valid price.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Description -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="description" class="form-label">Description</label>
+                                            <textarea class="form-control" id="description" name="description"
+                                                rows="3"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="row mb-3">
+                                <div class="col-md-12 text-center">
+                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                </div>
+                            </div>
+                        </form><!-- End General Form Elements -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main><!-- End #main -->
+
+<!-- Add JavaScript for Front-End Validation -->
+<script>
+    (function () {
+        'use strict';
+
+        // Fetch the form element
+        const form = document.getElementById('sparePartForm');
+
+        // Add event listener for form submission
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            form.classList.add('was-validated');
+        }, false);
+    })();
+</script>
+
+{% endblock %}
