@@ -39,8 +39,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="chemicalName" class="form-label">Chemical Name</label>
-                                            <input type="text" class="form-control" id="chemicalName" name="chemical_name"
-                                                required>
+                                            <input type="text" class="form-control" id="chemicalName"
+                                                name="chemical_name" required>
                                             <div class="invalid-feedback">Please enter the chemical name.</div>
                                         </div>
                                     </div>
@@ -59,16 +59,18 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="molecularFormula" class="form-label">Molecular Formula</label>
-                                            <input type="text" class="form-control" id="molecularFormula" name="molecular_formula">
+                                            <input type="text" class="form-control" id="molecularFormula"
+                                                name="molecular_formula">
                                         </div>
                                     </div>
 
                                     <!-- Manufacturer/Supplier -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
-                                            <label for="manufacturerSupplier" class="form-label">Manufacturer/Supplier</label>
-                                            <input type="text" class="form-control" id="manufacturerSupplier" name="manufacturer_supplier"
-                                                required>
+                                            <label for="manufacturerSupplier"
+                                                class="form-label">Manufacturer/Supplier</label>
+                                            <input type="text" class="form-control" id="manufacturerSupplier"
+                                                name="manufacturer_supplier" required>
                                             <div class="invalid-feedback">Please enter the manufacturer/supplier.</div>
                                         </div>
                                     </div>
@@ -77,7 +79,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="catalogNumber" class="form-label">Catalog Number</label>
-                                            <input type="text" class="form-control" id="catalogNumber" name="catalog_number">
+                                            <input type="text" class="form-control" id="catalogNumber"
+                                                name="catalog_number">
                                         </div>
                                     </div>
 
@@ -85,7 +88,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="batchLotNumber" class="form-label">Batch/Lot Number</label>
-                                            <input type="text" class="form-control" id="batchLotNumber" name="batch_lot_number">
+                                            <input type="text" class="form-control" id="batchLotNumber"
+                                                name="batch_lot_number">
                                         </div>
                                     </div>
                                 </div>
@@ -96,8 +100,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="quantityAvailable" class="form-label">Quantity Available</label>
-                                            <input type="number" class="form-control" id="quantityAvailable" name="quantity_available"
-                                                required min="0">
+                                            <input type="number" class="form-control" id="quantityAvailable"
+                                                name="quantity_available" required min="0">
                                             <div class="invalid-feedback">Please enter a valid quantity.</div>
                                         </div>
                                     </div>
@@ -105,8 +109,10 @@
                                     <!-- Unit of Measurement -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
-                                            <label for="unitOfMeasurement" class="form-label">Unit of Measurement</label>
-                                            <select class="form-select" id="unitOfMeasurement" name="unit_of_measurement" required>
+                                            <label for="unitOfMeasurement" class="form-label">Unit of
+                                                Measurement</label>
+                                            <select class="form-select" id="unitOfMeasurement"
+                                                name="unit_of_measurement" required>
                                                 <option selected disabled value="">Select Unit</option>
                                                 <option value="L">Liter (L)</option>
                                                 <option value="mL">Milliliter (mL)</option>
@@ -138,19 +144,36 @@
                                     <!-- Location/Storage Area -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
-                                            <label for="locationStorageArea" class="form-label">Location/Storage Area</label>
-                                            <input type="text" class="form-control" id="locationStorageArea" name="location_storage_area"
-                                                required>
+                                            <label for="locationStorageArea" class="form-label">Location/Storage
+                                                Area</label>
+                                            <input type="text" class="form-control" id="locationStorageArea"
+                                                name="location_storage_area" required>
                                             <div class="invalid-feedback">Please enter the location/storage area.</div>
                                         </div>
                                     </div>
+
+                                    <!-- Branch -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="branch" class="form-label">Branch</label>
+                                            <select class="form-select" id="branch" name="branch" required>
+                                                <option selected disabled value="">Select Branch</option>
+                                                {% for branch in branches %}
+                                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="invalid-feedback">Please select a branch.</div>
+                                        </div>
+                                    </div>
+
+
 
                                     <!-- Date of Entry -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="dateOfEntry" class="form-label">Date of Entry</label>
-                                            <input type="date" class="form-control" id="dateOfEntry" name="date_of_entry"
-                                                required>
+                                            <input type="date" class="form-control" id="dateOfEntry"
+                                                name="date_of_entry" required>
                                             <div class="invalid-feedback">Please select a date of entry.</div>
                                         </div>
                                     </div>
@@ -159,7 +182,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="expirationDate" class="form-label">Expiration Date</label>
-                                            <input type="date" class="form-control" id="expirationDate" name="expiration_date">
+                                            <input type="date" class="form-control" id="expirationDate"
+                                                name="expiration_date">
                                         </div>
                                     </div>
 
@@ -167,8 +191,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="reorderLevel" class="form-label">Reorder Level</label>
-                                            <input type="number" class="form-control" id="reorderLevel" name="reorder_level"
-                                                required min="0">
+                                            <input type="number" class="form-control" id="reorderLevel"
+                                                name="reorder_level" required min="0">
                                             <div class="invalid-feedback">Please enter a valid reorder level.</div>
                                         </div>
                                     </div>
@@ -184,8 +208,10 @@
                                     <!-- Hazard Classification -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
-                                            <label for="hazardClassification" class="form-label">Hazard Classification</label>
-                                            <input type="text" class="form-control" id="hazardClassification" name="hazard_classification">
+                                            <label for="hazardClassification" class="form-label">Hazard
+                                                Classification</label>
+                                            <input type="text" class="form-control" id="hazardClassification"
+                                                name="hazard_classification">
                                         </div>
                                     </div>
 
@@ -193,7 +219,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="usageLog" class="form-label">Usage Log</label>
-                                            <textarea class="form-control" id="usageLog" name="usage_log" rows="3"></textarea>
+                                            <textarea class="form-control" id="usageLog" name="usage_log"
+                                                rows="3"></textarea>
                                         </div>
                                     </div>
                                 </div>

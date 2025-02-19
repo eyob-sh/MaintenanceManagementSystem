@@ -1,0 +1,113 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
+
+    <div class="pagetitle">
+        <h1>Edit Manufacturer: {{ manufacturer.name }}</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"></h5>
+
+                        <!-- General Form Elements -->
+                        <form method="POST" id="manufacturerForm" novalidate>
+                            {% csrf_token %}
+
+                            <div class="row">
+                                <!-- Left Column -->
+                                <div class="col-md-6">
+                                    <!-- Manufacturer Name -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_name" class="form-label">Manufacturer Name</label>
+                                            {{ form.name }}
+                                            <div class="invalid-feedback">Please enter the manufacturer name.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Contact Email -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_contact_email" class="form-label">Contact Email</label>
+                                            {{ form.contact_email }}
+                                            <div class="invalid-feedback">Please enter a valid email.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column -->
+                                <div class="col-md-6">
+                                    <!-- Contact Phone Number -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_contact_phone_number" class="form-label">Contact Phone
+                                                Number</label>
+                                            {{ form.contact_phone_number }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Address -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_address" class="form-label">Address</label>
+                                            {{ form.address }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="row mb-3">
+                                <div class="col-md-12 text-center">
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                </div>
+                            </div>
+                        </form><!-- End General Form Elements -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main><!-- End #main -->
+
+<!-- Add JavaScript for Front-End Validation -->
+<script>
+    (function () {
+        'use strict';
+
+        // Fetch the form element
+        const form = document.getElementById('manufacturerForm');
+
+        // Add event listener for form submission
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            form.classList.add('was-validated');
+        }, false);
+    })();
+</script>
+
+{% endblock %}

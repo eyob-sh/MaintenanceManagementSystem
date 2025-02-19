@@ -179,7 +179,16 @@ class ChemicalForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(ChemicalsForm, self).__init__(*args, **kwargs)
+        super(ChemicalForm, self).__init__(*args, **kwargs)
         # Add Bootstrap 'form-control' class to all fields
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
+
+
+
+
+
+
+
+
+

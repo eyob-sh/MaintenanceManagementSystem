@@ -375,6 +375,7 @@ class Chemical(models.Model):
         max_length=255,
         help_text="Enter the location or storage area (e.g., Shelf A, Lab 2, Flammable Cabinet).",
     )
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
 
     # Dates
     date_of_entry = models.DateField(
