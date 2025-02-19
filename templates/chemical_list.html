@@ -1,0 +1,90 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
+
+    <div class="pagetitle">
+        <h1>{{ title }}</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+
+                <div class="card">
+                    <div class="card-body">
+
+                        <!-- Add Chemical Button -->
+                        <div class="d-flex justify-content-end mb-3" style="margin-top: 20px;">
+                            <a href="{% url 'add_chemical' %}" class="btn btn-success bg-success">
+                                <i class="bi bi-plus"></i> Add Chemical
+                            </a>
+                        </div>
+
+                        <!-- Chemical List Table -->
+                        <table class="table datatable">
+                            <thead>
+                                <tr>
+                                    <th>Chemical Name</th>
+                                    <th>CAS Number</th>
+                                    <th>Manufacturer/Supplier</th>
+                                    <th>Quantity Available</th>
+                                    <th>Unit of Measurement</th>
+                                    <th>Location/Storage Area</th>
+                                    <th>Expiration Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for chemical in item_list %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url edit_url chemical.id %}">{{ chemical.chemical_name }}</a>
+                                    </td>
+                                    <td>{{ chemical.cas_number }}</td>
+                                    <td>{{ chemical.manufacturer_supplier }}</td>
+                                    <td>{{ chemical.quantity_available }}</td>
+                                    <td>{{ chemical.get_unit_of_measurement_display }}</td>
+                                    <td>{{ chemical.location_storage_area }}</td>
+                                    <td>{{ chemical.expiration_date|default:"N/A" }}</td>
+                                    <td>
+                                        <a href="{% url edit_url chemical.id %}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </a>
+                                        <a href="{% url delete_url chemical.id %}" class="btn btn-danger btn-sm">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No chemicals found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+</main><!-- End #main -->
+
+{% endblock %}

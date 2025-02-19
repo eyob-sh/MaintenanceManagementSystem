@@ -1,0 +1,92 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
+
+    <div class="pagetitle">
+        <h1>{{ title }}</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+
+                <div class="card">
+                    <div class="card-body">
+
+                        <!-- Add Maintenance Button -->
+                        <div class="d-flex justify-content-end mb-3" style="margin-top: 20px;">
+                            <a href="{% url 'add_maintenance' %}" class="btn btn-success bg-success">
+                                <i class="bi bi-plus"></i> Add Maintenance
+                            </a>
+                        </div>
+
+                        <!-- Maintenance List Table -->
+                        <table class="table datatable">
+                            <thead>
+                                <tr>
+                                    <th>Equipment</th>
+                                    <th>Maintenance Type</th>
+                                    <th>Assigned Technicians</th>
+                                    <th>Branch</th>
+                                    <th>Status</th>
+                                    <th>Date/Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for maintenance in item_list %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url edit_url maintenance.id %}">{{ maintenance.equipment.name }}</a>
+                                    </td>
+                                    <td>{{ maintenance.maintenance_type.maintenance_type }}</td>
+                                    <td>
+                                        {% for technician in maintenance.assigned_technicians.all %}
+                                            {{ technician.get_full_name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>{{ maintenance.branch.name }}</td>
+                                    <td>{{ maintenance.get_status_display }}</td>
+                                    <td>{{ maintenance.datetime }}</td>
+                                    <td>
+                                        <a href="{% url edit_url maintenance.id %}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </a>
+                                        <a href="{% url delete_url maintenance.id %}" class="btn btn-danger btn-sm">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No maintenance records found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+</main><!-- End #main -->
+
+{% endblock %}

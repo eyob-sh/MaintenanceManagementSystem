@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.http import Http404
 from datetime import datetime
-from .Forms import EquipmentForm, SparePartForm
+from .Forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ChemicalForm
 
 from django.contrib.auth import authenticate, login, logout
 
@@ -379,6 +379,206 @@ def edit_spare_part(request, id):
 
     return render(request, 'edit_spare_part.html', {'form': form, 'spare_part': spare_part})
 
+
+ 
+    
+    
+def add_chemical_page(request):
+    branches = Branch.objects.all()  # Fetch all branches for the dropdown
+    return render(request, 'add_chemical.html', {
+        'branches': branches,
+    })
+
+def add_chemical(request):
+    branches = Branch.objects.all()  # Fetch all branches
+
+    if request.method == 'POST':
+        # Get form data
+        chemical_name = request.POST.get('chemical_name')
+        cas_number = request.POST.get('cas_number')
+        molecular_formula = request.POST.get('molecular_formula')
+        manufacturer_supplier = request.POST.get('manufacturer_supplier')
+        catalog_number = request.POST.get('catalog_number')
+        batch_lot_number = request.POST.get('batch_lot_number')
+        quantity_available = request.POST.get('quantity_available')
+        unit_of_measurement = request.POST.get('unit_of_measurement')
+        location_storage_area = request.POST.get('location_storage_area')
+        date_of_entry = request.POST.get('date_of_entry')
+        expiration_date = request.POST.get('expiration_date')
+        reorder_level = request.POST.get('reorder_level')
+        sds_link = request.POST.get('sds_link')
+        hazard_classification = request.POST.get('hazard_classification')
+        usage_log = request.POST.get('usage_log')
+        branch_id = request.POST.get('branch')
+
+        # Validate required fields
+        if not chemical_name or not cas_number or not manufacturer_supplier or not quantity_available or not unit_of_measurement or not location_storage_area or not date_of_entry or not branch_id:
+            messages.error(request, 'Please fill out all required fields.')
+            context = {
+                'branches': branches,
+            }
+            return render(request, 'add_chemical.html', context)
+
+        try:
+            # Convert quantity and reorder level to appropriate types
+            quantity_available = float(quantity_available)
+            reorder_level = float(reorder_level)
+
+            # Create and save the Chemical object
+            Chemical.objects.create(
+                chemical_name=chemical_name,
+                cas_number=cas_number,
+                molecular_formula=molecular_formula,
+                manufacturer_supplier=manufacturer_supplier,
+                catalog_number=catalog_number,
+                batch_lot_number=batch_lot_number,
+                quantity_available=quantity_available,
+                unit_of_measurement=unit_of_measurement,
+                location_storage_area=location_storage_area,
+                date_of_entry=date_of_entry,
+                expiration_date=expiration_date,
+                reorder_level=reorder_level,
+                sds_link=sds_link,
+                hazard_classification=hazard_classification,
+                usage_log=usage_log,
+                branch_id=branch_id,
+            )
+            messages.success(request, 'Chemical added successfully!')
+            return redirect('chemical_list')  # Redirect to the chemical list
+        except ValueError as e:
+            messages.error(request, f'Invalid input: {str(e)}')
+            context = {
+                'branches': branches,
+            }
+            return render(request, 'add_chemical.html', context)
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            context = {
+                'branches': branches,
+            }
+            return render(request, 'add_chemical.html', context)
+
+    # For GET requests, render the form with branches
+    context = {
+        'branches': branches,
+    }
+    return render(request, 'add_chemical.html', context)
+
+def chemical_list(request):
+    chemicals = Chemical.objects.all()  # Fetch all chemicals
+    context = {
+        'title': 'Chemical List',
+        'item_list': chemicals,
+        'edit_url': 'edit_chemical',  # URL name for editing chemicals
+    }
+    return render(request, 'chemical_list.html', context)
+
+
+def edit_chemical(request, id):
+    chemical = get_object_or_404(Chemical, id=id)  # Fetch the chemical instance
+
+    if request.method == 'POST':
+        form = ChemicalForm(request.POST, instance=chemical)
+        if form.is_valid():
+            form.save()  # Save the changes to the database
+            messages.success(request, 'Chemical updated successfully!')
+            return redirect('chemical_list')  # Redirect to the chemical list
+    else:
+        form = ChemicalForm(instance=chemical)  # Pre-fill the form with the current data
+
+    return render(request, 'edit_chemical.html', {'form': form, 'chemical': chemical})
+    
+    
+def add_maintenance_page(request):
+    context = {
+        'equipments': Equipment.objects.all(),
+        'technicians': User.objects.filter(is_staff=True),  # Filter technicians
+        'branches': Branch.objects.all(),
+        'maintenance_types': MaintenanceType.objects.all(),
+        'work_orders': WorkOrder.objects.all(),
+        'spare_parts': SparePart.objects.all(),
+    }
+    return render(request, 'add_maintenance.html', context)
+
+def add_maintenance(request):
+    context = {
+        'equipments': Equipment.objects.all(),
+        'technicians': User.objects.filter(is_staff=True),
+        'branches': Branch.objects.all(),
+        'maintenance_types': MaintenanceType.objects.all(),
+        'work_orders': WorkOrder.objects.all(),
+        'spare_parts': SparePart.objects.all(),
+    }
+
+    if request.method == 'POST':
+        # Get form data
+        equipment_id = request.POST.get('equipment')
+        assigned_technicians = request.POST.getlist('assigned_technicians')
+        branch_id = request.POST.get('branch')
+        maintenance_type_id = request.POST.get('maintenance_type')
+        maintenance_for = request.POST.get('maintenance_for')
+        work_order_id = request.POST.get('work_order')
+        spare_parts = request.POST.getlist('spare_parts')
+        remark = request.POST.get('remark')
+        procedure = request.POST.get('procedure')
+        problems = request.POST.get('problems')
+        status = request.POST.get('status')
+
+        # Validate required fields
+        if not equipment_id or not assigned_technicians or not branch_id or not maintenance_type_id or not maintenance_for or not status:
+            messages.error(request, 'Please fill out all required fields.')
+            return render(request, 'add_maintenance.html', context)
+
+        try:
+            # Create and save the MaintenanceRecord object
+            maintenance = MaintenanceRecord.objects.create(
+                equipment_id=equipment_id,
+                branch_id=branch_id,
+                maintenance_type_id=maintenance_type_id,
+                maintenance_for=maintenance_for,
+                work_order_id=work_order_id,
+                remark=remark,
+                procedure=procedure,
+                problems=problems,
+                status=status,
+            )
+            maintenance.assigned_technicians.set(assigned_technicians)
+            maintenance.spare_parts.set(spare_parts)
+
+            messages.success(request, 'Maintenance record added successfully!')
+            return redirect('maintenance_list')  # Redirect to the maintenance list
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            return render(request, 'add_maintenance.html', context)
+
+    # For GET requests, render the form with context
+    return render(request, 'add_maintenance.html', context)
+    
+    
+    
+
+def maintenance_list(request):
+    maintenance_records = MaintenanceRecord.objects.all()  # Fetch all maintenance records
+    context = {
+        'title': 'Maintenance List',
+        'item_list': maintenance_records,
+        'edit_url': 'edit_maintenance',  # URL name for editing maintenance records
+    }
+    return render(request, 'maintenance_list.html', context)
+    
+def edit_maintenance(request, id):
+    maintenance = get_object_or_404(MaintenanceRecord, id=id)  # Fetch the maintenance record instance
+
+    if request.method == 'POST':
+        form = MaintenanceRecordForm(request.POST, instance=maintenance)
+        if form.is_valid():
+            form.save()  # Save the changes to the database
+            messages.success(request, 'Maintenance record updated successfully!')
+            return redirect('maintenance_list')  # Redirect to the maintenance list
+    else:
+        form = MaintenanceRecordForm(instance=maintenance)  # Pre-fill the form with the current data
+
+    return render(request, 'edit_maintenance.html', {'form': form, 'maintenance': maintenance})
 
 
 

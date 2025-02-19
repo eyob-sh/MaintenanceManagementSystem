@@ -1,0 +1,172 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
+
+    <div class="pagetitle">
+        <h1>Edit Maintenance Record: {{ maintenance.equipment.name }}</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"></h5>
+
+                        <!-- General Form Elements -->
+                        <form method="POST" id="maintenanceForm" novalidate>
+                            {% csrf_token %}
+
+                            <div class="row">
+                                <!-- Left Column -->
+                                <div class="col-md-6">
+                                    <!-- Equipment -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_equipment" class="form-label">Equipment</label>
+                                            {{ form.equipment }}
+                                            <div class="invalid-feedback">Please select an equipment.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Assigned Technicians -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_assigned_technicians" class="form-label">Assigned Technicians</label>
+                                            {{ form.assigned_technicians }}
+                                            <div class="invalid-feedback">Please select at least one technician.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Branch -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_branch" class="form-label">Branch</label>
+                                            {{ form.branch }}
+                                            <div class="invalid-feedback">Please select a branch.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Maintenance Type -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_maintenance_type" class="form-label">Maintenance Type</label>
+                                            {{ form.maintenance_type }}
+                                            <div class="invalid-feedback">Please select a maintenance type.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Maintenance For -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_maintenance_for" class="form-label">Maintenance For</label>
+                                            {{ form.maintenance_for }}
+                                            <div class="invalid-feedback">Please select a maintenance type.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column -->
+                                <div class="col-md-6">
+                                    <!-- Work Order -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_work_order" class="form-label">Work Order</label>
+                                            {{ form.work_order }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Spare Parts -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_spare_parts" class="form-label">Spare Parts</label>
+                                            {{ form.spare_parts }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Status -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_status" class="form-label">Status</label>
+                                            {{ form.status }}
+                                            <div class="invalid-feedback">Please select a status.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Remark -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_remark" class="form-label">Remark</label>
+                                            {{ form.remark }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Procedure -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_procedure" class="form-label">Procedure</label>
+                                            {{ form.procedure }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Problems -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_problems" class="form-label">Problems</label>
+                                            {{ form.problems }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="row mb-3">
+                                <div class="col-md-12 text-center">
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                </div>
+                            </div>
+                        </form><!-- End General Form Elements -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main><!-- End #main -->
+
+<!-- Add JavaScript for Front-End Validation -->
+<script>
+    (function () {
+        'use strict';
+
+        // Fetch the form element
+        const form = document.getElementById('maintenanceForm');
+
+        // Add event listener for form submission
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            form.classList.add('was-validated');
+        }, false);
+    })();
+</script>
+
+{% endblock %}
