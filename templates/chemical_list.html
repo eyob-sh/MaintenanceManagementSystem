@@ -46,7 +46,7 @@
                                     <th>Unit of Measurement</th>
                                     <th>Location/Storage Area</th>
                                     <th>Expiration Date</th>
-                                    <th>Actions</th>
+                                    <!-- <th>Actions</th> -->
                                 </tr>
                             </thead>
                             <tbody>
@@ -62,9 +62,9 @@
                                     <td>{{ chemical.location_storage_area }}</td>
                                     <td>{{ chemical.expiration_date|default:"N/A" }}</td>
                                     <td>
-                                        <a href="{% url edit_url chemical.id %}" class="btn btn-primary btn-sm">
+                                        <!-- <a href="{% url edit_url chemical.id %}" class="btn btn-primary btn-sm">
                                             <i class="bi bi-pencil"></i> Edit
-                                        </a>
+                                        </a> -->
 
                                     </td>
                                 </tr>

@@ -46,8 +46,9 @@
                                 {% for decommissioned_equipment in item_list %}
                                 <tr>
                                     <td>
-                                        <a href="{% url edit_url decommissioned_equipment.id %}">{{
-                                            decommissioned_equipment.equipment.name }}</a>
+                                        <a href="{% url edit_url decommissioned_equipment.id %}">
+                                            {{ decommissioned_equipment.equipment.name }}
+                                        </a>
                                     </td>
                                     <td>{{ decommissioned_equipment.decommission_reason }}</td>
                                     <td>{{ decommissioned_equipment.decommission_date }}</td>

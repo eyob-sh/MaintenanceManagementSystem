@@ -47,7 +47,8 @@
                                     <!-- Assigned Technicians -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
-                                            <label for="id_assigned_technicians" class="form-label">Assigned Technicians</label>
+                                            <label for="id_assigned_technicians" class="form-label">Assigned
+                                                Technicians</label>
                                             {{ form.assigned_technicians }}
                                             <div class="invalid-feedback">Please select at least one technician.</div>
                                         </div>
@@ -71,34 +72,54 @@
                                         </div>
                                     </div>
 
-                                    <!-- Maintenance For -->
+                                    <!-- Spare Parts Section -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
-                                            <label for="id_maintenance_for" class="form-label">Maintenance For</label>
-                                            {{ form.maintenance_for }}
-                                            <div class="invalid-feedback">Please select a maintenance type.</div>
+                                            <label class="form-label">Spare Parts</label>
+                                            <!-- Initial Spare Part and Quantity Row -->
+                                            <div class="row mb-3 spare-part-row">
+                                                <div class="col-md-6">
+                                                    <select class="form-select spare-part-select" name="spare_parts[]">
+                                                        <option value="">Select Spare Part</option>
+                                                        {% for spare_part in spare_parts %}
+                                                        <option value="{{ spare_part.id }}"
+                                                            data-quantity="{{ spare_part.quantity }}">
+                                                            {{ spare_part.name }} ({{ spare_part.quantity }} available)
+                                                        </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <input type="number" class="form-control spare-part-quantity"
+                                                        name="spare_part_quantities[]" min="1" placeholder="Quantity">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <button type="button" class="btn btn-danger remove-spare-part"
+                                                        disabled>Remove</button>
+                                                </div>
+                                            </div>
+                                            <!-- End Initial Row -->
+
+                                            <!-- Container for Additional Rows -->
+                                            <div id="additional-spare-parts"></div>
+
+                                            <!-- Add More Button -->
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <button type="button" class="btn btn-success" id="add-spare-part">
+                                                        <i class="bi bi-plus"></i> Add Spare Part
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    <!-- Error Message Container -->
+                                    <div id="errorMessages" class="alert alert-danger d-none mb-3"></div>
                                 </div>
 
                                 <!-- Right Column -->
                                 <div class="col-md-6">
-                                    <!-- Work Order -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_work_order" class="form-label">Work Order</label>
-                                            {{ form.work_order }}
-                                        </div>
-                                    </div>
-
-                                    <!-- Spare Parts -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_spare_parts" class="form-label">Spare Parts</label>
-                                            {{ form.spare_parts }}
-                                        </div>
-                                    </div>
-
                                     <!-- Status -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
@@ -151,22 +172,89 @@
 
 <!-- Add JavaScript for Front-End Validation -->
 <script>
-    (function () {
-        'use strict';
-
-        // Fetch the form element
+    document.addEventListener('DOMContentLoaded', function () {
+        const addButton = document.getElementById('add-spare-part');
+        const container = document.getElementById('additional-spare-parts');
         const form = document.getElementById('maintenanceForm');
+        const errorMessagesContainer = document.getElementById('errorMessages');
 
-        // Add event listener for form submission
-        form.addEventListener('submit', function (event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
+        // Add new spare part row
+        addButton.addEventListener('click', function () {
+            const newRow = document.createElement('div');
+            newRow.className = 'row mb-3 spare-part-row';
+
+            newRow.innerHTML = `
+                <div class="col-md-6">
+                    <select class="form-select spare-part-select" name="spare_parts[]">
+                        <option value="">Select Spare Part</option>
+                        {% for spare_part in spare_parts %}
+                        <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}">
+                            {{ spare_part.name }} ({{ spare_part.quantity }} available)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-danger remove-spare-part">Remove</button>
+                </div>
+            `;
+
+            container.appendChild(newRow);
+
+            // Enable remove button for all rows
+            document.querySelectorAll('.remove-spare-part').forEach(button => {
+                button.disabled = false;
+            });
+        });
+
+        // Remove spare part row
+        container.addEventListener('click', function (event) {
+            if (event.target.classList.contains('remove-spare-part')) {
+                event.target.closest('.spare-part-row').remove();
+
+                // Disable remove button if only one row is left
+                if (document.querySelectorAll('.spare-part-row').length === 1) {
+                    document.querySelector('.remove-spare-part').disabled = true;
+                }
             }
+        });
 
-            form.classList.add('was-validated');
-        }, false);
-    })();
+        // Frontend validation before form submission
+        form.addEventListener('submit', function (event) {
+            let isValid = true;
+            const errorMessages = [];
+
+            // Validate spare parts and quantities
+            document.querySelectorAll('.spare-part-row').forEach(row => {
+                const sparePartSelect = row.querySelector('.spare-part-select');
+                const quantityInput = row.querySelector('.spare-part-quantity');
+                const selectedSparePart = sparePartSelect.options[sparePartSelect.selectedIndex];
+                const availableQuantity = parseInt(selectedSparePart.getAttribute('data-quantity'));
+                const quantityUsed = parseInt(quantityInput.value);
+
+                if (selectedSparePart.value && quantityUsed > availableQuantity) {
+                    isValid = false;
+                    errorMessages.push(`Not enough quantity for ${selectedSparePart.text}. Available: ${availableQuantity}`);
+                    quantityInput.classList.add('is-invalid');
+                } else {
+                    quantityInput.classList.remove('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                event.preventDefault(); // Prevent form submission
+
+                // Display error messages inline
+                errorMessagesContainer.innerHTML = errorMessages.join('<br>'); // Join messages with line breaks
+                errorMessagesContainer.classList.remove('d-none'); // Show the error container
+            } else {
+                errorMessagesContainer.classList.add('d-none'); // Hide the error container if no errors
+            }
+        });
+    });
 </script>
 
 {% endblock %}

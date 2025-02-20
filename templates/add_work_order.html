@@ -49,6 +49,21 @@
                                         </div>
                                     </div>
 
+
+                                    <!-- Branch -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="branch" class="form-label">Branch</label>
+                                            <select class="form-select" id="branch" name="branch" required>
+                                                <option selected disabled value="">Select Branch</option>
+                                                {% for branch in branches %}
+                                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="invalid-feedback">Please select a branch.</div>
+                                        </div>
+                                    </div>
+
                                     <!-- Description -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">

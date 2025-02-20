@@ -751,7 +751,6 @@ def add_maintenance(request):
         'technicians': User.objects.filter(is_staff=True),
         'branches': Branch.objects.all(),
         'maintenance_types': MaintenanceType.objects.all(),
-        'work_orders': WorkOrder.objects.all(),
         'spare_parts': SparePart.objects.all(),
     }
 
@@ -761,16 +760,15 @@ def add_maintenance(request):
         assigned_technicians = request.POST.getlist('assigned_technicians')
         branch_id = request.POST.get('branch')
         maintenance_type_id = request.POST.get('maintenance_type')
-        maintenance_for = request.POST.get('maintenance_for')
-        work_order_id = request.POST.get('work_order')
-        spare_parts = request.POST.getlist('spare_parts')
+        spare_parts = request.POST.getlist('spare_parts[]')  # List of spare part IDs
+        spare_part_quantities = request.POST.getlist('spare_part_quantities[]')  # List of quantities
         remark = request.POST.get('remark')
         procedure = request.POST.get('procedure')
         problems = request.POST.get('problems')
         status = request.POST.get('status')
 
         # Validate required fields
-        if not equipment_id or not assigned_technicians or not branch_id or not maintenance_type_id or not maintenance_for or not status:
+        if not equipment_id or not assigned_technicians or not branch_id or not maintenance_type_id or not status:
             messages.error(request, 'Please fill out all required fields.')
             return render(request, 'add_maintenance.html', context)
 
@@ -780,23 +778,43 @@ def add_maintenance(request):
                 equipment_id=equipment_id,
                 branch_id=branch_id,
                 maintenance_type_id=maintenance_type_id,
-                maintenance_for=maintenance_for,
-                work_order_id=work_order_id,
                 remark=remark,
                 procedure=procedure,
                 problems=problems,
                 status=status,
             )
             maintenance.assigned_technicians.set(assigned_technicians)
-            maintenance.spare_parts.set(spare_parts)
+
+            # Handle spare parts and quantities
+            for spare_part_id, quantity_used in zip(spare_parts, spare_part_quantities):
+                if not spare_part_id or not quantity_used:
+                    continue  # Skip empty fields
+
+                spare_part = SparePart.objects.get(id=spare_part_id)
+                quantity_used = int(quantity_used)
+
+                if spare_part.quantity < quantity_used:
+                    messages.error(request, f'Not enough quantity for {spare_part.name}.')
+                    maintenance.delete()  # Rollback the maintenance record
+                    return render(request, 'add_maintenance.html', context)
+
+                # Deduct the quantity from the spare part
+                spare_part.quantity -= quantity_used
+                spare_part.save()
+
+                # Create SparePartUsage record
+                SparePartUsage.objects.create(
+                    maintenance_record=maintenance,
+                    spare_part=spare_part,
+                    quantity_used=quantity_used,
+                )
 
             messages.success(request, 'Maintenance record added successfully!')
-            return redirect('maintenance_list')  # Redirect to the maintenance list
+            return redirect('maintenance_list')
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
             return render(request, 'add_maintenance.html', context)
 
-    # For GET requests, render the form with context
     return render(request, 'add_maintenance.html', context)
     
     
@@ -813,17 +831,81 @@ def maintenance_list(request):
     
 def edit_maintenance(request, id):
     maintenance = get_object_or_404(MaintenanceRecord, id=id)  # Fetch the maintenance record instance
+    spare_part_usages = SparePartUsage.objects.filter(maintenance_record=maintenance)
 
     if request.method == 'POST':
-        form = MaintenanceRecordForm(request.POST, instance=maintenance)
-        if form.is_valid():
-            form.save()  # Save the changes to the database
-            messages.success(request, 'Maintenance record updated successfully!')
-            return redirect('maintenance_list')  # Redirect to the maintenance list
-    else:
-        form = MaintenanceRecordForm(instance=maintenance)  # Pre-fill the form with the current data
+        # Get form data
+        equipment_id = request.POST.get('equipment')
+        assigned_technicians = request.POST.getlist('assigned_technicians')
+        branch_id = request.POST.get('branch')
+        maintenance_type_id = request.POST.get('maintenance_type')
+        spare_parts = request.POST.getlist('spare_parts[]')  # List of spare part IDs
+        spare_part_quantities = request.POST.getlist('spare_part_quantities[]')  # List of quantities
+        remark = request.POST.get('remark')
+        procedure = request.POST.get('procedure')
+        problems = request.POST.get('problems')
+        status = request.POST.get('status')
 
-    return render(request, 'edit_maintenance.html', {'form': form, 'maintenance': maintenance})
+        # Validate required fields
+        if not equipment_id or not assigned_technicians or not branch_id or not maintenance_type_id or not status:
+            messages.error(request, 'Please fill out all required fields.')
+            return render(request, 'edit_maintenance.html', {
+                'maintenance': maintenance,
+                'spare_parts': SparePart.objects.all(),
+            })
+
+        try:
+            # Update the MaintenanceRecord object
+            maintenance.equipment_id = equipment_id
+            maintenance.branch_id = branch_id
+            maintenance.maintenance_type_id = maintenance_type_id
+            maintenance.remark = remark
+            maintenance.procedure = procedure
+            maintenance.problems = problems
+            maintenance.status = status
+            maintenance.save()
+            maintenance.assigned_technicians.set(assigned_technicians)
+
+            # Handle spare parts and quantities
+            SparePartUsage.objects.filter(maintenance_record=maintenance).delete()  # Clear existing spare part usages
+            for spare_part_id, quantity_used in zip(spare_parts, spare_part_quantities):
+                if not spare_part_id or not quantity_used:
+                    continue  # Skip empty fields
+
+                spare_part = SparePart.objects.get(id=spare_part_id)
+                quantity_used = int(quantity_used)
+
+                if spare_part.quantity < quantity_used:
+                    messages.error(request, f'Not enough quantity for {spare_part.name}.')
+                    return render(request, 'edit_maintenance.html', {
+                        'maintenance': maintenance,
+                        'spare_parts': SparePart.objects.all(),
+                    })
+
+                # Deduct the quantity from the spare part
+                spare_part.quantity -= quantity_used
+                spare_part.save()
+
+                # Create SparePartUsage record
+                SparePartUsage.objects.create(
+                    maintenance_record=maintenance,
+                    spare_part=spare_part,
+                    quantity_used=quantity_used,
+                )
+
+            messages.success(request, 'Maintenance record updated successfully!')
+            return redirect('maintenance_list')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            return render(request, 'edit_maintenance.html', {
+                'maintenance': maintenance,
+                'spare_parts': SparePart.objects.all(),
+            })
+
+    return render(request, 'edit_maintenance.html', {
+        'maintenance': maintenance,
+        'spare_parts': SparePart.objects.all(),
+    })
 
 
 

@@ -104,8 +104,8 @@ class MaintenanceRecordForm(forms.ModelForm):
             'assigned_technicians',
             'branch',
             'maintenance_type',
-            'maintenance_for',
-            'work_order',
+            
+            
             'spare_parts',
             'remark',
             'procedure',
@@ -113,6 +113,12 @@ class MaintenanceRecordForm(forms.ModelForm):
             'status',
             # 'datetime',
         ]
+
+        widgets = {
+            'assigned_technicians': forms.SelectMultiple(attrs={'class': 'form-select'}),
+            'remark': forms.Textarea(attrs={'rows': 3}),
+            'procedure': forms.Textarea(attrs={'rows': 3}),
+            'problems': forms.Textarea(attrs={'rows': 3}),}
 
     def __init__(self, *args, **kwargs):
         super(MaintenanceRecordForm, self).__init__(*args, **kwargs)

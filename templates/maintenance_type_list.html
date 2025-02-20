@@ -45,8 +45,8 @@
                                 {% for maintenance_type in item_list %}
                                 <tr>
                                     <td>
-                                        <a href="{% url edit_url maintenance_type.id %}">{{
-                                            maintenance_type.maintenance_type }}</a>
+                                        <a href="{% url edit_url maintenance_type.id %}">
+                                            {{ maintenance_type.maintenance_type }}</a>
                                     </td>
                                     <td>{{ maintenance_type.description }}</td>
                                 </tr>

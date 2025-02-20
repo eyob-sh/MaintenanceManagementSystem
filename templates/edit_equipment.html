@@ -104,7 +104,8 @@
                                     <!-- Installation Date -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
-                                            <label for="id_installation_date" class="form-label">Installation Date</label>
+                                            <label for="id_installation_date" class="form-label">Installation
+                                                Date</label>
                                             {{ form.installation_date }}
                                             <div class="invalid-feedback">Please select an installation date.</div>
                                         </div>
@@ -132,19 +133,23 @@
                             <!-- Maintenance Intervals -->
                             <div class="row mb-3">
                                 <div class="col-md-3">
-                                    <label for="id_maintenance_interval_years" class="form-label">Maintenance Interval (Years)</label>
+                                    <label for="id_maintenance_interval_years" class="form-label">Maintenance Interval
+                                        (Years)</label>
                                     {{ form.maintenance_interval_years }}
                                 </div>
                                 <div class="col-md-3">
-                                    <label for="id_maintenance_interval_months" class="form-label">Maintenance Interval (Months)</label>
+                                    <label for="id_maintenance_interval_months" class="form-label">Maintenance Interval
+                                        (Months)</label>
                                     {{ form.maintenance_interval_months }}
                                 </div>
                                 <div class="col-md-3">
-                                    <label for="id_maintenance_interval_weeks" class="form-label">Maintenance Interval (Weeks)</label>
+                                    <label for="id_maintenance_interval_weeks" class="form-label">Maintenance Interval
+                                        (Weeks)</label>
                                     {{ form.maintenance_interval_weeks }}
                                 </div>
                                 <div class="col-md-3">
-                                    <label for="id_maintenance_interval_days" class="form-label">Maintenance Interval (Days)</label>
+                                    <label for="id_maintenance_interval_days" class="form-label">Maintenance Interval
+                                        (Days)</label>
                                     {{ form.maintenance_interval_days }}
                                 </div>
                             </div>
@@ -174,14 +179,61 @@
 
         // Add event listener for form submission
         form.addEventListener('submit', function (event) {
+            // Check if the form is valid
             if (!form.checkValidity()) {
                 event.preventDefault();
                 event.stopPropagation();
             }
 
+            // Custom validation for maintenance intervals
+            const maintenanceYears = document.getElementById('maintenanceYears');
+            const maintenanceMonths = document.getElementById('maintenanceMonths');
+            const maintenanceWeeks = document.getElementById('maintenanceWeeks');
+            const maintenanceDays = document.getElementById('maintenanceDays');
+
+            // Check if all maintenance intervals are zero
+            if (
+                maintenanceYears.value == 0 &&
+                maintenanceMonths.value == 0 &&
+                maintenanceWeeks.value == 0 &&
+                maintenanceDays.value == 0
+            ) {
+                // Prevent form submission
+                event.preventDefault();
+                event.stopPropagation();
+
+                // Add error message and styling
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'invalid-feedback';
+                errorMessage.textContent = 'Please provide at least one maintenance interval (years, months, weeks, or days).';
+
+                // Append the error message below the maintenance interval fields
+                const maintenanceIntervalGroup = document.querySelector('.row.mb-3');
+                if (!maintenanceIntervalGroup.querySelector('.invalid-feedback')) {
+                    maintenanceIntervalGroup.appendChild(errorMessage);
+                }
+
+                // Add invalid class to the fields
+                maintenanceYears.classList.add('is-invalid');
+                maintenanceMonths.classList.add('is-invalid');
+                maintenanceWeeks.classList.add('is-invalid');
+                maintenanceDays.classList.add('is-invalid');
+            } else {
+                // Remove error message and styling if validation passes
+                const errorMessage = document.querySelector('.row.mb-3 .invalid-feedback');
+                if (errorMessage) {
+                    errorMessage.remove();
+                }
+
+                maintenanceYears.classList.remove('is-invalid');
+                maintenanceMonths.classList.remove('is-invalid');
+                maintenanceWeeks.classList.remove('is-invalid');
+                maintenanceDays.classList.remove('is-invalid');
+            }
+
+            // Add Bootstrap's validation class to the form
             form.classList.add('was-validated');
         }, false);
     })();
 </script>
-
 {% endblock %}

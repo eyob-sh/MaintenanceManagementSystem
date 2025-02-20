@@ -225,20 +225,9 @@ class MaintenanceRecord(models.Model):
         on_delete=models.PROTECT,
     )
     
-    maintenance_for = models.CharField(
-        max_length=30,
-        default='Scheduled_Maintenance',
-        choices=MAINTENANCE_FOR,
-        help_text='Select the type of maintenance.',
-    )
+    
 
-    work_order = models.ForeignKey(
-        'WorkOrder',
-        blank=True,
-        null=True,
-        on_delete=models.SET_NULL,
-        help_text='Select a work order if applicable.',
-    )
+    
     
     spare_parts = models.ManyToManyField('SparePart', through='SparePartUsage')
 
@@ -284,7 +273,8 @@ class MaintenanceRecord(models.Model):
         
     
 class SparePartUsage(models.Model):
-    maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE)
+    maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE, null=True)
+    WorkOrder = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, null=True)
     spare_part = models.ForeignKey(SparePart, on_delete=models.CASCADE)
     quantity_used = models.IntegerField()  # Quantity of the spare part used
     
