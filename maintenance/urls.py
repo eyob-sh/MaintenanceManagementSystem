@@ -6,8 +6,8 @@ urlpatterns = [
     path('logout/', views.logoutUser,  name = "logout" ),
     path('register/', views.register, name = "register"),
     path('add_user/', views.add_user, name = "add_user"),
-    path('add_branch_page/', views.add_branch_page, name = "add_branch_page"),
-    path('add_branch/', views.add_branch, name = "add_branch"),
+    # path('add_branch_page/', views.add_branch_page, name = "add_branch_page"),
+    # path('add_branch/', views.add_branch, name = "add_branch"),
     #----------------------------------------------------------------------------------------------------
     path('add_manufacturer_page/', views.add_manufacturer_page, name = "add_manufacturer_page"),
 
@@ -84,6 +84,23 @@ path('add_maintenance_type_page/', views.add_maintenance_type_page, name = "add_
     path('maintenance_type/', views.maintenance_type_list, name='maintenance_type_list'),
     path('maintenance_type/edit/<int:id>/', views.edit_maintenance_type, name='edit_maintenance_type'),
 
+#----------------------------------------------------------------------------------------------------------------
+
+path('add_branch_page/', views.add_branch_page, name = "add_branch"),
+
+    path('add_branch/', views.add_branch, name = "add_branch"),
+    
+    path('branch/', views.branch_list, name='branch_list'),
+    path('branch/edit/<int:id>/', views.edit_branch, name='edit_branch'),
+
+#---------------------------------------------------------------------------------------------------------
+
+path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_profile_page"),
+
+    path('add_user_profile/', views.add_user_profile, name = "add_user_profile"),
+    
+    path('user_profile/', views.user_profile_list, name='user_profile_list'),
+    path('user_profile/edit/<int:id>/', views.edit_user_profile, name='edit_user_profile'),
 
     path('dashboard', views.dashboard, name="dashboard"),
 ]

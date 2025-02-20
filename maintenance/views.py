@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.http import Http404
 from datetime import datetime
-from .Forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ChemicalForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTypeForm
+from .Forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ChemicalForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTypeForm, BranchForm, UserProfileForm
 
 from django.contrib.auth import authenticate, login, logout
 
@@ -110,16 +110,16 @@ def add_user(request):
     return render(request, 'register_page.html')
 
 
-def add_branch_page(request):
-    return render(request,'branch.html')
+# def add_branch_page(request):
+#     return render(request,'branch.html')
 
-def add_branch(request):
-    if request.method == 'POST':
-        branch_name = request.POST.get('name')  # Get the branch name from the form
-        if branch_name:
-            Branch.objects.create(name=branch_name)  # Create a new Branch object
-            messages.success(request, 'Branch added successfully')
-    return render(request, 'branch.html')  # Render the form if GET request
+# def add_branch(request):
+#     if request.method == 'POST':
+#         branch_name = request.POST.get('name')  # Get the branch name from the form
+#         if branch_name:
+#             Branch.objects.create(name=branch_name)  # Create a new Branch object
+#             messages.success(request, 'Branch added successfully')
+#     return render(request, 'branch.html')  # Render the form if GET request
 
 def manufacturer_list(request):
     manufacturers = Manufacturer.objects.all()
@@ -860,10 +860,90 @@ def edit_maintenance(request, id):
 #     path('maintenance_type/', views.maintenance_type_list, name='maintenance_type_list'),
 #     path('maintenance_type/edit/<int:id>/', views.edit_maintenance_type, name='edit_maintenance_type'),
 
+def branch_list(request):
+    branches = Branch.objects.all()
+    context = {
+        'title': 'Branches',
+        'item_list': branches,
+        'edit_url': 'edit_branch',
+    }
+    return render(request, 'branch_list.html', context)
+
+def add_branch_page(request):
+    return render(request, 'add_branch.html')
 
 
 
 
+def add_branch(request):
+    if request.method == 'POST':
+        form = BranchForm(request.POST)  # Bind the form to the POST data
+        if form.is_valid():  # Validate the form
+            form.save()  # Save the form data to the database
+            messages.success(request, 'Branch added successfully!')
+            return redirect('branch_list')  # Redirect to the branch list page
+    else:
+        form = BranchForm()  # Create an empty form for GET requests
+
+    # Render the form in the template
+    return render(request, 'add_branch.html', {'form': form})
+
+def edit_branch(request, id):
+    branch = get_object_or_404(Branch, id=id)
+    if request.method == 'POST':
+        form = BranchForm(request.POST, instance=branch)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Branch updated successfully!')
+            return redirect('branch_list')
+    else:
+        form = BranchForm(instance=branch)
+    return render(request, 'edit_branch.html', {'form': form, 'branch': branch})
+#---------------------------------------------------------------------------------------------
+
+def user_profile_list(request):
+    user_profiles = UserProfile.objects.all()
+    context = {
+        'title': 'User Profiles',
+        'item_list': user_profiles,
+        'edit_url': 'edit_user_profile',
+    }
+    return render(request, 'user_profile_list.html', context)
+
+def add_user_profile_page(request):
+    users = User.objects.all()
+    branches = Branch.objects.all()
+    departments = Department.objects.all()
+    roles = Role.objects.all()
+    return render(request, 'add_user_profile.html', {
+        'users': users,
+        'branches': branches,
+        'departments': departments,
+        'roles': roles,
+    })
+
+def add_user_profile(request):
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'User Profile added successfully!')
+            return redirect('user_profile_list')
+    else:
+        form = UserProfileForm()
+    return render(request, 'add_user_profile.html', {'form': form})
+
+def edit_user_profile(request, id):
+    user_profile = get_object_or_404(UserProfile, id=id)
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, instance=user_profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'User Profile updated successfully!')
+            return redirect('user_profile_list')
+    else:
+        form = UserProfileForm(instance=user_profile)
+    return render(request, 'edit_user_profile.html', {'form': form, 'user_profile': user_profile})
 
 @login_required()
 def dashboard(request):

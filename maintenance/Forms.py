@@ -1,6 +1,5 @@
 from django import forms
-from .models import Equipment, SparePart, Manufacturer, DecommissionedEquipment, MaintenanceType ,MaintenanceRecord, WorkOrder, SparePartUsage, Chemical
-
+from .models import Equipment, SparePart, Manufacturer, DecommissionedEquipment, MaintenanceType ,MaintenanceRecord, WorkOrder, SparePartUsage, Chemical, Branch, UserProfile
 class EquipmentForm(forms.ModelForm):
     class Meta:
         model = Equipment
@@ -183,9 +182,27 @@ class ChemicalForm(forms.ModelForm):
         # Add Bootstrap 'form-control' class to all fields
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
+            
+class BranchForm(forms.ModelForm):
+    class Meta:
+        model = Branch
+        fields = ['name']
+
+    def __init__(self, *args, **kwargs):
+        super(BranchForm, self).__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.update({'class': 'form-control'})
 
 
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['user', 'branch', 'department', 'role']
 
+    def __init__(self, *args, **kwargs):
+        super(UserProfileForm, self).__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.update({'class': 'form-control'})
 
 
 

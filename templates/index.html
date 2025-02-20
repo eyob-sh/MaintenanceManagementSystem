@@ -301,7 +301,7 @@
       </li><!-- End Equipments Nav -->
 
       <li class="nav-item">
-        <a class="nav-link " href="">
+        <a class="nav-link " href="{% url 'decommissioned_equipment_list' %}">
           <i class="bi bi-grid"></i>
           <span>Decomissioned Equipments</span>
         </a>
@@ -358,32 +358,21 @@
       </li><!-- End Spare part Usage Nav -->
 
 
-      <li class="nav-item">
-        <a class="nav-link " href="{% url 'register' %}">
-          <i class="bi bi-grid"></i>
-          <span>Add User</span>
-        </a>
-      </li><!-- End Add User Nav -->
+      
 
 
+      
       <li class="nav-item">
-        <a class="nav-link " href="{% url 'add_branch_page' %}">
+        <a class="nav-link " href="{% url 'user_profile_list' %}">
           <i class="bi bi-grid"></i>
-          <span>Add Branch</span>
-        </a>
-      </li><!-- End Add Branch Nav -->
-
-      <li class="nav-item">
-        <a class="nav-link " href="{% url 'add_manufacturer_page' %}">
-          <i class="bi bi-grid"></i>
-          <span>Add Manufacturer</span>
+          <span>Users</span>
         </a>
       </li><!-- End Add Manufacturer Nav -->
 
       <li class="nav-item">
-        <a class="nav-link " href="{% url 'add_equipment_page' %}">
+        <a class="nav-link " href="{% url 'branch_list' %}">
           <i class="bi bi-grid"></i>
-          <span>Add equipment</span>
+          <span>Branch</span>
         </a>
       </li><!-- End Add Manufacturer Nav -->
 
