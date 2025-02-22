@@ -1,11 +1,9 @@
 from django.contrib import admin
-from .models import Branch, Department, Role, UserProfile, Manufacturer, Equipment, SparePart
+from .models import Branch, UserProfile, Manufacturer, Equipment, SparePart
 from .models import DecommissionedEquipment, MaintenanceType ,MaintenanceRecord, WorkOrder, SparePartUsage, Chemical
 
 # Register your models here.
 admin.site.register(Branch)
-admin.site.register(Department)
-admin.site.register(Role)
 admin.site.register(UserProfile)
 admin.site.register(Manufacturer)
 admin.site.register(Equipment)

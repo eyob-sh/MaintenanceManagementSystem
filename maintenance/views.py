@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.hashers import make_password
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.http import Http404
 from datetime import datetime
 from .Forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ChemicalForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTypeForm, BranchForm, UserProfileForm
@@ -70,44 +71,44 @@ def logoutUser(request):
     return redirect('login')
 
 
-def register(request):
-    branches = Branch.objects.all
-    return render (request, 'register_page.html', {'branches': branches})
+# def register(request):
+#     branches = Branch.objects.all
+#     return render (request, 'register_page.html', {'branches': branches})
 
 
-def add_user(request):
-    if request.method == 'POST':
-        first_name = request.POST.get('firstName')
-        last_name = request.POST.get('lastName')
-        username = request.POST.get('Username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        role = request.POST.get('role')  # Now this is a string
-        department = request.POST.get('department')
-        branch_id = request.POST.get('branch')
+# def add_user(request):
+#     if request.method == 'POST':
+#         first_name = request.POST.get('firstName')
+#         last_name = request.POST.get('lastName')
+#         username = request.POST.get('Username')
+#         email = request.POST.get('email')
+#         password = request.POST.get('password')
+#         role = request.POST.get('role')  # Now this is a string
+#         department = request.POST.get('department')
+#         branch_id = request.POST.get('branch')
 
-        # Create the User
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name
-        )
+#         # Create the User
+#         user = User.objects.create_user(
+#             username=username,
+#             email=email,
+#             password=password,
+#             first_name=first_name,
+#             last_name=last_name
+#         )
 
-        # Create UserProfile
-        user_profile = UserProfile(
-            user=user,
-            branch_id=branch_id,
-            department=department,
-            role=role  # Store the role as a string
-        )
-        user_profile.save()
+#         # Create UserProfile
+#         user_profile = UserProfile(
+#             user=user,
+#             branch_id=branch_id,
+#             department=department,
+#             role=role  # Store the role as a string
+#         )
+#         user_profile.save()
 
-        return redirect('dashboard')  # Redirect to a success page or user list
+#         return redirect('')  # Redirect to a success page or user list
 
-    # For GET requests, render the register page
-    return render(request, 'register_page.html')
+#     # For GET requests, render the register page
+#     return render(request, 'register_page.html')
 
 
 # def add_branch_page(request):
@@ -120,6 +121,41 @@ def add_user(request):
 #             Branch.objects.create(name=branch_name)  # Create a new Branch object
 #             messages.success(request, 'Branch added successfully')
 #     return render(request, 'branch.html')  # Render the form if GET request
+
+@login_required
+def my_profile(request):
+    # Get the current user's profile
+    user_profile = UserProfile.objects.get(user=request.user)
+    
+    if request.method == 'POST':
+        # Handle email update
+        new_email = request.POST.get('email')
+        if new_email and new_email != request.user.email:
+            # Update the user's email
+            request.user.email = new_email
+            request.user.save()
+            messages.success(request, 'Email updated successfully!')
+
+        # Handle password update
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirmPassword')
+        if password and confirm_password:
+            if password == confirm_password:
+                # Update the user's password
+                request.user.password = make_password(password)
+                request.user.save()
+                messages.success(request, 'Password updated successfully!')
+            else:
+                messages.error(request, 'Passwords do not match!')
+                return redirect('my_profile')
+        
+        messages.success(request, 'Profile updated successfully!')
+        return redirect('my_profile')
+    
+    return render(request, 'my_profile.html', {
+        'user_profile': user_profile,
+    })
+
 
 def manufacturer_list(request):
     manufacturers = Manufacturer.objects.all()
@@ -895,10 +931,7 @@ def edit_maintenance(request, id):
                         spare_part.quantity -= usage.quantity_used  # Deduct the old quantity (undo Step 1)
                         spare_part.save()
                     return render(request, 'edit_maintenance.html', {
-                        'form': form,
                         'maintenance': maintenance,
-                        'spare_parts': spare_parts,
-                        'spare_part_usages': spare_part_usages,
                         'spare_parts': spare_parts,
                         'spare_part_usages': spare_part_usages,
                     })
@@ -937,38 +970,6 @@ def edit_maintenance(request, id):
         'spare_parts': spare_parts,
         'spare_part_usages': spare_part_usages,
     })
-# path('manufacturer/', views.manufacturer_list, name='manufacturer_list'),
-# path('manufacturer/edit/<int:id>/', views.edit_manufacturer, name='edit_manufacturer'),
-
-# path('add_work_order_page/', views.add_work_order_page, name = "add_work_order_page"),
-
-#     path('add_work_order/', views.add_work_order, name = "add_work_order"),
-    
-#     path('work_order/', views.work_order_list, name='work_order_list'),
-#     path('work_order/edit/<int:id>/', views.edit_work_order, name='edit_work_order'),
-
-# #---------------------------------------------------------------------------------------------------------
-# path('add_spare_part_usage_page/', views.add_spare_part_usage_page, name = "add_spare_part_usage_page"),
-
-#     path('add_spare_part_usage/', views.add_spare_part_usage, name = "add_spare_part_usage"),
-    
-#     path('spare_part_usage/', views.spare_part_usage_list, name='spare_part_usage_list'),
-#     path('spare_part_usage/edit/<int:id>/', views.edit_spare_part_usage, name='edit_spare_part_usage'),
-
-# #-----------------------------------------------------------------------------------------------------
-# path('add_decommissioned_equipment_page/', views.add_decommissioned_equipment_page, name = "add_decommissioned_equipment_page"),
-
-#     path('add_decommissioned_equipment/', views.add_decommissioned_equipment, name = "add_decommissioned_equipment"),
-    
-#     path('decommissioned_equipment/', views.decommissioned_equipment_list, name='decommissioned_equipment_list'),
-#     path('decommissioned_equipment/edit/<int:id>/', views.edit_decommissioned_equipment, name='edit_decommissioned_equipment'),
-# #----------------------------------------------------------------------------------------------------------------
-# path('add_maintenance_type_page/', views.add_maintenance_type_page, name = "add_maintenance_type_page"),
-
-#     path('add_maintenance_type/', views.add_maintenance_type, name = "add_maintenance_type"),
-    
-#     path('maintenance_type/', views.maintenance_type_list, name='maintenance_type_list'),
-#     path('maintenance_type/edit/<int:id>/', views.edit_maintenance_type, name='edit_maintenance_type'),
 
 def branch_list(request):
     branches = Branch.objects.all()
@@ -1021,39 +1022,98 @@ def user_profile_list(request):
     return render(request, 'user_profile_list.html', context)
 
 def add_user_profile_page(request):
-    users = User.objects.all()
+    # Fetch all branches from the database
     branches = Branch.objects.all()
-    departments = Department.objects.all()
-    roles = Role.objects.all()
-    return render(request, 'add_user_profile.html', {
-        'users': users,
-        'branches': branches,
-        'departments': departments,
-        'roles': roles,
-    })
+
+    # Debugging: Print the choices to the console
+    print("Roles:", UserProfile.ROLE_CHOICES)
+    print("Branches:", branches)
+
+    # Pass the DEPARTMENT_CHOICES, ROLE_CHOICES, and branches to the template
+    context = {
+        'roles': UserProfile.ROLE_CHOICES,
+        'branches': branches,  # Pass the branches queryset
+    }
+    return render(request, 'add_user_profile.html', context)
+
 
 def add_user_profile(request):
     if request.method == 'POST':
-        form = UserProfileForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'User Profile added successfully!')
-            return redirect('user_profile_list')
-    else:
-        form = UserProfileForm()
-    return render(request, 'add_user_profile.html', {'form': form})
+        first_name = request.POST.get('firstName')
+        last_name = request.POST.get('lastName')
+        username = request.POST.get('username')
+        email = request.POST.get('email')  # Email is optional
+        password = request.POST.get('password')
+        role = request.POST.get('role')  # Role as a string
+        branch_id = request.POST.get('branch')
+        is_active = request.POST.get('is_active')  # Default to active
+        is_active = is_active.capitalize()
 
+        # Check if the username already exists
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists')
+            return redirect('add_user_profile_page')
+
+        # Create the User
+        user = User.objects.create_user(
+            username=username,
+            email=email,  # Email is optional
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=is_active  # Set user active status
+        )
+
+        # Create UserProfile
+        user_profile = UserProfile(
+            user=user,
+            branch_id=branch_id,
+            role=role  # Pass the role string
+        )
+        user_profile.save()
+
+        messages.success(request, 'User created successfully')
+        return redirect('user_profile_list')  # Redirect to the user list page
+
+    return render(request, 'add_user_profile.html')
 def edit_user_profile(request, id):
     user_profile = get_object_or_404(UserProfile, id=id)
+    
     if request.method == 'POST':
         form = UserProfileForm(request.POST, instance=user_profile)
         if form.is_valid():
-            form.save()
+            # Update the user's active status
+            is_active = request.POST.get('is_active', 'on') == 'on'
+            user_profile.user.is_active = is_active
+            user_profile.user.save()  # Save the User model
+
+            # Handle password update
+            password = request.POST.get('password')
+            confirm_password = request.POST.get('confirmPassword')
+            if password and confirm_password:
+                if password == confirm_password:
+                    # Update the user's password
+                    user_profile.user.password = make_password(password)
+                    user_profile.user.save()
+                    messages.success(request, 'Password updated successfully!')
+                else:
+                    messages.error(request, 'Passwords do not match!')
+                    return redirect('edit_user_profile', id=id)
+
+            form.save()  # Save the UserProfile model
             messages.success(request, 'User Profile updated successfully!')
             return redirect('user_profile_list')
     else:
         form = UserProfileForm(instance=user_profile)
-    return render(request, 'edit_user_profile.html', {'form': form, 'user_profile': user_profile})
+    
+    return render(request, 'edit_user_profile.html', {
+        'form': form,
+        'user_profile': user_profile,
+    })
+def check_username(request):
+    username = request.GET.get('username')
+    exists = User.objects.filter(username=username).exists()
+    return JsonResponse({'exists': exists})
 
 @login_required()
 def dashboard(request):

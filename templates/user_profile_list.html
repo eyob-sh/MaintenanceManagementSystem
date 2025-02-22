@@ -27,7 +27,7 @@
                     <div class="card-body">
 
                         <div class="d-flex justify-content-end mb-3" style="margin-top: 20px;">
-                            <a href="{% url 'register' %}" class="btn btn-success bg-success">
+                            <a href="{% url 'add_user_profile_page' %}" class="btn btn-success bg-success">
                                 <i class="bi bi-plus"></i> Add User 
                             </a>
                         </div>
@@ -37,7 +37,6 @@
                                 <tr>
                                     <th>User</th>
                                     <th>Branch</th>
-                                    <th>Department</th>
                                     <th>Role</th>
                                     <th>Actions</th>
                                 </tr>
@@ -47,15 +46,14 @@
                                 <tr>
                                     <td>{{ user_profile.user.username }}</td>
                                     <td>{{ user_profile.branch.name }}</td>
-                                    <td>{{ user_profile.department.name }}</td>
-                                    <td>{{ user_profile.role.name }}</td>
+                                    <td>{{ user_profile.get_role_display }}</td>  <!-- Display role -->
                                     <td>
                                         <a href="{% url 'edit_user_profile' user_profile.id %}" class="btn btn-warning">Edit</a>
                                     </td> 
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="5" class="text-center">No user profiles found.</td>
+                                    <td colspan="4" class="text-center">No user profiles found.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

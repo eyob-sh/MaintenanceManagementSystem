@@ -199,7 +199,7 @@ class BranchForm(forms.ModelForm):
 class UserProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
-        fields = ['user', 'branch', 'department', 'role']
+        fields = ['user', 'branch',  'role']
 
     def __init__(self, *args, **kwargs):
         super(UserProfileForm, self).__init__(*args, **kwargs)

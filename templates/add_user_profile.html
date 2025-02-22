@@ -5,112 +5,198 @@
 
 <main id="main" class="main">
 
-    <!-- Messages Block -->
-    {% if messages %}
-    <div class="messages">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} text-center mb-2">
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    <!-- End Messages Block -->
+  <div class="pagetitle">
+    <h1>Add User</h1>
+  </div><!-- End Page Title -->
 
-    <div class="pagetitle">
-        <h1>Add User Profile</h1>
-    </div><!-- End Page Title -->
+  <section class="section">
+    <div class="row">
+      <div class="col-lg-10 mx-auto">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title"></h5>
 
-    <section class="section">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title"></h5>
+            <!-- General Form Elements -->
+            <form method="post" autocomplete="off" action="{% url 'add_user_profile' %}" id="userForm">
+              <input autocomplete="false" name="hidden" type="text" style="display:none;">
+              {% csrf_token %}
 
-                        <!-- General Form Elements -->
-                        <form method="POST" id="userProfileForm" novalidate>
-                            {% csrf_token %}
+              <!-- First Name and Last Name -->
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="firstName" class="form-label">First name</label>
+                  <input type="text" class="form-control" id="firstName" name="firstName" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="lastName" class="form-label">Last name</label>
+                  <input type="text" class="form-control" id="lastName" name="lastName" required>
+                </div>
+              </div>
 
-                            <div class="row">
-                                <!-- User -->
-                                <div class="col-md-6">
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_user" class="form-label">User</label>
-                                            {{ form.user }}
-                                            <div class="invalid-feedback">Please select a user.</div>
-                                        </div>
-                                    </div>
-                                </div>
+              <!-- Username -->
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="username" class="form-label">Username</label>
+                  <input type="text" class="form-control" id="username" name="username" readonly required>
+                  <div id="usernameError" class="text-danger"></div>
+                </div>
+                <div class="col-md-6">
+                  <label for="email" class="form-label">Email</label>
+                  <input type="email" class="form-control" name="email" id="email" autocomplete="off">
+                </div>
+              </div>
 
-                                <!-- Branch -->
-                                <div class="col-md-6">
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_branch" class="form-label">Branch</label>
-                                            {{ form.branch }}
-                                            <div class="invalid-feedback">Please select a branch.</div>
-                                        </div>
-                                    </div>
-                                </div>
+              <!-- Password and Confirm Password -->
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="password" class="form-label">Password</label>
+                  <div class="input-group">
+                    <input type="password" class="form-control" id="password" name="password" required autocomplete="new-password">
+                    <span class="input-group-text" id="togglePassword">
+                      <i class="bi bi-eye"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label for="confirmPassword" class="form-label">Confirm Password</label>
+                  <div class="input-group">
+                    <input type="password" class="form-control" id="confirmPassword" required>
+                    <span class="input-group-text" id="toggleConfirmPassword">
+                      <i class="bi bi-eye"></i>
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-                                <!-- Department -->
-                                <div class="col-md-6">
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_department" class="form-label">Department</label>
-                                            {{ form.department }}
-                                            <div class="invalid-feedback">Please select a department.</div>
-                                        </div>
-                                    </div>
-                                </div>
+              <!-- Role -->
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">Role</label>
+                <div class="col-sm-7">
+                  <select id="role" class="form-select" name="role" required>
+                    <option value="" selected>Select Role</option>
+                    {% for value, label in roles %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
 
-                                <!-- Role -->
-                                <div class="col-md-6">
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_role" class="form-label">Role</label>
-                                            {{ form.role }}
-                                            <div class="invalid-feedback">Please select a role.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+              <!-- Branch -->
+              <div class="row mb-3" id="branchField">
+                <label class="col-sm-2 col-form-label">Branch</label>
+                <div class="col-sm-7">
+                  <select id="branch" class="form-select" name="branch" required>
+                    <option value="" selected>Select Branch</option>
+                    {% for branch in branches %}
+                    <option value="{{ branch.id }}">{{ branch.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
 
-                            <!-- Submit Button -->
-                            <div class="row mb-3">
-                                <div class="col-md-12 text-center">
-                                    <button type="submit" class="btn btn-primary">Submit</button>
-                                </div>
-                            </div>
-                        </form><!-- End General Form Elements -->
+              <!-- Active Checkbox -->
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">Active</label>
+                <div class="col-sm-7">
+                    <div class="form-check">
+                        <!-- Hidden input to send False when unchecked -->
+                        <input type="hidden" name="is_active" value="False">
+                        <input class="form-check-input" type="checkbox" id="isActive" name="is_active" value="True" checked>
+                        <label class="form-check-label" for="isActive">
+                            Make user active
+                        </label>
                     </div>
                 </div>
             </div>
+
+              <!-- Submit Button -->
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label"></label>
+                <div class="col-sm-10">
+                  <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+              </div>
+            </form>
+          </div>
         </div>
-    </section>
+      </div>
+    </div>
+  </section>
 
 </main><!-- End #main -->
 
-<!-- Add JavaScript for Front-End Validation -->
+<!-- JavaScript for Username Generation and Password Toggle -->
 <script>
-    (function () {
-        'use strict';
+  document.addEventListener('DOMContentLoaded', function () {
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
+    const usernameInput = document.getElementById('username');
+    const usernameError = document.getElementById('usernameError');
 
-        // Fetch the form element
-        const form = document.getElementById('userProfileForm');
+    // Function to generate username
+    function generateUsername(firstName, lastName) {
+      return `${firstName}.${lastName}`.toLowerCase();
+    }
 
-        // Add event listener for form submission
-        form.addEventListener('submit', function (event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
+    // Function to check if username exists
+    async function checkUsernameExists(username) {
+      const response = await fetch(`/check-username/?username=${username}`);
+      const data = await response.json();
+      return data.exists;
+    }
 
-            form.classList.add('was-validated');
-        }, false);
-    })();
+    // Function to update username with a suffix if it exists
+    async function updateUsername() {
+      const firstName = firstNameInput.value.trim();
+      const lastName = lastNameInput.value.trim();
+
+      if (firstName && lastName) {
+        let baseUsername = generateUsername(firstName, lastName);
+        let username = baseUsername;
+        let suffix = 1;
+
+        // Check if the username already exists and append a suffix if necessary
+        while (await checkUsernameExists(username)) {
+          username = `${baseUsername}${suffix}`;
+          suffix++;
+        }
+
+        usernameInput.value = username;
+        usernameError.textContent = '';
+      } else {
+        usernameInput.value = '';
+      }
+    }
+
+    // Event listeners for first name and last name inputs
+    firstNameInput.addEventListener('input', updateUsername);
+    lastNameInput.addEventListener('input', updateUsername);
+
+    // Password toggle functionality
+    document.getElementById('togglePassword').addEventListener('click', function () {
+      const passwordInput = document.getElementById('password');
+      const icon = this.querySelector('i');
+      togglePasswordVisibility(passwordInput, icon);
+    });
+
+    document.getElementById('toggleConfirmPassword').addEventListener('click', function () {
+      const confirmPasswordInput = document.getElementById('confirmPassword');
+      const icon = this.querySelector('i');
+      togglePasswordVisibility(confirmPasswordInput, icon);
+    });
+
+    function togglePasswordVisibility(input, icon) {
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+      }
+    }
+  });
 </script>
 
 {% endblock %}

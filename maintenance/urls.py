@@ -4,8 +4,8 @@ from . import views
 urlpatterns = [
     path('login/', views.loginPage, name = "login"),
     path('logout/', views.logoutUser,  name = "logout" ),
-    path('register/', views.register, name = "register"),
-    path('add_user/', views.add_user, name = "add_user"),
+    # path('register/', views.register, name = "register"),
+    # path('add_user/', views.add_user, name = "add_user"),
     # path('add_branch_page/', views.add_branch_page, name = "add_branch_page"),
     # path('add_branch/', views.add_branch, name = "add_branch"),
     #----------------------------------------------------------------------------------------------------
@@ -94,6 +94,7 @@ path('add_branch_page/', views.add_branch_page, name = "add_branch"),
     path('branch/edit/<int:id>/', views.edit_branch, name='edit_branch'),
 
 #---------------------------------------------------------------------------------------------------------
+ path('my_profile/', views.my_profile, name='my_profile'),
 
 path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_profile_page"),
 
@@ -101,6 +102,7 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
     
     path('user_profile/', views.user_profile_list, name='user_profile_list'),
     path('user_profile/edit/<int:id>/', views.edit_user_profile, name='edit_user_profile'),
+     path('check-username/', views.check_username, name='check_username'),
 
     path('dashboard', views.dashboard, name="dashboard"),
 ]

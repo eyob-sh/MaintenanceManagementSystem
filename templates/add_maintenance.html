@@ -34,7 +34,7 @@
 
                             <div class="row">
                                 <!-- Left Column -->
-                                <div class="col-md-6">
+                                <div class="col-md-7">
                                     <!-- Equipment -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
@@ -158,7 +158,7 @@
                                 </div>
 
                                 <!-- Right Column -->
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <!-- Status -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
@@ -348,5 +348,20 @@
         });
     });
 </script>
+
+<!-- JavaScript to Enable Disabled Fields Before Submission -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const form = document.getElementById('userForm');
+  
+      form.addEventListener('submit', function (event) {
+        // Enable the disabled department field before submission
+        const departmentField = document.getElementById('department');
+        if (departmentField.disabled) {
+          departmentField.disabled = false;
+        }
+      });
+    });
+  </script>
 
 {% endblock %}
