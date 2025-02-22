@@ -837,59 +837,106 @@ def edit_maintenance(request, id):
 
     if request.method == 'POST':
         # Get form data
-        form = MaintenanceRecordForm(request.POST, instance=maintenance)
-        if form.is_valid():
-            # Save the form data
-            maintenance = form.save()
+        equipment_id = request.POST.get('equipment')
+        assigned_technicians = request.POST.getlist('assigned_technicians')
+        branch_id = request.POST.get('branch')
+        maintenance_type_id = request.POST.get('maintenance_type')
+        spare_parts_post = request.POST.getlist('spare_parts[]')  # List of spare part IDs from the form
+        spare_part_quantities = request.POST.getlist('spare_part_quantities[]')  # List of quantities from the form
+        remark = request.POST.get('remark')
+        procedure = request.POST.get('procedure')
+        problems = request.POST.get('problems')
+        status = request.POST.get('status')
 
-            # Handle spare parts and quantities
-            spare_parts = request.POST.getlist('spare_parts[]')  # List of spare part IDs
-            spare_part_quantities = request.POST.getlist('spare_part_quantities[]')  # List of quantities
+        # Validate required fields
+        if not equipment_id or not assigned_technicians or not branch_id or not maintenance_type_id or not status:
+            messages.error(request, 'Please fill out all required fields.')
+            return render(request, 'edit_maintenance.html', {
+                'maintenance': maintenance,
+                'spare_parts': spare_parts,
+                'spare_part_usages': spare_part_usages,
+            })
 
-            # Clear existing spare part usages
-            SparePartUsage.objects.filter(maintenance_record=maintenance).delete()
+        try:
+            # Update the MaintenanceRecord object
+            maintenance.equipment_id = equipment_id
+            maintenance.branch_id = branch_id
+            maintenance.maintenance_type_id = maintenance_type_id
+            maintenance.remark = remark
+            maintenance.procedure = procedure
+            maintenance.problems = problems
+            maintenance.status = status
+            maintenance.save()
+            maintenance.assigned_technicians.set(assigned_technicians)
 
-            # Add new spare part usages
-            for spare_part_id, quantity_used in zip(spare_parts, spare_part_quantities):
+            # Step 1: Add back the old quantities to the spare parts
+            for usage in spare_part_usages:
+                spare_part = usage.spare_part
+                spare_part.quantity += usage.quantity_used  # Add back the old quantity
+                spare_part.save()
+
+            # Step 2: Process the new spare parts and quantities
+            for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
                 if not spare_part_id or not quantity_used:
                     continue  # Skip empty fields
 
-                spare_part = SparePart.objects.get(id=spare_part_id)
+                spare_part_id = int(spare_part_id)
                 quantity_used = int(quantity_used)
 
+                # Get the spare part
+                spare_part = SparePart.objects.get(id=spare_part_id)
+
+                # Check if the new quantity exceeds the available stock
                 if spare_part.quantity < quantity_used:
-                    messages.error(request, f'Not enough quantity for {spare_part.name}.')
+                    messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
+                    # Rollback the old quantities
+                    for usage in spare_part_usages:
+                        spare_part = usage.spare_part
+                        spare_part.quantity -= usage.quantity_used  # Deduct the old quantity (undo Step 1)
+                        spare_part.save()
                     return render(request, 'edit_maintenance.html', {
                         'form': form,
                         'maintenance': maintenance,
                         'spare_parts': spare_parts,
                         'spare_part_usages': spare_part_usages,
+                        'spare_parts': spare_parts,
+                        'spare_part_usages': spare_part_usages,
                     })
 
-                # Deduct the quantity from the spare part
+                # Deduct the new quantity from the spare part
                 spare_part.quantity -= quantity_used
                 spare_part.save()
 
-                # Create SparePartUsage record
-                SparePartUsage.objects.create(
+                # Create or update the SparePartUsage record
+                SparePartUsage.objects.update_or_create(
                     maintenance_record=maintenance,
                     spare_part=spare_part,
-                    quantity_used=quantity_used,
+                    defaults={'quantity_used': quantity_used},
                 )
+
+            # Step 3: Delete any remaining spare part usages that were not in the form
+            SparePartUsage.objects.filter(maintenance_record=maintenance).exclude(
+                spare_part_id__in=[int(id) for id in spare_parts_post]
+            ).delete()
 
             messages.success(request, 'Maintenance record updated successfully!')
             return redirect('maintenance_list')
-    else:
-        # Pre-fill the form with the current data
-        form = MaintenanceRecordForm(instance=maintenance)
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            return render(request, 'edit_maintenance.html', {
+                'maintenance': maintenance,
+                'spare_parts': spare_parts,
+                'spare_part_usages': spare_part_usages,
+            })
 
+    # For GET requests, pre-fill the form and spare parts
+    form = MaintenanceRecordForm(instance=maintenance)
     return render(request, 'edit_maintenance.html', {
         'form': form,
         'maintenance': maintenance,
         'spare_parts': spare_parts,
         'spare_part_usages': spare_part_usages,
     })
-
 # path('manufacturer/', views.manufacturer_list, name='manufacturer_list'),
 # path('manufacturer/edit/<int:id>/', views.edit_manufacturer, name='edit_manufacturer'),
 

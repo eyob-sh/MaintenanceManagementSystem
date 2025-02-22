@@ -73,6 +73,36 @@
                                     </div>
 
                                     <!-- Spare Parts Section -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label class="form-label">Spare Parts</label>
+                                            <!-- Initial Spare Part and Quantity Row -->
+                                            {% for usage in spare_part_usages %}
+                                            <div class="row mb-3 spare-part-row">
+                                                <div class="col-md-6">
+                                                    <select class="form-select spare-part-select" name="spare_parts[]">
+                                                        <option value="">Select Spare Part</option>
+                                                        {% for spare_part in spare_parts %}
+                                                        <option value="{{ spare_part.id }}"
+                                                            data-quantity="{{ spare_part.quantity }}" 
+                                                            {% if usage.spare_part.id == spare_part.id %}selected{% endif %}>
+                                                            {{ spare_part.name }} ({{ spare_part.quantity }} available)
+                                                        </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <input type="number" class="form-control spare-part-quantity"
+                                                        name="spare_part_quantities[]" min="1" placeholder="Quantity"
+                                                        value="{{ usage.quantity_used }}">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <button type="button"
+                                                        class="btn btn-danger remove-spare-part">Remove</button>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <!-- End Initial Row -->
                                    <!-- Spare Parts Section -->
 <div class="row mb-3">
     <div class="col-md-12">
@@ -229,20 +259,23 @@
             let isValid = true;
             const errorMessages = [];
 
-            // Validate spare parts and quantities
-            document.querySelectorAll('.spare-part-row').forEach(row => {
-                const sparePartSelect = row.querySelector('.spare-part-select');
-                const quantityInput = row.querySelector('.spare-part-quantity');
-                const selectedSparePart = sparePartSelect.options[sparePartSelect.selectedIndex];
-                const availableQuantity = parseInt(selectedSparePart.getAttribute('data-quantity'));
-                const quantityUsed = parseInt(quantityInput.value);
+            // Validate required fields (excluding spare part quantities)
+            const requiredFields = [
+                'equipment',
+                'assigned_technicians',
+                'branch',
+                'maintenance_type',
+                'status',
+            ];
 
-                if (selectedSparePart.value && quantityUsed > availableQuantity) {
+            requiredFields.forEach(fieldName => {
+                const field = form.querySelector(`[name="${fieldName}"]`);
+                if (!field.value) {
                     isValid = false;
-                    errorMessages.push(`Not enough quantity for ${selectedSparePart.text}. Available: ${availableQuantity}`);
-                    quantityInput.classList.add('is-invalid');
+                    errorMessages.push(`Please fill out the ${fieldName.replace('_', ' ')} field.`);
+                    field.classList.add('is-invalid');
                 } else {
-                    quantityInput.classList.remove('is-invalid');
+                    field.classList.remove('is-invalid');
                 }
             });
 
