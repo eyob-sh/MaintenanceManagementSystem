@@ -73,46 +73,48 @@
                                     </div>
 
                                     <!-- Spare Parts Section -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label class="form-label">Spare Parts</label>
-                                            <!-- Initial Spare Part and Quantity Row -->
-                                            <div class="row mb-3 spare-part-row">
-                                                <div class="col-md-6">
-                                                    <select class="form-select spare-part-select" name="spare_parts[]">
-                                                        <option value="">Select Spare Part</option>
-                                                        {% for spare_part in spare_parts %}
-                                                        <option value="{{ spare_part.id }}"
-                                                            data-quantity="{{ spare_part.quantity }}">
-                                                            {{ spare_part.name }} ({{ spare_part.quantity }} available)
-                                                        </option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <input type="number" class="form-control spare-part-quantity"
-                                                        name="spare_part_quantities[]" min="1" placeholder="Quantity">
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <button type="button" class="btn btn-danger remove-spare-part"
-                                                        disabled>Remove</button>
-                                                </div>
-                                            </div>
-                                            <!-- End Initial Row -->
+                                   <!-- Spare Parts Section -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <label class="form-label">Spare Parts</label>
+        <!-- Initial Spare Part and Quantity Row -->
+        {% for usage in spare_part_usages %}
+        <div class="row mb-3 spare-part-row">
+            <div class="col-md-6">
+                <select class="form-select spare-part-select" name="spare_parts[]">
+                    <option value="">Select Spare Part</option>
+                    {% for spare_part in spare_parts %}
+                    <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}"
+                        {% if usage.spare_part.id == spare_part.id %}selected{% endif %}>
+                        {{ spare_part.name }} ({{ spare_part.quantity }} available)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]"
+                    min="1" placeholder="Quantity" value="{{ usage.quantity_used }}">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger remove-spare-part">Remove</button>
+            </div>
+        </div>
+        {% endfor %}
+        <!-- End Initial Row -->
 
-                                            <!-- Container for Additional Rows -->
-                                            <div id="additional-spare-parts"></div>
+        <!-- Container for Additional Rows -->
+        <div id="additional-spare-parts"></div>
 
-                                            <!-- Add More Button -->
-                                            <div class="row mb-3">
-                                                <div class="col-md-12">
-                                                    <button type="button" class="btn btn-success" id="add-spare-part">
-                                                        <i class="bi bi-plus"></i> Add Spare Part
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+        <!-- Add More Button -->
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <button type="button" class="btn btn-success" id="add-spare-part">
+                    <i class="bi bi-plus"></i> Add Spare Part
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
                                     <!-- Error Message Container -->
                                     <div id="errorMessages" class="alert alert-danger d-none mb-3"></div>
