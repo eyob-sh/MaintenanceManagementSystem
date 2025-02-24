@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Branch, UserProfile, Manufacturer, Equipment, SparePart
-from .models import DecommissionedEquipment, MaintenanceType ,MaintenanceRecord, WorkOrder, SparePartUsage, Chemical, Notification
+from .models import DecommissionedEquipment, MaintenanceType ,MaintenanceRecord, WorkOrder, SparePartUsage, Chemical, Notification, RestockSparePart
 
 # Register your models here.
 admin.site.register(Branch)
@@ -15,3 +15,4 @@ admin.site.register(WorkOrder)
 admin.site.register(SparePartUsage)
 admin.site.register(Chemical)
 admin.site.register(Notification)
+admin.site.register(RestockSparePart)

@@ -1,0 +1,74 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
+
+    <div class="pagetitle">
+        <h1>Restock Spare Part</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+
+                <div class="card">
+                    <div class="card-body">
+
+                        <h5 class="card-title"></h5>
+
+                        <!-- Restock Form -->
+                        <form method="post"  action="{% url 'restock_spare_part' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <!-- Spare Part Dropdown -->
+                            <div class="mb-3">
+                                <label for="spare_part" class="form-label">Select Spare Part</label>
+                                <select name="spare_part" id="spare_part" class="form-select" required>
+                                    <option value="" disabled selected>Select a spare part</option>
+                                    {% for spare_part in spare_parts %}
+                                    <option value="{{ spare_part.id }}">{{ spare_part.name }} ({{ spare_part.quantity }} in stock)</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Quantity Field -->
+                            <div class="mb-3">
+                                <label for="quantity" class="form-label">Quantity to Restock</label>
+                                <input type="number" name="quantity" id="quantity" class="form-control" min="1" required>
+                            </div>
+
+                            <!--Attachment Field -->
+                            <div class="mb-3">
+                                <label for="attachment" class="form-label">Attachment (Optional)</label>
+                                <input type="file" name="attachment" id="attachment" class="form-control">
+                            </div> 
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="btn btn-primary">Restock</button>
+                            <a href="{% url 'restock_list' %}" class="btn btn-secondary">Cancel</a>
+                        </form>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+</main><!-- End #main -->
+
+{% endblock %}

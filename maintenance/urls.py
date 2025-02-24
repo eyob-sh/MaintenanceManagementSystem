@@ -114,7 +114,7 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
     
     path('accept_work_order/<int:work_order_id>/', views.accept_work_order, name='accept_work_order'),
     path('complete_work_order/<int:work_order_id>/', views.complete_work_order, name='complete_work_order'),
-    path('approve_work_order/<int:maintenance_id>/', views.approve_work_order, name='approve_work_order'),    
+    path('approve_work_order/<int:work_order_id>/', views.approve_work_order, name='approve_work_order'),    
     
     #-----------------------------------------------------------------------------------------------------------
     path('mark_notification_as_read/<int:notification_id>/', views.mark_notification_as_read, name='mark_notification_as_read'),
@@ -122,5 +122,11 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
     path('maintenance_due/', views.maintenance_due, name='maintenance_due'),  
     
     path('low_spare_part/', views.low_spare_part, name='low_spare_part'),  
+
+     path('restock_list/', views.restock_list, name='restock_list'),
+    path('restock_spare_part/', views.restock_spare_part, name='restock_spare_part'),
+        path('restock_spare_part_page/', views.restock_spare_part_page, name='restock_spare_part_page'),
+
+
 
 ]

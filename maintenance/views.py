@@ -5,7 +5,9 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.http import Http404
 from datetime import datetime
-from .Forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ChemicalForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTypeForm, BranchForm, UserProfileForm
+from django.db.models import Count, Q
+from datetime import datetime, timedelta
+from .Forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ChemicalForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTypeForm, BranchForm, UserProfileForm, RestockSparePartForm
 
 from django.contrib.auth import authenticate, login, logout
 
@@ -327,6 +329,7 @@ def edit_work_order(request, id):
                 # Deduct the new quantity from the spare part
                 spare_part.quantity -= quantity_used
                 spare_part.save()
+                check_low_spare_parts(spare_part)
 
                 # Create or update the SparePartUsage record
                 SparePartUsage.objects.update_or_create(
@@ -1073,6 +1076,7 @@ def add_maintenance(request):
 
                 spare_part.quantity -= quantity_used
                 spare_part.save()
+                check_low_spare_parts(spare_part)
 
                 SparePartUsage.objects.create(
                     maintenance_record=maintenance,
@@ -1184,11 +1188,13 @@ def edit_maintenance(request, id):
                         spare_part = usage.spare_part
                         spare_part.quantity -= usage.quantity_used
                         spare_part.save()
+                        
                     return redirect(f'{request.path}?equipment={equipment_id}&maintenance_type={maintenance_type_id}&error=1')
 
                 # Deduct the new quantity from the spare part
                 spare_part.quantity -= quantity_used
                 spare_part.save()
+                check_low_spare_parts(spare_part)
 
                 # Create or update the SparePartUsage record
                 SparePartUsage.objects.update_or_create(
@@ -1392,14 +1398,14 @@ def check_username(request):
     exists = User.objects.filter(username=username).exists()
     return JsonResponse({'exists': exists})
 
-@login_required()
-def dashboard(request):
-    notifications = get_notifications(request.user)
+# @login_required()
+# def dashboard(request):
+#     notifications = get_notifications(request.user)
 
-    context = {
-    'active_page': 'dashboard', 'notifications':notifications}
+#     context = {
+#     'active_page': 'dashboard', 'notifications':notifications}
     
-    return render(request, 'dashboard.html', context)
+#     return render(request, 'dashboard.html', context)
 
 # @login_required()
 # def equipment(request):
@@ -1559,10 +1565,260 @@ def approve_work_order(request, work_order_id):
     
     return redirect('work_order_list')
 
-def maintenance_due(request):
+
+
+
+def dashboard(request):
     notifications = get_notifications(request.user)
 
-    return render(request,'maintenance_due.html', {'active_page':'maintenance_due','notifications':notifications})
+    user = request.user
+    user_role = user.userprofile.role
+    user_branch = user.userprofile.branch
+
+    context = {
+        'active_page': 'dashboard',
+        'user_role': user_role,
+        'user_branch': user_branch,
+        'notifications':notifications,
+        
+
+
+    }
+
+    # Common data for all roles
+    today = datetime.now().date()
+    last_week = today - timedelta(days=7)
+
+    # Role-specific data
+    if user_role in ['MD manager', 'TEC']:
+        # Equipment count for the user's branch
+        equipment_count = Equipment.objects.filter(branch=user_branch).count()
+
+        # Maintenance records not completed for the user's branch
+        maintenance_count = MaintenanceRecord.objects.filter(
+            branch=user_branch
+        ).exclude(status='Complete').count()
+
+        # Work orders not completed for the user's branch
+        work_order_count = WorkOrder.objects.filter(
+            branch=user_branch
+        ).exclude(status='Complete').count()
+
+        # Maintenance and work orders completed in the last week (for graph)
+        maintenance_completed = MaintenanceRecord.objects.filter(
+            branch=user_branch,
+            status='Complete',
+            # completion_date__gte=last_week
+        ).count()
+
+        work_order_completed = WorkOrder.objects.filter(
+            branch=user_branch,
+            status='Complete',
+            # completion_date__gte=last_week
+        ).count()
+
+        # Recent actions for the user
+        recent_actions = MaintenanceRecord.objects.filter(
+            assigned_technicians=user)
+        # .order_by('-created_at')[:5]
+
+        context.update({
+            'equipment_count': equipment_count,
+            'maintenance_count': maintenance_count,
+            'work_order_count': work_order_count,
+            'maintenance_completed': maintenance_completed,
+            'work_order_completed': work_order_completed,
+            'recent_actions': recent_actions,
+        })
+
+    elif user_role == 'MO':
+        # Data for all branches
+        equipment_count = Equipment.objects.count()
+        maintenance_count = MaintenanceRecord.objects.exclude(status='Complete').count()
+        work_order_count = WorkOrder.objects.exclude(status='Complete').count()
+
+        maintenance_completed = MaintenanceRecord.objects.filter(
+            status='Complete',
+            completion_date__gte=last_week
+        ).count()
+
+        work_order_completed = WorkOrder.objects.filter(
+            status='Complete',
+            completion_date__gte=last_week
+        ).count()
+
+        # Recent actions for all branches
+        recent_actions = MaintenanceRecord.objects.order_by('-created_at')[:5]
+
+        context.update({
+            'equipment_count': equipment_count,
+            'maintenance_count': maintenance_count,
+            'work_order_count': work_order_count,
+            'maintenance_completed': maintenance_completed,
+            'work_order_completed': work_order_completed,
+            'recent_actions': recent_actions,
+        })
+
+    elif user_role == 'CL':
+        # Work orders added by the client
+        work_orders = WorkOrder.objects.filter(requester=user)
+        work_order_count = work_orders.count()
+        completed_work_orders = work_orders.filter(status='Complete').count()
+
+        context.update({
+            'work_order_count': work_order_count,
+            'completed_work_orders': completed_work_orders,
+            'work_orders': work_orders,
+        })
+
+    elif user_role == 'AD':
+        # System-wide statistics
+        user_count = User.objects.count()
+        equipment_count = Equipment.objects.count()
+        branch_count = User.objects.values('userprofile__branch').distinct().count()
+
+        context.update({
+            'user_count': user_count,
+            'equipment_count': equipment_count,
+            'branch_count': branch_count,
+        })
+
+    return render(request, 'dashboard.html', context)
+
+def check_low_spare_parts(spare_part):
+    """
+    Check if the spare part quantity is below 5 and create a notification for the MD manager.
+    """
+    if spare_part.quantity < 5:
+        # Get the MD manager of the same branch
+        md_manager = User.objects.filter(
+            userprofile__branch=spare_part.branch,
+            userprofile__role='MD manager'
+        ).first()
+
+        if md_manager:
+            # Create a notification for the MD manager
+            Notification.objects.create(
+                user=md_manager,
+                type="low_spare_part",
+                message=f'Low stock alert: {spare_part.name} is below 5 in {spare_part.branch.name}.',
+            )
+
 def low_spare_part(request):
+    # Get the user's branch
+    user_branch = request.user.userprofile.branch
+
+    # Fetch spare parts with quantity below 5 for the user's branch
+    spare_parts = SparePart.objects.filter(branch=user_branch, quantity__lt=5)  # Changed variable name to match template
+
+    # Get notifications for the user
+    notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-timestamp')[:10]
+
+    context = {
+        'spare_parts': spare_parts,  # Changed variable name to match template
+        'active_page': 'low_spare_part',
+        'notifications': notifications,
+    }
+
+    return render(request, 'low_spare_part.html', context)
+
+
+
+def restock_spare_part(request):
     notifications = get_notifications(request.user)
-    return render(request, 'low_spare_part.html', {'active_page':'low_spare_part','notifications':notifications})
+
+    if request.method == 'POST':
+        selected_spare_part_id = request.POST.get('spare_part')  # Get the selected spare part ID
+        spare_part = get_object_or_404(SparePart, id=selected_spare_part_id)  # Fetch the spare part instance
+
+        form = RestockSparePartForm(request.POST, request.FILES)
+        if form.is_valid():
+            restock = form.save(commit=False)
+            restock.spare_part = spare_part  # Associate the restock with the spare part
+            restock.restock_date = timezone.now()  # Set the restock date to the current time
+            restock.save()
+
+            # Update the spare part quantity and last_restock_date
+            spare_part.quantity += restock.quantity
+            spare_part.last_restock_date = restock.restock_date
+            spare_part.save()
+
+            messages.success(request, f'{restock.quantity} units of {spare_part.name} restocked successfully!')
+            return redirect('spare_part_list')
+    else:
+        form = RestockSparePartForm()
+
+    # Pass a list of spare parts to the template
+    user_branch = request.user.userprofile.branch
+    spare_parts = SparePart.objects.filter(branch=user_branch)
+
+    context = {
+        'form': form,
+        'spare_parts': spare_parts,  # Ensure you pass all spare parts to the template
+        'active_page': 'spare_part_list',
+        'notifications': notifications,
+    }
+    return render(request, 'restock_spare_part.html', context)
+def restock_list(request):
+    # Get the user's branch
+    user_branch = request.user.userprofile.branch
+
+    # Fetch restock records for spare parts in the user's branch
+    restock_list = RestockSparePart.objects.filter(spare_part__branch=user_branch).order_by('-restock_date')
+
+    # Get notifications for the user
+    notifications = get_notifications(request.user)
+
+    context = {
+        'restock_list': restock_list,
+        'active_page': 'restock_list',
+        'notifications': notifications,
+        'title': 'Restock List',
+    }
+
+    return render(request, 'restock_list.html', context)
+
+
+def restock_spare_part_page(request):
+    notifications = get_notifications(request.user)
+
+    user_branch = request.user.userprofile.branch
+
+    context = {
+        'spare_parts': SparePart.objects.filter(branch=user_branch),  # Fetch spare parts for the branch
+        'active_page': 'spare_part_list',
+        'notifications': notifications,
+    }
+
+    return render(request, 'restock_spare_part.html', context)
+
+
+# def maintenance_due(request):
+#     notifications = get_notifications(request.user)
+
+#     return render(request,'maintenance_due.html', {'active_page':'maintenance_due','notifications':notifications})
+
+# def maintenance_due(request):
+#     user_branch = request.user.branch
+#     today = timezone.now().date()
+#     due_date = today + timedelta(days=5)
+
+#     due_equipment = Equipment.objects.filter(
+#         branch=user_branch,
+#         next_maintenance_date__lte=due_date,
+#         next_maintenance_date__gte=today
+#     )
+
+#     # Notify MD managers in the same branch
+#     md_managers = User.objects.filter(
+#         branch=user_branch,
+#         role__in=['MD manager', 'Maintenance Department Manager']
+#     )
+
+#     for manager in md_managers:
+#         messages.warning(
+#             request,
+#             f"Equipment {equipment.name} is due for maintenance on {equipment.next_maintenance_date}."
+#         )
+
+#     return render(request, 'maintenance_due.html', {'due_equipment': due_equipment})

@@ -46,8 +46,7 @@
                                 {% for spare_part_usage in item_list %}
                                 <tr>
                                     <td>
-                                        {{
-                                            spare_part_usage.maintenance_record }}
+                                        {{spare_part_usage.maintenance_record }}
                                     </td>
                                     <td>{{ spare_part_usage.spare_part.name }}</td>
                                     <td>{{ spare_part_usage.quantity_used }}</td>

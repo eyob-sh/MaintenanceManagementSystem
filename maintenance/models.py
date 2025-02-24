@@ -78,16 +78,10 @@ class Equipment(models.Model):
         ('operational', 'Operational'),
         ('non_operational', 'Non Operational'),
         ('under_maintenance', 'Under Maintenance'),
-       
-        
     ]
 
-   
-
-   
-
     name = models.CharField(max_length=100)
-    equipment_type = models.CharField(max_length=50)  # To specify if it's a machine, tool, etc.
+    equipment_type = models.CharField(max_length=50)
     manufacturer = models.ForeignKey('Manufacturer', on_delete=models.PROTECT)
     model_number = models.CharField(max_length=50)
     serial_number = models.CharField(max_length=50)
@@ -99,18 +93,27 @@ class Equipment(models.Model):
     maintenance_interval_weeks = models.PositiveIntegerField(default=0)
     maintenance_interval_days = models.PositiveIntegerField(default=0)
     last_maintenance_date = models.DateField(null=True, blank=True)
-    next_maintenance_date = models.DateField(null=True, blank=True, )  # New field
+    next_maintenance_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='operational')
     remark = models.TextField(blank=True)
-    
-    
-    
-    
-    
 
+    def calculate_next_maintenance_date(self):
+        from datetime import timedelta
+        next_date = self.installation_date
+        next_date += timedelta(days=self.maintenance_interval_days)
+        next_date += timedelta(weeks=self.maintenance_interval_weeks)
+        next_date += timedelta(days=30 * self.maintenance_interval_months)
+        next_date += timedelta(days=365 * self.maintenance_interval_years)
+        return next_date
+
+    def save(self, *args, **kwargs):
+        # Set the next maintenance date only when the instance is created
+        if not self.pk:  # Check if the instance is being created
+            self.next_maintenance_date = self.calculate_next_maintenance_date()
+        super().save(*args, **kwargs)  # Call the original save() method
 
     def __str__(self):
-        return f"{self.name} ({self.equipment_type} -- {self.serial_number}) "
+        return f"{self.name} ({self.equipment_type} -- {self.serial_number})"
     
 
 class SparePart(models.Model):
@@ -124,11 +127,21 @@ class SparePart(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)  # Price of the spare part
     date_added = models.DateField(auto_now_add=True)  # Date when the part was added
     last_updated = models.DateField(auto_now=True)  # Date when the part was last updated
+    last_restock_date = models.DateTimeField(null=True)
     
     
 
     def __str__(self):
         return f"{self.name} ({self.quantity} left) - {self.store}"
+    
+class RestockSparePart(models.Model):
+    spare_part = models.ForeignKey(SparePart, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(default=0)
+    restock_date = models.DateTimeField(auto_now_add=True)
+    attachment = models.FileField(upload_to='restock_attachments/', null=True, blank=True)  # Optional attachment
+
+    def __str__(self):
+        return f"Restock {self.quantity} units of {self.spare_part.name} on {self.restock_date}"
     
 
     
@@ -360,3 +373,7 @@ class Notification(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.message}'
+
+
+
+

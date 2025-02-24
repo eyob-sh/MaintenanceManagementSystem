@@ -1,5 +1,5 @@
 from django import forms
-from .models import Equipment, SparePart, Manufacturer, DecommissionedEquipment, MaintenanceType ,MaintenanceRecord, WorkOrder, SparePartUsage, Chemical, Branch, UserProfile
+from .models import Equipment, SparePart, Manufacturer, DecommissionedEquipment, MaintenanceType ,MaintenanceRecord, WorkOrder, SparePartUsage, Chemical, Branch, UserProfile, RestockSparePart
 class EquipmentForm(forms.ModelForm):
     class Meta:
         model = Equipment
@@ -45,6 +45,8 @@ class SparePartForm(forms.ModelForm):
             'part_number',
             'price',
             'description',
+            'last_restock_date',
+
         ]
 
     def __init__(self, *args, **kwargs):
@@ -56,6 +58,14 @@ class SparePartForm(forms.ModelForm):
         if self.instance and self.instance.pk:  # Check if the form is for an existing instance
             self.fields['branch'].disabled = True  # Disable the field
             self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
+            self.fields['quantity'].widget.attrs['readonly'] = True
+            self.fields['last_restock_date'].widget.attrs['readonly'] = True
+
+class RestockSparePartForm(forms.ModelForm):
+    class Meta:
+        model = RestockSparePart
+        fields = ['spare_part', 'quantity', 'attachment']
+
             
             
             
@@ -218,6 +228,10 @@ class ChemicalForm(forms.ModelForm):
         # Add Bootstrap 'form-control' class to all fields
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
+        if self.instance and self.instance.pk:  # Check if the form is for an existing instance
+            self.fields['quantity_available'].widget.attrs['readonly'] = True  # Make it read-only
+            
+            
             
 class BranchForm(forms.ModelForm):
     class Meta:

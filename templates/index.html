@@ -293,6 +293,12 @@
                     <span>Spare Part Usage</span>
                 </a>
             </li>
+            <li class="nav-item">
+              <a class="nav-link {% if active_page != 'restock_list' %}collapsed{% endif %}" href="{% url 'restock_list' %}">
+                <i class="bi bi-box"></i>
+                  <span>Restock Spare Part</span>
+              </a>
+          </li>
 
             <li class="nav-item">
               <a class="nav-link {% if active_page != 'maintenance_due' %}collapsed{% endif %}" href="{% url 'maintenance_due' %}">
