@@ -49,18 +49,13 @@
                                         </div>
                                     </div>
 
-
                                     <!-- Branch -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="branch" class="form-label">Branch</label>
-                                            <select class="form-select" id="branch" name="branch" required>
-                                                <option selected disabled value="">Select Branch</option>
-                                                {% for branch in branches %}
-                                                <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <div class="invalid-feedback">Please select a branch.</div>
+                                            <input type="text" class="form-control" id="branch" name="branch_name" value="{{ request.user.userprofile.branch.name }}" readonly>
+                                            <input type="hidden" name="branch" value="{{ request.user.userprofile.branch.id }}">
+                                            <div class="invalid-feedback">Branch is required.</div>
                                         </div>
                                     </div>
 
@@ -68,8 +63,7 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="description" class="form-label">Description</label>
-                                            <textarea class="form-control" id="description" name="description" rows="3"
-                                                required></textarea>
+                                            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
                                             <div class="invalid-feedback">Please enter a description.</div>
                                         </div>
                                     </div>
@@ -81,13 +75,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="requester" class="form-label">Requester</label>
-                                            <select class="form-select" id="requester" name="requester" required>
-                                                <option selected disabled value="">Select Requester</option>
-                                                {% for user in users %}
-                                                <option value="{{ user.id }}">{{ user.username }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <div class="invalid-feedback">Please select a requester.</div>
+                                            <input type="text" class="form-control" id="requester" name="requester" value="{{ request.user.username }}" readonly>
+                                            <div class="invalid-feedback">Requester is required.</div>
                                         </div>
                                     </div>
 
@@ -95,13 +84,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="status" class="form-label">Status</label>
-                                            <select class="form-select" id="status" name="status" required>
-                                                <option selected disabled value="">Select Status</option>
-                                                <option value="Pending">Pending</option>
-                                                <option value="In Progress">In Progress</option>
-                                                <option value="Completed">Completed</option>
-                                            </select>
-                                            <div class="invalid-feedback">Please select a status.</div>
+                                            <input type="text" class="form-control" id="status" name="status" value="Pending" readonly>
+                                            <div class="invalid-feedback">Status is required.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -127,10 +111,8 @@
     (function () {
         'use strict';
 
-        // Fetch the form element
         const form = document.getElementById('workOrderForm');
 
-        // Add event listener for form submission
         form.addEventListener('submit', function (event) {
             if (!form.checkValidity()) {
                 event.preventDefault();

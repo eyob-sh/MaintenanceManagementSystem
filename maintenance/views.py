@@ -30,7 +30,8 @@ ROLE_CHOICES = [
     
 ]
 
-
+def get_notifications(user):
+    return Notification.objects.filter(user=user, is_read=False).order_by('-timestamp')[:10]
 
 
 
@@ -71,61 +72,14 @@ def logoutUser(request):
     return redirect('login')
 
 
-# def register(request):
-#     branches = Branch.objects.all
-#     return render (request, 'register_page.html', {'branches': branches})
 
-
-# def add_user(request):
-#     if request.method == 'POST':
-#         first_name = request.POST.get('firstName')
-#         last_name = request.POST.get('lastName')
-#         username = request.POST.get('Username')
-#         email = request.POST.get('email')
-#         password = request.POST.get('password')
-#         role = request.POST.get('role')  # Now this is a string
-#         department = request.POST.get('department')
-#         branch_id = request.POST.get('branch')
-
-#         # Create the User
-#         user = User.objects.create_user(
-#             username=username,
-#             email=email,
-#             password=password,
-#             first_name=first_name,
-#             last_name=last_name
-#         )
-
-#         # Create UserProfile
-#         user_profile = UserProfile(
-#             user=user,
-#             branch_id=branch_id,
-#             department=department,
-#             role=role  # Store the role as a string
-#         )
-#         user_profile.save()
-
-#         return redirect('')  # Redirect to a success page or user list
-
-#     # For GET requests, render the register page
-#     return render(request, 'register_page.html')
-
-
-# def add_branch_page(request):
-#     return render(request,'branch.html')
-
-# def add_branch(request):
-#     if request.method == 'POST':
-#         branch_name = request.POST.get('name')  # Get the branch name from the form
-#         if branch_name:
-#             Branch.objects.create(name=branch_name)  # Create a new Branch object
-#             messages.success(request, 'Branch added successfully')
-#     return render(request, 'branch.html')  # Render the form if GET request
 
 @login_required
 def my_profile(request):
     # Get the current user's profile
     user_profile = UserProfile.objects.get(user=request.user)
+    notifications = get_notifications(request.user)
+
     
     if request.method == 'POST':
         # Handle email update
@@ -147,44 +101,73 @@ def my_profile(request):
                 messages.success(request, 'Password updated successfully!')
             else:
                 messages.error(request, 'Passwords do not match!')
-                return redirect('my_profile')
+                return redirect('my_profile', {'notifications':notifications})
         
         messages.success(request, 'Profile updated successfully!')
-        return redirect('my_profile')
+        return redirect('my_profile', { 'active_page': 'profile','notifications':notifications,
+})
     
     return render(request, 'my_profile.html', {
         'user_profile': user_profile,
+                'active_page': 'profile',
+                'notifications':notifications
+
+        
     })
 
 
 def manufacturer_list(request):
-    manufacturers = Manufacturer.objects.all()
+    user_branch = request.user.userprofile.branch
+    manufacturers = Manufacturer.objects.filter(site = user_branch)
+    notifications = get_notifications(request.user)
+
     context = {
+        'active_page': 'manufacturer_list',
         'title': 'Manufacturers',
         'item_list': manufacturers,
         'edit_url': 'edit_manufacturer',
+        'notifications':notifications
     }
     return render(request, 'manufacturer_list.html', context)
 
 def add_manufacturer_page(request):
-    return render(request, 'add_manufacturer.html')
+    notifications = get_notifications(request.user)
+
+    
+    context = {
+    'active_page': 'manufacturer_list', 'notifications':notifications}
+    
+    return render(request, 'add_manufacturer.html', context)
 
 def add_manufacturer(request):
+    notifications = get_notifications(request.user)
+
+    # Get the user's branch
+    if request.user.is_authenticated:
+        branch = request.user.userprofile.branch  # Ensure this matches your UserProfile model
+    else:
+        branch = None  # Handle unauthenticated users
+
     if request.method == 'POST':
+        # Get form data
         name = request.POST.get('name')
         description = request.POST.get('description')
+        site = request.POST.get('site')  # This will be the branch ID
         contact_email = request.POST.get('contact_email')
         contact_phone_number = request.POST.get('contact_phone_number')
         address = request.POST.get('address')
 
-        if not name or not contact_email:
+        # Validate required fields
+        if not name or not site:
             messages.error(request, 'Please fill out all required fields.')
-            return render(request, 'add_manufacturer.html')
+            return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications})
 
         try:
+            # Create the manufacturer
             Manufacturer.objects.create(
                 name=name,
                 description=description,
+                site_id=site,  # Use site_id to assign the branch
                 contact_email=contact_email,
                 contact_phone_number=contact_phone_number,
                 address=address
@@ -193,12 +176,17 @@ def add_manufacturer(request):
             return redirect('manufacturer_list')
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
-            return render(request, 'add_manufacturer.html')
+            return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications})
 
-    return render(request, 'add_manufacturer.html')
+    return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications})
 
 def edit_manufacturer(request, id):
     manufacturer = get_object_or_404(Manufacturer, id=id)
+    branch = request.user.userprofile.branch
+    notifications = get_notifications(request.user)
+
+
+   
 
     if request.method == 'POST':
         form = ManufacturerForm(request.POST, instance=manufacturer)
@@ -209,50 +197,71 @@ def edit_manufacturer(request, id):
     else:
         form = ManufacturerForm(instance=manufacturer)
 
-    return render(request, 'edit_manufacturer.html', {'form': form, 'manufacturer': manufacturer})
+    return render(request, 'edit_manufacturer.html', {'form': form, 'manufacturer': manufacturer,  'active_page': 'manufacturer_list', 'branch':branch, 'notifications':notifications})
 
 #----------------------------------------------------------------------------------
 
 def work_order_list(request):
-    work_orders = WorkOrder.objects.all()
+    user_branch = request.user.userprofile.branch
+
+    work_orders = WorkOrder.objects.filter(branch = user_branch)
+    notifications = get_notifications(request.user)
+
     context = {
+        'active_page': 'work_order_list',
         'title': 'Work Orders',
         'item_list': work_orders,
         'edit_url': 'edit_work_order',
+        'notifications':notifications,
     }
     return render(request, 'work_order_list.html', context)
 
 def add_work_order_page(request):
-    equipments = Equipment.objects.all()
-    users = User.objects.all()
-    branches = Branch.objects.all()
+    notifications = get_notifications(request.user)
+    user_branch = request.user.userprofile.branch
+
+    equipments = Equipment.objects.filter(branch=user_branch)
+    
     return render(request, 'add_work_order.html', {
         'equipments': equipments,
-        'users': users,
-        'branches': branches,
+        'branch': user_branch,
+        'notifications': notifications,
+        'active_page': 'work_order_list',
+
     })
 
 def add_work_order(request):
+    notifications = get_notifications(request.user)
+
     if request.method == 'POST':
-        requester_id = request.POST.get('requester')
-        branch_id = request.POST.get('branch')
+        branch = request.POST.get('branch')
         equipment_id = request.POST.get('equipment')
         description = request.POST.get('description')
-        status = request.POST.get('status')
+        status = 'Pending'  # Default status
 
-        if not requester_id or not branch_id or not equipment_id or not description or not status:
+        if not branch or not equipment_id or not description:
             messages.error(request, 'Please fill out all required fields.')
             return redirect('add_work_order_page')
 
         try:
-            WorkOrder.objects.create(
-                requester_id=requester_id,
-                branch_id=branch_id,
+            work_order = WorkOrder.objects.create(
+                requester=request.user,
+                branch_id=branch,
                 equipment_id=equipment_id,
                 description=description,
                 status=status
             )
             messages.success(request, 'Work Order added successfully!')
+
+            # Send notification to the MD Manager of the same branch
+            manager = User.objects.filter(userprofile__branch=branch, userprofile__role='MD manager').first()
+            if manager:
+                Notification.objects.create(
+                    user=manager,
+                    type = "maintenance",
+                    message=f'New work order: {work_order.equipment.name}.',
+                )
+
             return redirect('work_order_list')
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
@@ -260,39 +269,152 @@ def add_work_order(request):
 
     return redirect('add_work_order_page')
 
-
-
 def edit_work_order(request, id):
+    user_branch = request.user.userprofile.branch
+    notifications = get_notifications(request.user)
+    spare_parts = SparePart.objects.filter(branch=user_branch)
     work_order = get_object_or_404(WorkOrder, id=id)
+    assigned_technician_ids = work_order.assigned_technicians.values_list('id', flat=True)
 
     if request.method == 'POST':
-        form = WorkOrderForm(request.POST, instance=work_order)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Work Order updated successfully!')
-            return redirect('work_order_list')
-    else:
-        form = WorkOrderForm(instance=work_order)
+        # Get form data
+        assigned_technicians = request.POST.getlist('assigned_technicians[]')
+        spare_parts_post = request.POST.getlist('spare_parts[]')
+        spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
 
-    return render(request, 'edit_work_order.html', {'form': form, 'work_order': work_order})
+        try:
+            # Update assigned technicians
+            work_order.assigned_technicians.set(assigned_technicians)
+
+            # Step 1: Add back the old quantities to the spare parts
+            spare_part_usages = SparePartUsage.objects.filter(work_order=work_order)
+            for usage in spare_part_usages:
+                spare_part = usage.spare_part
+                spare_part.quantity += usage.quantity_used
+                spare_part.save()
+
+            # Step 2: Process the new spare parts and quantities
+            for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
+                # Skip if spare_part_id or quantity_used is empty
+                if not spare_part_id.strip() or not quantity_used.strip():
+                    continue  # Skip empty fields
+
+                # Skip if spare_part_id is not a valid integer
+                try:
+                    spare_part_id = int(spare_part_id)
+                except ValueError:
+                    continue  # Skip invalid spare_part_id (e.g., non-numeric values)
+
+                # Skip if quantity_used is not a valid integer
+                try:
+                    quantity_used = int(quantity_used)
+                except ValueError:
+                    continue  # Skip invalid quantities (e.g., non-numeric values)
+
+                # Get the spare part
+                spare_part = SparePart.objects.get(id=spare_part_id)
+
+                # Check if the new quantity exceeds the available stock
+                if spare_part.quantity < quantity_used:
+                    messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
+                    # Rollback the old quantities
+                    for usage in spare_part_usages:
+                        spare_part = usage.spare_part
+                        spare_part.quantity -= usage.quantity_used
+                        spare_part.save()
+                    return redirect('edit_work_order', id=work_order.id)
+
+                # Deduct the new quantity from the spare part
+                spare_part.quantity -= quantity_used
+                spare_part.save()
+
+                # Create or update the SparePartUsage record
+                SparePartUsage.objects.update_or_create(
+                    work_order=work_order,  # Use work_order instead of maintenance_record
+                    spare_part=spare_part,
+                    defaults={'quantity_used': quantity_used},
+                )
+
+            # Step 3: Delete any remaining spare part usages that were not in the form
+            SparePartUsage.objects.filter(work_order=work_order).exclude(
+                spare_part_id__in=[int(id) for id in spare_parts_post if id.strip()]
+            ).delete()
+
+            # Notify assigned technicians
+            for technician_id in assigned_technicians:
+                technician = User.objects.get(id=technician_id)
+                Notification.objects.create(
+                    user=technician,
+                    type = "work_order",
+                    message=f'You have been assigned a new work order task: {work_order}.',
+                )
+
+            messages.success(request, 'Work order updated successfully!')
+            return redirect('work_order_list')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            return redirect('edit_work_order', id=work_order.id)
+
+    # For GET requests, pre-fill the form and spare parts
+    context = {
+        'work_order': work_order,
+        'technicians': User.objects.filter(userprofile__branch=user_branch, userprofile__role='TEC'),
+        'assigned_technician_ids': assigned_technician_ids,
+        'active_page': 'work_order_list',
+        'notifications': notifications,
+        'spare_parts': spare_parts,
+    }
+    return render(request, 'edit_work_order.html', context)
+#------------------------------------------------------------------------------------
+
+#  user_branch = request.user.userprofile.branch
+#     notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-timestamp')[:10]
+
+#     context = {
+#         'equipments': Equipment.objects.filter(branch=user_branch),
+#         'technicians': User.objects.filter(userprofile__branch=user_branch, userprofile__role='TEC'),
+#         'branch': user_branch,
+#         'maintenance_types': MaintenanceType.objects.filter(branch=user_branch),
+#         'work_orders': WorkOrder.objects.filter(branch=user_branch),
+#         'spare_parts': SparePart.objects.filter(branch=user_branch),
+#         'active_page': 'maintenance_list',
+#         'notifications': notifications,
+#     }
+
+
+
+
+
+
 
 #---------------------------------------------------------------------------------------
 
 def spare_part_usage_list(request):
-    spare_part_usages = SparePartUsage.objects.all()
+    notifications = get_notifications(request.user)
+    user_branch = request.user.userprofile.branch
+
+    spare_part_usages = SparePartUsage.objects.filter(maintenance_record__branch=user_branch)
     context = {
+        'active_page': 'spare_part_usage_list',
         'title': 'Spare Part Usages',
         'item_list': spare_part_usages,
         'edit_url': 'edit_spare_part_usage',
+        'notifications':notifications
+        
     }
     return render(request, 'spare_part_usage_list.html', context)
 
 def add_spare_part_usage_page(request):
-    maintenance_records = MaintenanceRecord.objects.all()
+    notifications = get_notifications(request.user)
+    user_branch = request.user.userprofile.branch
+
+    maintenance_records = MaintenanceRecord.objects.filter(branch = user_branch)
     spare_parts = SparePart.objects.all()
     return render(request, 'add_spare_part_usage.html', {
         'maintenance_records': maintenance_records,
         'spare_parts': spare_parts,
+    'active_page': 'spare_part_usage_list',
+    'notifications': notifications
     })
 
 def add_spare_part_usage(request):
@@ -321,6 +443,8 @@ def add_spare_part_usage(request):
 
 def edit_spare_part_usage(request, id):
     spare_part_usage = get_object_or_404(SparePartUsage, id=id)
+    notifications = get_notifications(request.user)
+
 
     if request.method == 'POST':
         form = SparePartUsageForm(request.POST, instance=spare_part_usage)
@@ -331,22 +455,27 @@ def edit_spare_part_usage(request, id):
     else:
         form = SparePartUsageForm(instance=spare_part_usage)
 
-    return render(request, 'edit_spare_part_usage.html', {'form': form, 'spare_part_usage': spare_part_usage})
+    return render(request, 'edit_spare_part_usage.html', {'form': form, 'spare_part_usage': spare_part_usage, 'active_page': 'spare_part_usage_list', 'notifications':notifications})
 
 #------------------------------------------------------------------------------------
 def decommissioned_equipment_list(request):
     decommissioned_equipments = DecommissionedEquipment.objects.all()
+    notifications = get_notifications(request.user)
+
     context = {
+        'active_page': 'decommissioned_equipment_list',
         'title': 'Decommissioned Equipments',
         'item_list': decommissioned_equipments,
         'edit_url': 'edit_decommissioned_equipment',
+        'notifications':notifications
     }
     return render(request, 'decommissioned_equipment_list.html', context)
 
 def add_decommissioned_equipment_page(request):
-    equipments = Equipment.objects.all()
+    notifications = get_notifications(request.user)
+    equipments = Equipment.objects.filter(branch = request.user.userprofile.branch)
     return render(request, 'add_decommissioned_equipment.html', {
-        'equipments': equipments,
+        'equipments': equipments,'active_page': 'decommissioned_equipment_list','notifications':notifications
     })
 
 def add_decommissioned_equipment(request):
@@ -376,6 +505,8 @@ def add_decommissioned_equipment(request):
 
 def edit_decommissioned_equipment(request, id):
     decommissioned_equipment = get_object_or_404(DecommissionedEquipment, id=id)
+    notifications = get_notifications(request.user)
+
 
     if request.method == 'POST':
         form = DecommissionedEquipmentForm(request.POST, instance=decommissioned_equipment)
@@ -386,45 +517,87 @@ def edit_decommissioned_equipment(request, id):
     else:
         form = DecommissionedEquipmentForm(instance=decommissioned_equipment)
 
-    return render(request, 'edit_decommissioned_equipment.html', {'form': form, 'decommissioned_equipment': decommissioned_equipment})
+    return render(request, 'edit_decommissioned_equipment.html', {'form': form, 'decommissioned_equipment': decommissioned_equipment, 'active_page': 'decommissioned_equipment_list','notifications':notifications})
 
 
 #--------------------------------------------------------------------------------------
 def maintenance_type_list(request):
-    maintenance_types = MaintenanceType.objects.all()
+    user_branch = request.user.userprofile.branch
+    notifications = get_notifications(request.user)
+
+
+    maintenance_types = MaintenanceType.objects.filter(branch =user_branch )
     context = {
+        'active_page': 'maintenance_type_list',
         'title': 'Maintenance Types',
         'item_list': maintenance_types,
         'edit_url': 'edit_maintenance_type',
+        'notifications':notifications
     }
     return render(request, 'maintenance_type_list.html', context)
 
 def add_maintenance_type_page(request):
-    return render(request, 'add_maintenance_type.html')
+    user_branch = request.user.userprofile.branch
+    notifications = get_notifications(request.user)
+
+
+    return render(request, 'add_maintenance_type.html',{ 'active_page': 'maintenance_type_list', 'branch': user_branch, 'notifications':notifications
+})
 
 def add_maintenance_type(request):
+    user_branch = request.user.userprofile.branch
+    notifications = get_notifications(request.user)
+   
+
     if request.method == 'POST':
         maintenance_type = request.POST.get('maintenance_type')
+        branch_id = request.POST.get('branch')  # Get the branch ID from the form
         description = request.POST.get('description')
 
         if not maintenance_type:
             messages.error(request, 'Please fill out all required fields.')
-            return redirect('add_maintenance_type_page')
+            return render(request, 'add_maintenance_type.html', {
+                'active_page': 'maintenance_type_list',
+                'branch': user_branch,
+                'notifications':notifications
+                
+            })
 
         try:
+            # Fetch the Branch instance using the branch_id
+            branch = Branch.objects.get(id=branch_id)
+
+            # Create the MaintenanceType object
             MaintenanceType.objects.create(
                 maintenance_type=maintenance_type,
+                branch=branch,  # Pass the Branch instance
                 description=description
             )
             messages.success(request, 'Maintenance Type added successfully!')
             return redirect('maintenance_type_list')
+        except Branch.DoesNotExist:
+            messages.error(request, 'Invalid branch selected.')
+            return render(request, 'add_maintenance_type.html', {
+                'active_page': 'maintenance_type_list',
+                'branch': user_branch
+            })
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
-            return redirect('add_maintenance_type_page')
+            return render(request, 'add_maintenance_type.html', {
+                'active_page': 'maintenance_type_list',
+                'branch': user_branch
+            })
 
-    return redirect('add_maintenance_type_page')
-
+    # For GET requests, render the add maintenance type page with context
+    return render(request, 'add_maintenance_type.html', {
+        'active_page': 'maintenance_type_list',
+        'branch': user_branch
+    })
 def edit_maintenance_type(request, id):
+    user_branch = request.user.userprofile.branch
+    notifications = get_notifications(request.user)
+
+
     maintenance_type = get_object_or_404(MaintenanceType, id=id)
 
     if request.method == 'POST':
@@ -436,34 +609,50 @@ def edit_maintenance_type(request, id):
     else:
         form = MaintenanceTypeForm(instance=maintenance_type)
 
-    return render(request, 'edit_maintenance_type.html', {'form': form, 'maintenance_type': maintenance_type})
+    return render(request, 'edit_maintenance_type.html', {'form': form, 'maintenance_type': maintenance_type,  'active_page': 'maintenance_type_list','notifications':notifications})
 #--------------------------------------------------------------------------------------------
 
 def equipment_list(request):
-    equipments = Equipment.objects.all()  # Fetch all equipment
+    user_branch = request.user.userprofile.branch
+    notifications = get_notifications(request.user)
+
+
+    equipments = Equipment.objects.filter(branch = user_branch)  # Fetch all equipment
     context = {
+        'active_page': 'equipment_list',
         'title': 'Equipments',
         'item_list': equipments,
         'edit_url': 'edit_equipment',  # Assuming you have an edit view set up
+        'notifications':notifications
     }
     return render(request, 'equipment_list.html', context)
 
 
 
 def add_equipment_page(request):
-    manufacturers = Manufacturer.objects.all()
-    branches = Branch.objects.all()
+    notifications = get_notifications(request.user)
+
+    user_branch = request.user.userprofile.branch
+    manufacturers = Manufacturer.objects.filter(site = user_branch)
+    branch = user_branch
     return render (request, 'equipment.html', {
                 'manufacturers': manufacturers,
-                'branches': branches,
+                'branch': branch,
+                'active_page': 'equipment_list',
+                'notifications':notifications
             })
 
 
 def add_equipment(request):
-    # Fetch all manufacturers and branches
-    manufacturers = Manufacturer.objects.all()
-    branches = Branch.objects.all()
-    
+    notifications = get_notifications(request.user)
+
+    equipment= Equipment.objects.all()
+    # Get the user's branch
+    user_branch = request.user.userprofile.branch
+
+    # Filter manufacturers by the user's branch
+    manufacturers = Manufacturer.objects.filter(site=user_branch)
+
     if request.method == 'POST':
         # Get form data
         name = request.POST.get('name')
@@ -471,7 +660,6 @@ def add_equipment(request):
         manufacturer_id = request.POST.get('manufacturer')
         model_number = request.POST.get('model_number')
         serial_number = request.POST.get('serial_number')
-        branch_id = request.POST.get('branch')
         location = request.POST.get('location')
         installation_date = request.POST.get('installation_date')
         
@@ -485,11 +673,13 @@ def add_equipment(request):
         remark = request.POST.get('remark')
         
         # Validate required fields
-        if not name or not equipment_type or not manufacturer_id or not model_number or not serial_number or not branch_id or not location or not installation_date or not status:
+        if not name or not equipment_type or not manufacturer_id or not model_number or not serial_number or not location or not installation_date or not status:
             messages.error(request, 'Please fill out all required fields.')
             context = {
                 'manufacturers': manufacturers,
-                'branches': branches,
+                'branch': user_branch,  # Pass the user's branch to the template
+                'active_page': 'equipment_list',
+                'notifications':notifications
             }
             return render(request, 'equipment.html', context)
 
@@ -510,7 +700,7 @@ def add_equipment(request):
                 manufacturer_id=manufacturer_id,
                 model_number=model_number,
                 serial_number=serial_number,
-                branch_id=branch_id,
+                branch=user_branch,  # Set the branch to the user's branch
                 location=location,
                 installation_date=installation_date,
                 maintenance_interval_years=maintenance_interval_years,
@@ -526,27 +716,32 @@ def add_equipment(request):
             messages.error(request, f'Invalid date format: {str(e)}')
             context = {
                 'manufacturers': manufacturers,
-                'branches': branches,
+                'branch': user_branch,  # Pass the user's branch to the template
+                'active_page': 'equipment_list',
+                'notifications':notifications,
             }
             return render(request, 'equipment.html', context)
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
             context = {
                 'manufacturers': manufacturers,
-                'branches': branches,
+                'branch': user_branch,  # Pass the user's branch to the template
+                'active_page': 'equipment_list',
+                'notifications':notifications
             }
             return render(request, 'equipment.html', context)
 
-    # For GET requests, render the form with manufacturers and branches
+    # For GET requests, render the form with manufacturers and the user's branch
     context = {
         'manufacturers': manufacturers,
-        'branches': branches,
+        'branch': user_branch,  # Pass the user's branch to the template
+        'active_page': 'equipment_list',
+        'notifications':notifications
     }
     return render(request, 'equipment.html', context)
-
-
-
 def edit_equipment(request, id):
+    notifications = get_notifications(request.user)
+
     equipment = get_object_or_404(Equipment, id=id)  # Fetch the equipment instance
 
     if request.method == 'POST':
@@ -560,29 +755,49 @@ def edit_equipment(request, id):
     else:
         form = EquipmentForm(instance=equipment)  # Pre-fill the form with the current data
 
-    return render(request, 'edit_equipment.html', {'form': form, 'equipment': equipment})
+    return render(request, 'edit_equipment.html', {'form': form, 'equipment': equipment, 'active_page': 'equipment_list','notifications':notifications})
 
-
+#-----------------------------------------------------------------------------------------------
 
 def spare_part_list(request):
-    spare_parts = SparePart.objects.all()  # Fetch all sparepart
+    notifications = get_notifications(request.user)
+
+    user_branch = request.user.userprofile.branch
+
+    spare_parts = SparePart.objects.filter(branch = user_branch)  # Fetch all sparepart
     context = {
+        'active_page': 'spare_part_list',
         'title': 'Spare Parts',
         'item_list': spare_parts,
         'edit_url': 'edit_spare_part',  # Assuming you have an edit view set up
+        'notifications':notifications
     }
     return render(request, 'spare_part_list.html', context)
 
 def add_spare_part_page(request):
-    branches = Branch.objects.all()
+    notifications = get_notifications(request.user)
+
+    user_branch = request.user.userprofile.branch
+
+    branch = user_branch
     return render (request, 'add_spare_part.html', {
-                'branches': branches,
+                'branch': branch,
+                'active_page': 'spare_part_list',
+                'notifications':notifications
+
             })
 
 def add_spare_part(request):
-    
-    # Fetch all branches
-    branches = Branch.objects.all()
+    notifications = get_notifications(request.user)
+
+    user_branch = request.user.userprofile.branch
+
+    # Define context with default values
+    context = {
+        'branch': user_branch,
+        'active_page': 'spare_part_list',
+        'notifications':notifications
+    }
 
     if request.method == 'POST':
         # Get form data
@@ -597,9 +812,6 @@ def add_spare_part(request):
         # Validate required fields
         if not name or not branch_id or not store or not quantity or not part_number or not price:
             messages.error(request, 'Please fill out all required fields.')
-            context = {
-                'branches': branches,
-            }
             return render(request, 'add_spare_part.html', context)
 
         try:
@@ -608,12 +820,7 @@ def add_spare_part(request):
             price = float(price)
 
             # Check if the part number already exists for the selected branch
-            if SparePart.objects.filter(part_number=part_number, branch_id=branch_id).exists():
-                messages.error(request, 'A spare part with this part number already exists in the selected branch.')
-                context = {
-                    'branches': branches,
-                }
-                return render(request, 'add_spare_part.html', context)
+            
 
             # Create and save the SparePart object
             SparePart.objects.create(
@@ -626,27 +833,19 @@ def add_spare_part(request):
                 description=description
             )
             messages.success(request, 'Spare part added successfully!')
-            return redirect('spare_part_list')  # Redirect to a success page or spare part list
+            return redirect('spare_part_list')  # Redirect to the spare part list page
         except ValueError as e:
             messages.error(request, f'Invalid input: {str(e)}')
-            context = {
-                'branches': branches,
-            }
             return render(request, 'add_spare_part.html', context)
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
-            context = {
-                'branches': branches,
-            }
             return render(request, 'add_spare_part.html', context)
 
     # For GET requests, render the form with branches
-    context = {
-        'branches': branches,
-    }
     return render(request, 'add_spare_part.html', context)
-    
 def edit_spare_part(request, id):
+    notifications = get_notifications(request.user)
+
     spare_part = get_object_or_404(SparePart, id=id)  # Fetch the spare part instance
 
     if request.method == 'POST':
@@ -658,19 +857,27 @@ def edit_spare_part(request, id):
     else:
         form = SparePartForm(instance=spare_part)  # Pre-fill the form with the current data
 
-    return render(request, 'edit_spare_part.html', {'form': form, 'spare_part': spare_part})
+    return render(request, 'edit_spare_part.html', {'form': form, 'spare_part': spare_part,'active_page': 'spare_part_list','notifications':notifications
+})
 
 
  
     
     
 def add_chemical_page(request):
+    notifications = get_notifications(request.user)
+
     branches = Branch.objects.all()  # Fetch all branches for the dropdown
     return render(request, 'add_chemical.html', {
         'branches': branches,
+        'active_page': 'chemical_list',
+        'notifications':notifications
+
     })
 
 def add_chemical(request):
+    notifications = get_notifications(request.user)
+
     branches = Branch.objects.all()  # Fetch all branches
 
     if request.method == 'POST':
@@ -697,6 +904,9 @@ def add_chemical(request):
             messages.error(request, 'Please fill out all required fields.')
             context = {
                 'branches': branches,
+                'active_page': 'chemical_list',
+                'notifications':notifications
+
             }
             return render(request, 'add_chemical.html', context)
 
@@ -730,32 +940,46 @@ def add_chemical(request):
             messages.error(request, f'Invalid input: {str(e)}')
             context = {
                 'branches': branches,
+                'active_page': 'chemical_list',
+                'notifications':notifications
+
             }
             return render(request, 'add_chemical.html', context)
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
             context = {
                 'branches': branches,
+                'active_page': 'chemical_list',
+                'notifications':notifications
             }
             return render(request, 'add_chemical.html', context)
 
     # For GET requests, render the form with branches
     context = {
         'branches': branches,
+        'active_page': 'chemical_list',
+        'notifications':notifications
+
     }
     return render(request, 'add_chemical.html', context)
 
 def chemical_list(request):
+    notifications = get_notifications(request.user)
+
     chemicals = Chemical.objects.all()  # Fetch all chemicals
     context = {
+        'active_page': 'chemical_list',
         'title': 'Chemical List',
         'item_list': chemicals,
         'edit_url': 'edit_chemical',  # URL name for editing chemicals
+        'notifications':notifications
     }
     return render(request, 'chemical_list.html', context)
 
 
 def edit_chemical(request, id):
+    notifications = get_notifications(request.user)
+
     chemical = get_object_or_404(Chemical, id=id)  # Fetch the chemical instance
 
     if request.method == 'POST':
@@ -767,49 +991,63 @@ def edit_chemical(request, id):
     else:
         form = ChemicalForm(instance=chemical)  # Pre-fill the form with the current data
 
-    return render(request, 'edit_chemical.html', {'form': form, 'chemical': chemical})
+    return render(request, 'edit_chemical.html', {'form': form, 'chemical': chemical, 'active_page': 'chemical_list','notifications':notifications
+})
     
     
+
 def add_maintenance_page(request):
+    notifications = get_notifications(request.user)
+
+    user_branch = request.user.userprofile.branch
+
     context = {
-        'equipments': Equipment.objects.all(),
-        'technicians': User.objects.filter(is_staff=True),  # Filter technicians
-        'branches': Branch.objects.all(),
-        'maintenance_types': MaintenanceType.objects.all(),
-        'work_orders': WorkOrder.objects.all(),
-        'spare_parts': SparePart.objects.all(),
+        'equipments': Equipment.objects.filter(branch=user_branch),
+        'technicians': User.objects.filter(
+            userprofile__branch=user_branch,  # Filter by branch
+            userprofile__role='TEC'  # Filter by role (Technician)
+        ),
+        'branch': user_branch,
+        'maintenance_types': MaintenanceType.objects.filter(branch=user_branch),
+        'work_orders': WorkOrder.objects.filter(branch=user_branch),
+        'spare_parts': SparePart.objects.filter(branch=user_branch),
+        'active_page': 'maintenance_list',
+        'notifications':notifications
     }
     return render(request, 'add_maintenance.html', context)
 
 def add_maintenance(request):
+    user_branch = request.user.userprofile.branch
+    notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-timestamp')[:10]
+
     context = {
-        'equipments': Equipment.objects.all(),
-        'technicians': User.objects.filter(is_staff=True),
-        'branches': Branch.objects.all(),
-        'maintenance_types': MaintenanceType.objects.all(),
-        'spare_parts': SparePart.objects.all(),
+        'equipments': Equipment.objects.filter(branch=user_branch),
+        'technicians': User.objects.filter(userprofile__branch=user_branch, userprofile__role='TEC'),
+        'branch': user_branch,
+        'maintenance_types': MaintenanceType.objects.filter(branch=user_branch),
+        'work_orders': WorkOrder.objects.filter(branch=user_branch),
+        'spare_parts': SparePart.objects.filter(branch=user_branch),
+        'active_page': 'maintenance_list',
+        'notifications': notifications,
     }
 
     if request.method == 'POST':
-        # Get form data
         equipment_id = request.POST.get('equipment')
-        assigned_technicians = request.POST.getlist('assigned_technicians')
+        assigned_technicians = request.POST.getlist('assigned_technicians[]')
         branch_id = request.POST.get('branch')
         maintenance_type_id = request.POST.get('maintenance_type')
-        spare_parts = request.POST.getlist('spare_parts[]')  # List of spare part IDs
-        spare_part_quantities = request.POST.getlist('spare_part_quantities[]')  # List of quantities
+        spare_parts = request.POST.getlist('spare_parts[]')
+        spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
         remark = request.POST.get('remark')
         procedure = request.POST.get('procedure')
         problems = request.POST.get('problems')
         status = request.POST.get('status')
 
-        # Validate required fields
-        if not equipment_id or not assigned_technicians or not branch_id or not maintenance_type_id or not status:
-            messages.error(request, 'Please fill out all required fields.')
-            return render(request, 'add_maintenance.html', context)
+        # if not equipment_id or not assigned_technicians or not branch_id or not maintenance_type_id or not status:
+        #     messages.error(request, 'Please fill out all required fields.')
+        #     return render(request, 'add_maintenance.html', context)
 
         try:
-            # Create and save the MaintenanceRecord object
             maintenance = MaintenanceRecord.objects.create(
                 equipment_id=equipment_id,
                 branch_id=branch_id,
@@ -817,59 +1055,72 @@ def add_maintenance(request):
                 remark=remark,
                 procedure=procedure,
                 problems=problems,
-                status=status,
+                status='Not Started',
             )
             maintenance.assigned_technicians.set(assigned_technicians)
 
-            # Handle spare parts and quantities
             for spare_part_id, quantity_used in zip(spare_parts, spare_part_quantities):
                 if not spare_part_id or not quantity_used:
-                    continue  # Skip empty fields
+                    continue
 
                 spare_part = SparePart.objects.get(id=spare_part_id)
                 quantity_used = int(quantity_used)
 
                 if spare_part.quantity < quantity_used:
                     messages.error(request, f'Not enough quantity for {spare_part.name}.')
-                    maintenance.delete()  # Rollback the maintenance record
+                    maintenance.delete()
                     return render(request, 'add_maintenance.html', context)
 
-                # Deduct the quantity from the spare part
                 spare_part.quantity -= quantity_used
                 spare_part.save()
 
-                # Create SparePartUsage record
                 SparePartUsage.objects.create(
                     maintenance_record=maintenance,
                     spare_part=spare_part,
                     quantity_used=quantity_used,
                 )
 
+            # Notify assigned technicians via system notifications
+            for technician_id in assigned_technicians:
+                technician = User.objects.get(id=technician_id)
+                Notification.objects.create(
+                    user=technician,
+                    type = "maintenance",
+                    message=f'You have been assigned a new maintenance task: {maintenance.equipment.name}.',
+                )
+
             messages.success(request, 'Maintenance record added successfully!')
+            print(notifications)
+
             return redirect('maintenance_list')
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
             return render(request, 'add_maintenance.html', context)
+    print(notifications)
 
     return render(request, 'add_maintenance.html', context)
-    
-    
-    
-
 def maintenance_list(request):
-    maintenance_records = MaintenanceRecord.objects.all()  # Fetch all maintenance records
+    notifications = get_notifications(request.user)
+
+    user_branch = request.user.userprofile.branch
+
+    maintenance_records = MaintenanceRecord.objects.filter(branch = user_branch )  # Fetch all maintenance records
     context = {
+        'active_page': 'maintenance_list',
         'title': 'Maintenance List',
         'item_list': maintenance_records,
         'edit_url': 'edit_maintenance',  # URL name for editing maintenance records
+        'notifications':notifications
     }
     return render(request, 'maintenance_list.html', context)
     
 
 def edit_maintenance(request, id):
-    maintenance = get_object_or_404(MaintenanceRecord, id=id)  # Fetch the maintenance record instance
-    spare_parts = SparePart.objects.all()  # Fetch all spare parts
-    spare_part_usages = SparePartUsage.objects.filter(maintenance_record=maintenance)  # Fetch existing spare part usages
+    notifications = get_notifications(request.user)
+    user_branch = request.user.userprofile.branch
+    maintenance = get_object_or_404(MaintenanceRecord, id=id)
+    spare_parts = SparePart.objects.filter(branch=user_branch)
+    spare_part_usages = SparePartUsage.objects.filter(maintenance_record=maintenance)
 
     if request.method == 'POST':
         # Get form data
@@ -877,38 +1128,41 @@ def edit_maintenance(request, id):
         assigned_technicians = request.POST.getlist('assigned_technicians')
         branch_id = request.POST.get('branch')
         maintenance_type_id = request.POST.get('maintenance_type')
-        spare_parts_post = request.POST.getlist('spare_parts[]')  # List of spare part IDs from the form
-        spare_part_quantities = request.POST.getlist('spare_part_quantities[]')  # List of quantities from the form
+        spare_parts_post = request.POST.getlist('spare_parts[]')
+        spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
         remark = request.POST.get('remark')
         procedure = request.POST.get('procedure')
         problems = request.POST.get('problems')
         status = request.POST.get('status')
 
         # Validate required fields
-        if not equipment_id or not assigned_technicians or not branch_id or not maintenance_type_id or not status:
-            messages.error(request, 'Please fill out all required fields.')
-            return render(request, 'edit_maintenance.html', {
-                'maintenance': maintenance,
-                'spare_parts': spare_parts,
-                'spare_part_usages': spare_part_usages,
-            })
+        # if not equipment_id  or not branch_id or not maintenance_type_id or not status:
+        #     messages.error(request, 'Please fill out all required fields.')
+        #     return render(request, 'edit_maintenance.html', {
+        #         'maintenance': maintenance,
+        #         'spare_parts': spare_parts,
+        #         'spare_part_usages': spare_part_usages,
+        #         'active_page': 'maintenance_list',
+        #         'notifications': notifications,
+                
+        #     })
 
         try:
             # Update the MaintenanceRecord object
-            maintenance.equipment_id = equipment_id
-            maintenance.branch_id = branch_id
+            # maintenance.equipment_id = equipment_id
+            # maintenance.branch_id = branch_id
             maintenance.maintenance_type_id = maintenance_type_id
             maintenance.remark = remark
             maintenance.procedure = procedure
             maintenance.problems = problems
-            maintenance.status = status
+            # maintenance.status = status
             maintenance.save()
-            maintenance.assigned_technicians.set(assigned_technicians)
+            # maintenance.assigned_technicians.set(assigned_technicians)
 
             # Step 1: Add back the old quantities to the spare parts
             for usage in spare_part_usages:
                 spare_part = usage.spare_part
-                spare_part.quantity += usage.quantity_used  # Add back the old quantity
+                spare_part.quantity += usage.quantity_used
                 spare_part.save()
 
             # Step 2: Process the new spare parts and quantities
@@ -928,13 +1182,9 @@ def edit_maintenance(request, id):
                     # Rollback the old quantities
                     for usage in spare_part_usages:
                         spare_part = usage.spare_part
-                        spare_part.quantity -= usage.quantity_used  # Deduct the old quantity (undo Step 1)
+                        spare_part.quantity -= usage.quantity_used
                         spare_part.save()
-                    return render(request, 'edit_maintenance.html', {
-                        'maintenance': maintenance,
-                        'spare_parts': spare_parts,
-                        'spare_part_usages': spare_part_usages,
-                    })
+                    return redirect(f'{request.path}?equipment={equipment_id}&maintenance_type={maintenance_type_id}&error=1')
 
                 # Deduct the new quantity from the spare part
                 spare_part.quantity -= quantity_used
@@ -960,6 +1210,8 @@ def edit_maintenance(request, id):
                 'maintenance': maintenance,
                 'spare_parts': spare_parts,
                 'spare_part_usages': spare_part_usages,
+                'active_page': 'maintenance_list',
+                'notifications': notifications
             })
 
     # For GET requests, pre-fill the form and spare parts
@@ -969,24 +1221,33 @@ def edit_maintenance(request, id):
         'maintenance': maintenance,
         'spare_parts': spare_parts,
         'spare_part_usages': spare_part_usages,
+        'active_page': 'maintenance_list',
+        'notifications': notifications
     })
-
 def branch_list(request):
+    notifications = get_notifications(request.user)
+
     branches = Branch.objects.all()
     context = {
+        'active_page': 'branch_list',
         'title': 'Branches',
         'item_list': branches,
         'edit_url': 'edit_branch',
+        'notifications':notifications
     }
     return render(request, 'branch_list.html', context)
 
 def add_branch_page(request):
-    return render(request, 'add_branch.html')
+    notifications = get_notifications(request.user)
+
+    return render(request, 'add_branch.html',{ 'active_page': 'branch_list','notifications':notifications})
 
 
 
 
 def add_branch(request):
+    notifications = get_notifications(request.user)
+
     if request.method == 'POST':
         form = BranchForm(request.POST)  # Bind the form to the POST data
         if form.is_valid():  # Validate the form
@@ -997,31 +1258,39 @@ def add_branch(request):
         form = BranchForm()  # Create an empty form for GET requests
 
     # Render the form in the template
-    return render(request, 'add_branch.html', {'form': form})
+    return render(request, 'add_branch.html', {'form': form,  'active_page': 'branch_list','notifications':notifications})
 
 def edit_branch(request, id):
+    notifications = get_notifications(request.user)
+
     branch = get_object_or_404(Branch, id=id)
     if request.method == 'POST':
         form = BranchForm(request.POST, instance=branch)
         if form.is_valid():
             form.save()
             messages.success(request, 'Branch updated successfully!')
-            return redirect('branch_list')
+            return redirect('branch_list',{ 'active_page': 'branch_list','notifications':notifications})
     else:
         form = BranchForm(instance=branch)
-    return render(request, 'edit_branch.html', {'form': form, 'branch': branch})
+    return render(request, 'edit_branch.html', {'form': form, 'branch': branch, 'active_page': 'branch_list','notifications':notifications})
 #---------------------------------------------------------------------------------------------
 
 def user_profile_list(request):
+    notifications = get_notifications(request.user)
+
     user_profiles = UserProfile.objects.all()
     context = {
+        'active_page': 'user_profile_list',
         'title': 'User Profiles',
         'item_list': user_profiles,
         'edit_url': 'edit_user_profile',
+        'notifications':notifications
     }
     return render(request, 'user_profile_list.html', context)
 
 def add_user_profile_page(request):
+    notifications = get_notifications(request.user)
+
     # Fetch all branches from the database
     branches = Branch.objects.all()
 
@@ -1033,11 +1302,15 @@ def add_user_profile_page(request):
     context = {
         'roles': UserProfile.ROLE_CHOICES,
         'branches': branches,  # Pass the branches queryset
+         'active_page': 'user_profile_list',
+         'notifications':notifications
     }
     return render(request, 'add_user_profile.html', context)
 
 
 def add_user_profile(request):
+    notifications = get_notifications(request.user)
+
     if request.method == 'POST':
         first_name = request.POST.get('firstName')
         last_name = request.POST.get('lastName')
@@ -1052,7 +1325,7 @@ def add_user_profile(request):
         # Check if the username already exists
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username already exists')
-            return redirect('add_user_profile_page')
+            return redirect('add_user_profile_page', { 'active_page': 'user_profile_list','notifications':notifications})
 
         # Create the User
         user = User.objects.create_user(
@@ -1075,8 +1348,10 @@ def add_user_profile(request):
         messages.success(request, 'User created successfully')
         return redirect('user_profile_list')  # Redirect to the user list page
 
-    return render(request, 'add_user_profile.html')
+    return render(request, 'add_user_profile.html', { 'active_page': 'user_profile_list',})
 def edit_user_profile(request, id):
+    notifications = get_notifications(request.user)
+
     user_profile = get_object_or_404(UserProfile, id=id)
     
     if request.method == 'POST':
@@ -1098,17 +1373,19 @@ def edit_user_profile(request, id):
                     messages.success(request, 'Password updated successfully!')
                 else:
                     messages.error(request, 'Passwords do not match!')
-                    return redirect('edit_user_profile', id=id)
+                    return redirect('edit_user_profile', id=id, )
 
             form.save()  # Save the UserProfile model
             messages.success(request, 'User Profile updated successfully!')
-            return redirect('user_profile_list')
+            return redirect('user_profile_list', { 'active_page': 'user_profile_list',})
     else:
         form = UserProfileForm(instance=user_profile)
     
     return render(request, 'edit_user_profile.html', {
         'form': form,
         'user_profile': user_profile,
+         'active_page': 'user_profile_list',
+         'notifications':notifications
     })
 def check_username(request):
     username = request.GET.get('username')
@@ -1117,8 +1394,175 @@ def check_username(request):
 
 @login_required()
 def dashboard(request):
-    return render(request, 'dashboard.html')
+    notifications = get_notifications(request.user)
 
-@login_required()
-def equipment(request):
-    return render(request, 'equipment.html')
+    context = {
+    'active_page': 'dashboard', 'notifications':notifications}
+    
+    return render(request, 'dashboard.html', context)
+
+# @login_required()
+# def equipment(request):
+#     return render(request, 'equipment.html')
+
+def accept_maintenance(request, maintenance_id):
+    maintenance = MaintenanceRecord.objects.get(id=maintenance_id)
+    if request.user in maintenance.assigned_technicians.all():
+        maintenance.status = 'Accepted'
+        maintenance.accepted_by = request.user
+        maintenance.save()
+        messages.success(request, 'Maintenance task accepted.')
+    else:
+        messages.error(request, 'You are not assigned to this task.')
+    return redirect('maintenance_list')
+
+def complete_maintenance(request, maintenance_id):
+    maintenance = MaintenanceRecord.objects.get(id=maintenance_id)
+    if request.user in maintenance.assigned_technicians.all():
+        maintenance.status = 'Complete'
+        maintenance.save()
+        messages.success(request, 'Maintenance task marked as complete.')
+        
+        maintenance_branch = maintenance.branch
+        
+        # Find the MD Manager in the same branch
+        manager = User.objects.filter(userprofile__branch=maintenance_branch, userprofile__role='MD manager').first()
+        if manager:
+            # Create a notification for the MD Manager
+            Notification.objects.create(
+                user=manager,
+                type = "maintenance",
+                message=f'The maintenance task for {maintenance.equipment.name} has been marked as complete.',
+            )
+        
+    else:
+        messages.error(request, 'You are not assigned to this task.')
+    return redirect('maintenance_list')
+
+def approve_maintenance(request, maintenance_id):
+    maintenance = MaintenanceRecord.objects.get(id=maintenance_id)
+    if request.user.userprofile.role == 'MD manager':
+        maintenance.status = 'Approved'
+        maintenance.approved_by = request.user
+        maintenance.save()
+
+        # Update equipment's last and next maintenance dates
+        equipment = maintenance.equipment
+        equipment.last_maintenance_date = timezone.now().date()
+        equipment.next_maintenance_date = calculate_next_maintenance_date(equipment)
+        equipment.save()
+
+        messages.success(request, 'Maintenance task approved.')
+    else:
+        messages.error(request, 'You are not authorized to approve this task.')
+    return redirect('maintenance_list')
+
+def calculate_next_maintenance_date(equipment):
+    from datetime import timedelta
+    next_date = equipment.last_maintenance_date
+    next_date += timedelta(days=equipment.maintenance_interval_days)
+    next_date += timedelta(weeks=equipment.maintenance_interval_weeks)
+    next_date += timedelta(days=30 * equipment.maintenance_interval_months)
+    next_date += timedelta(days=365 * equipment.maintenance_interval_years)
+    return next_date
+
+def mark_notification_as_read(request, notification_id):
+    if request.user.is_authenticated:
+        try:
+            notification = Notification.objects.get(id=notification_id, user=request.user)
+            notification.is_read = True
+            notification.save()
+            # Redirect based on the type of notification
+            if notification.type == 'maintenance':  # Assuming you have a 'type' field
+                return redirect('maintenance_list')  # Adjust the URL name as necessary
+            elif notification.type == 'work_order':
+                return redirect('work_order_list')  # Adjust the URL name as necessary
+            elif notification.type == 'low_maintenance':
+                return redirect('low_maintenance')  # Adjust the URL name as necessary
+            elif notification.type == 'low_spare_part':
+                return redirect('low_spare_part')  # Adjust the URL name as necessary
+            
+        except Notification.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Notification not found'})
+    return JsonResponse({'status': 'error', 'message': 'User not authenticated'})
+
+
+def accept_work_order(request, work_order_id):
+    
+    work_order = get_object_or_404(WorkOrder, id=work_order_id)
+    if request.user.userprofile.role == 'MD manager':
+        work_order.status = 'Accepted'
+        work_order.accepted_by = request.user
+        work_order.save()
+        messages.success(request, 'Work order accepted.')
+    else:
+        messages.error(request, 'You are not assigned to this work order.')
+    return redirect('work_order_list')
+
+#---------------------------------------------------------------------------
+
+
+
+#----------------------------------------------------------------------------
+
+def complete_work_order(request, work_order_id):
+    work_order = get_object_or_404(WorkOrder, id=work_order_id)
+    
+    if request.user in work_order.assigned_technicians.all():
+        work_order.status = 'Complete'
+        work_order.save()
+        
+        equipment = work_order.equipment
+        equipment.last_maintenance_date = timezone.now().date()
+        equipment.next_maintenance_date = calculate_next_maintenance_date(equipment)
+        equipment.save()
+        messages.success(request, 'Work order marked as complete.')
+        
+        work_order_branch = work_order.branch
+        
+        # Find the MD Manager in the same branch
+        manager = User.objects.filter(userprofile__branch=work_order_branch, userprofile__role='MD manager').first()
+        client = work_order.requester
+        if manager:
+            # Create a notification for the MD Manager
+            Notification.objects.create(
+                user=manager,
+                message=f'The work order for {work_order.equipment.name} has been marked as complete.',
+            )
+        if client:
+             Notification.objects.create(
+                user=client,
+                type = "maintenance",
+                message=f'The work order for {work_order.equipment.name} has been marked as complete.',
+            )
+            
+    else:
+        messages.error(request, 'You are not assigned to this work order.')
+    
+    return redirect('work_order_list')
+
+def approve_work_order(request, work_order_id):
+    work_order = get_object_or_404(WorkOrder, id=work_order_id)
+    client = work_order.requester
+    
+    if request.user == client:
+        work_order.status = 'Approved'
+        work_order.approved_by = request.user
+        work_order.save()
+
+        # Update equipment's last and next maintenance dates if relevant
+        
+
+        messages.success(request, 'Work order approved.')
+    else:
+        messages.error(request, 'You are not authorized to approve this work order.')
+    
+    return redirect('work_order_list')
+
+def maintenance_due(request):
+    notifications = get_notifications(request.user)
+
+    return render(request,'maintenance_due.html', {'active_page':'maintenance_due','notifications':notifications})
+def low_spare_part(request):
+    notifications = get_notifications(request.user)
+    return render(request, 'low_spare_part.html', {'active_page':'low_spare_part','notifications':notifications})

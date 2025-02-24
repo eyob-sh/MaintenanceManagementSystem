@@ -1,0 +1,71 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
+
+    <div class="pagetitle">
+        <h1>Low Spare Parts Quantity</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+
+                <div class="card">
+                    <div class="card-body">
+
+                        
+
+                        <table class="table datatable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Quantity</th>
+                                    <th>Branch</th>
+                                    <th>Location</th>
+                                    <th>Last Restocked</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for spare_part in spare_parts %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'edit_spare_part' spare_part.id %}">{{ spare_part.name }}</a>
+                                    </td>
+                                    <td>{{ spare_part.quantity }}</td>
+                                    <td>{{ spare_part.branch.name }}</td>
+                                    <td>{{ spare_part.location }}</td>
+                                    <td>{{ spare_part.last_restocked }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No spare parts with low quantity.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+</main><!-- End #main -->
+
+{% endblock %}

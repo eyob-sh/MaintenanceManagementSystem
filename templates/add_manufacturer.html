@@ -37,6 +37,17 @@
                                 </div>
                             </div>
 
+                            <!-- Branch -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <label for="site" class="form-label">Site</label>
+        <input type="text" class="form-control" id="site" name="site" value="{{ branch.name }}" readonly>
+        <input type="hidden" name="site" value="{{ branch.id }}"> <!-- Hidden field for branch ID -->
+        <div class="invalid-feedback">Please select a branch.</div>
+    </div>
+</div>
+
+
                             <!-- Contact Email -->
                             <div class="row mb-3">
                                 <div class="col-md-12">

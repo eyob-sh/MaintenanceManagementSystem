@@ -105,4 +105,22 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
      path('check-username/', views.check_username, name='check_username'),
 
     path('dashboard', views.dashboard, name="dashboard"),
+    
+    #-----------------------------------------------------------------------------------
+ path('accept_maintenance/<int:maintenance_id>/', views.accept_maintenance, name='accept_maintenance'),
+    path('complete_maintenance/<int:maintenance_id>/', views.complete_maintenance, name='complete_maintenance'),
+    path('approve_maintenance/<int:maintenance_id>/', views.approve_maintenance, name='approve_maintenance'),    
+    #-----------------------------------------------------------------------------------------------------------
+    
+    path('accept_work_order/<int:work_order_id>/', views.accept_work_order, name='accept_work_order'),
+    path('complete_work_order/<int:work_order_id>/', views.complete_work_order, name='complete_work_order'),
+    path('approve_work_order/<int:maintenance_id>/', views.approve_work_order, name='approve_work_order'),    
+    
+    #-----------------------------------------------------------------------------------------------------------
+    path('mark_notification_as_read/<int:notification_id>/', views.mark_notification_as_read, name='mark_notification_as_read'),
+    
+    path('maintenance_due/', views.maintenance_due, name='maintenance_due'),  
+    
+    path('low_spare_part/', views.low_spare_part, name='low_spare_part'),  
+
 ]

@@ -2,12 +2,14 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.utils import timezone
+from django.db.models import UniqueConstraint
 
 
 
 # Create your models here.
 class Branch(models.Model):
     name = models.CharField(max_length=100)
+    location = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
@@ -16,10 +18,7 @@ class Branch(models.Model):
 
 class UserProfile(models.Model):
     # Define choices for departments
-    DEPARTMENT_CHOICES = [
-        ('MD', 'Maintenance Department'),
-        ('CD', 'Chemicals Department'),
-    ]
+   
 
     # Define choices for roles
     ROLE_CHOICES = [
@@ -32,7 +31,7 @@ class UserProfile(models.Model):
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True)
+    branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, null=True)
 
     def __str__(self):
@@ -48,6 +47,7 @@ class MaintenanceType(models.Model):
         max_length=255,
         unique=True,
     )
+    branch = models.ForeignKey(Branch , on_delete=models.PROTECT)
 
     description = models.TextField(
         blank=True,
@@ -64,6 +64,7 @@ class MaintenanceType(models.Model):
 class Manufacturer(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    site= models.ForeignKey(Branch, on_delete=models.PROTECT)
     contact_email = models.EmailField(blank=True, null=True)
     contact_phone_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
@@ -77,7 +78,7 @@ class Equipment(models.Model):
         ('operational', 'Operational'),
         ('non_operational', 'Non Operational'),
         ('under_maintenance', 'Under Maintenance'),
-        ('decommissioned', 'Decommissioned'),
+       
         
     ]
 
@@ -89,7 +90,7 @@ class Equipment(models.Model):
     equipment_type = models.CharField(max_length=50)  # To specify if it's a machine, tool, etc.
     manufacturer = models.ForeignKey('Manufacturer', on_delete=models.PROTECT)
     model_number = models.CharField(max_length=50)
-    serial_number = models.CharField(max_length=50, unique=True)
+    serial_number = models.CharField(max_length=50)
     branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
     location = models.CharField(max_length=50)
     installation_date = models.DateField()
@@ -101,6 +102,9 @@ class Equipment(models.Model):
     next_maintenance_date = models.DateField(null=True, blank=True, )  # New field
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='operational')
     remark = models.TextField(blank=True)
+    
+    
+    
     
     
 
@@ -121,8 +125,7 @@ class SparePart(models.Model):
     date_added = models.DateField(auto_now_add=True)  # Date when the part was added
     last_updated = models.DateField(auto_now=True)  # Date when the part was last updated
     
-    class Meta:
-        unique_together = ('part_number', 'branch')
+    
 
     def __str__(self):
         return f"{self.name} ({self.quantity} left) - {self.store}"
@@ -132,7 +135,7 @@ class SparePart(models.Model):
 class WorkOrder(models.Model):
     requester = models.ForeignKey(
         User,  # Use the built-in User model
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='work_orders',
         help_text='The user requesting the maintenance.',
     )
@@ -143,14 +146,22 @@ class WorkOrder(models.Model):
         on_delete=models.PROTECT,
         help_text='Select the equipment that needs maintenance.',
     )
+    
+    assigned_technicians = models.ManyToManyField(User)
+    spare_parts = models.ManyToManyField('SparePart', through='SparePartUsage')
+
+    
+    location = models.CharField(max_length=40, null=True)
+    
     description = models.TextField(
         help_text='Describe the maintenance needed.',
     )
     status = models.CharField(
         choices=[
             ('Pending', 'Pending'),
-            ('In Progress', 'In Progress'),
-            ('Completed', 'Completed'),
+            ('Accepted', 'Accepted'),
+            ('Complete', 'Complete'),
+            ('Approved', 'Approved'),
         ],
         default='Pending',
         help_text='Current status of the work order.',
@@ -174,98 +185,34 @@ class WorkOrder(models.Model):
         return f'Work Order #{self.id} - {self.equipment}'
 
 class MaintenanceRecord(models.Model):
-    
-    
     STATUS_CHOICES = [
-    ('Not Started', 'Not Started'),
-    ('Complete', 'Complete'),
-    ('In Progress', 'In Progress'),
-    ('Failed', 'Failed'),
-]
-    
-    MAINTENANCE_FOR = [
-    ('Scheduled_Maintenance', 'Scheduled_Maintenance'),
-    ('Work Order' ,'Work Order')
-]
+        ('Not Started', 'Not Started'),
+        ('Accepted', 'Accepted'),
+        ('In Progress', 'In Progress'),
+        ('Complete', 'Complete'),
+        ('Approved', 'Approved'),
+        ('Failed', 'Failed'),
+    ]
 
-    
-    equipment = models.ForeignKey(
-        'Equipment',
-        help_text='Select/Create an equipment.',
-        on_delete=models.PROTECT,
-    )
-    
-    
-
-    assigned_technicians = models.ManyToManyField(
-        User,
-
-        help_text='The users who are assigned to perform the maintenace.',
-        related_name='maintenance_records',)
-    
-    branch = models.ForeignKey(
-        'Branch',
-        on_delete=models.PROTECT,
-        help_text='Select the branch for this user.',
-    )
-    
-
-    maintenance_type = models.ForeignKey(
-        'MaintenanceType',
-        help_text='Select/Create a maintenance type.',
-        on_delete=models.PROTECT,
-    )
-    
-    
-
-    
-    
+    equipment = models.ForeignKey('Equipment', on_delete=models.PROTECT)
+    assigned_technicians = models.ManyToManyField(User, related_name='maintenance_records')
+    branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
+    maintenance_type = models.ForeignKey('MaintenanceType', on_delete=models.PROTECT)
     spare_parts = models.ManyToManyField('SparePart', through='SparePartUsage')
-
-   
-
-    remark = models.TextField(
-        blank=True,
-        help_text='Enter remarks for the maintenance performed.',
-        null=True,
-    )
-
-    procedure = models.TextField(
-        blank=True,
-        help_text='Enter details of how the maintenance was performed.',
-        null=True,
-    )
-
-    problems = models.TextField(
-        blank=True,
-        help_text='Describe problems that arose during maintenance.',
-        null=True,
-    )
-
-    
-
-    
-
-    status = models.CharField(
-        choices = STATUS_CHOICES,
-        default='Not Started',
-        help_text='What is the current status of the system maintenance?',
-        max_length=15,
-    )
-    
-    
-    datetime = models.DateTimeField(auto_now_add=True
-    )
-
+    remark = models.TextField(blank=True, null=True)
+    procedure = models.TextField(blank=True, null=True)
+    problems = models.TextField(blank=True, null=True)
+    status = models.CharField(choices=STATUS_CHOICES, default='Not Started', max_length=15)
+    datetime = models.DateTimeField(auto_now_add=True)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_maintenance')
 
     def __str__(self):
-        return '{} - {} ({})'.format(
-            self.equipment, self.maintenance_type, self.datetime.date())
+        return f'{self.equipment} - {self.maintenance_type} ({self.datetime.date()})'
         
     
 class SparePartUsage(models.Model):
     maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE, null=True)
-    WorkOrder = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, null=True)
+    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, null=True)
     spare_part = models.ForeignKey(SparePart, on_delete=models.CASCADE)
     quantity_used = models.IntegerField()  # Quantity of the spare part used
     
@@ -401,3 +348,15 @@ class Chemical(models.Model):
         verbose_name_plural = "Chemicals"
         ordering = ['chemical_name']
     
+    
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    type = models.CharField(max_length=40, null= True)
+    message = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(default=timezone.now)
+    is_read = models.BooleanField(default=False)
+    url = models.URLField(blank=True, null=True)  # Optional: Link to a specific page
+
+    def __str__(self):
+        return f'{self.user.username} - {self.message}'

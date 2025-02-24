@@ -26,6 +26,10 @@ class EquipmentForm(forms.ModelForm):
         # Loop through the fields and add the 'form-control' class
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})  # Add the Bootstrap class
+        
+        if self.instance and self.instance.pk:  # Check if the form is for an existing instance
+            self.fields['branch'].disabled = True  # Disable the field
+            self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
             
             
 
@@ -49,6 +53,12 @@ class SparePartForm(forms.ModelForm):
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})  # Add the Bootstrap class
             
+        if self.instance and self.instance.pk:  # Check if the form is for an existing instance
+            self.fields['branch'].disabled = True  # Disable the field
+            self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
+            
+            
+            
 
 class ManufacturerForm(forms.ModelForm):
     class Meta:
@@ -56,6 +66,7 @@ class ManufacturerForm(forms.ModelForm):
         fields = [
             'name',
             'description',
+            'site',
             'contact_email',
             'contact_phone_number',
             'address',
@@ -63,9 +74,15 @@ class ManufacturerForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(ManufacturerForm, self).__init__(*args, **kwargs)
+        
         # Add Bootstrap 'form-control' class to all fields
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
+
+        # Make the 'site' field read-only if the form is for an existing instance
+        if self.instance and self.instance.pk:  # Check if the form is for an existing instance
+            self.fields['site'].disabled = True  # Disable the field
+            self.fields['site'].widget.attrs['readonly'] = True  # Make it read-only
             
 class DecommissionedEquipmentForm(forms.ModelForm):
     class Meta:
@@ -87,6 +104,7 @@ class MaintenanceTypeForm(forms.ModelForm):
         model = MaintenanceType
         fields = [
             'maintenance_type',
+            'branch',
             'description',
         ]
 
@@ -95,6 +113,10 @@ class MaintenanceTypeForm(forms.ModelForm):
         # Add Bootstrap 'form-control' class to all fields
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
+            
+        if self.instance and self.instance.pk:  # Check if the form is for an existing instance
+            self.fields['branch'].disabled = True  # Disable the field
+            self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
             
 class MaintenanceRecordForm(forms.ModelForm):
     class Meta:
@@ -122,6 +144,12 @@ class MaintenanceRecordForm(forms.ModelForm):
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
             
+        if self.instance and self.instance.pk:  # Check if the form is for an existing instance
+            self.fields['branch'].disabled = True  # Disable the field
+            self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
+            
+            
+            
 class WorkOrderForm(forms.ModelForm):
     class Meta:
         model = WorkOrder
@@ -138,6 +166,12 @@ class WorkOrderForm(forms.ModelForm):
         # Add Bootstrap 'form-control' class to all fields
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
+            
+        if self.instance and self.instance.pk:  # Check if the form is for an existing instance
+            self.fields['branch'].disabled = True  # Disable the field
+            self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
+            
+            
             
 class SparePartUsageForm(forms.ModelForm):
     class Meta:

@@ -56,7 +56,7 @@
                                             <!-- Initial Technician Row -->
                                             <div class="row mb-3 technician-row">
                                                 <div class="col-md-10">
-                                                    <select class="form-select technician-select" name="assigned_technicians[]">
+                                                    <select class="form-select technician-select" name="assigned_technicians[]" required>
                                                         <option value="">Select Technician</option>
                                                         {% for technician in technicians %}
                                                         <option value="{{ technician.id }}">{{ technician.get_full_name }}</option>
@@ -87,12 +87,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="branch" class="form-label">Branch</label>
-                                            <select class="form-select" id="branch" name="branch" required>
-                                                <option selected disabled value="">Select Branch</option>
-                                                {% for branch in branches %}
-                                                <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                                {% endfor %}
-                                            </select>
+                                            <input type="text" class="form-control" id="branch" name="branch" value="{{ branch.name }}" readonly>
+                                            <input type="hidden" name="branch" value="{{ branch.id }}"> <!-- Hidden field for branch ID -->
                                             <div class="invalid-feedback">Please select a branch.</div>
                                         </div>
                                     </div>
@@ -104,8 +100,7 @@
                                             <select class="form-select" id="maintenance_type" name="maintenance_type" required>
                                                 <option selected disabled value="">Select Maintenance Type</option>
                                                 {% for maintenance_type in maintenance_types %}
-                                                <option value="{{ maintenance_type.id }}">{{
-                                                    maintenance_type.maintenance_type }}</option>
+                                                <option value="{{ maintenance_type.id }}">{{ maintenance_type.maintenance_type }}</option>
                                                 {% endfor %}
                                             </select>
                                             <div class="invalid-feedback">Please select a maintenance type.</div>
@@ -279,7 +274,7 @@
 
             newRow.innerHTML = `
                 <div class="col-md-10">
-                    <select class="form-select technician-select" name="assigned_technicians[]">
+                    <select class="form-select technician-select" name="assigned_technicians[]" required>
                         <option value="">Select Technician</option>
                         {% for technician in technicians %}
                         <option value="{{ technician.id }}">{{ technician.get_full_name }}</option>
@@ -348,20 +343,5 @@
         });
     });
 </script>
-
-<!-- JavaScript to Enable Disabled Fields Before Submission -->
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const form = document.getElementById('userForm');
-  
-      form.addEventListener('submit', function (event) {
-        // Enable the disabled department field before submission
-        const departmentField = document.getElementById('department');
-        if (departmentField.disabled) {
-          departmentField.disabled = false;
-        }
-      });
-    });
-  </script>
 
 {% endblock %}

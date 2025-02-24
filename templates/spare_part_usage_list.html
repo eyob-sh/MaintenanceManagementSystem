@@ -28,11 +28,11 @@
                 <div class="card">
                     <div class="card-body">
 
-                        <div class="d-flex justify-content-end mb-3" style="margin-top: 20px;">
+                        {% comment %} <div class="d-flex justify-content-end mb-3" style="margin-top: 20px;">
                             <a href="{% url 'add_spare_part_usage' %}" class="btn btn-success bg-success">
                                 <i class="bi bi-plus"></i> Add Spare Part Usage
                             </a>
-                        </div>
+                        </div> {% endcomment %}
 
                         <table class="table datatable">
                             <thead>
@@ -46,8 +46,8 @@
                                 {% for spare_part_usage in item_list %}
                                 <tr>
                                     <td>
-                                        <a href="{% url edit_url spare_part_usage.id %}">{{
-                                            spare_part_usage.maintenance_record }}</a>
+                                        {{
+                                            spare_part_usage.maintenance_record }}
                                     </td>
                                     <td>{{ spare_part_usage.spare_part.name }}</td>
                                     <td>{{ spare_part_usage.quantity_used }}</td>
@@ -70,3 +70,4 @@
 </main><!-- End #main -->
 
 {% endblock %}
+

@@ -93,18 +93,14 @@
                                 <!-- Right Column -->
                                 <div class="col-md-6">
                                     <!-- Branch -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="branch" class="form-label">Branch</label>
-                                            <select class="form-select" id="branch" name="branch" required>
-                                                <option selected disabled value="">Select Branch</option>
-                                                {% for branch in branches %}
-                                                <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <div class="invalid-feedback">Please select a branch.</div>
-                                        </div>
-                                    </div>
+<div class="row mb-3">
+    <div class="col-md-12">
+        <label for="branch" class="form-label">Branch</label>
+        <input type="text" class="form-control" id="branch" name="branch" value="{{ branch.name }}" readonly>
+        <input type="hidden" name="branch" value="{{ branch.id }}"> <!-- Hidden field for branch ID -->
+        <div class="invalid-feedback">Please select a branch.</div>
+    </div>
+</div>
 
                                     <!-- Location -->
                                     <div class="row mb-3">
@@ -135,7 +131,7 @@
                                                 <option value="operational">Operational</option>
                                                 <option value="non_operational">Non Operational</option>
                                                 <option value="under_maintenance">Under Maintenance</option>
-                                                <option value="decommissioned">Decommissioned</option>
+                                                
                                             </select>
                                             <div class="invalid-feedback">Please select a status.</div>
                                         </div>

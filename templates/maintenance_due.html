@@ -1,0 +1,77 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
+
+    <div class="pagetitle">
+        <h1>Equipment Due for Maintenance</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+
+                <div class="card">
+                    <div class="card-body">
+
+                       
+
+                        <table class="table datatable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Manufacturer</th>
+                                    <th>Serial Number</th>
+                                    <th>Location</th>
+                                    <th>Installation Date</th>
+                                    <th>Next Maintenance Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for equipment in equipment_list %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'edit_equipment' equipment.id %}">{{ equipment.name }}</a>
+                                    </td>
+                                    <td>{{ equipment.equipment_type }}</td>
+                                    <td>{{ equipment.manufacturer }}</td>
+                                    <td>{{ equipment.serial_number }}</td>
+                                    <td>{{ equipment.location }}</td>
+                                    <td>{{ equipment.installation_date }}</td>
+                                    <td>{{ equipment.next_maintenance_date }}</td>
+                                    <td>{{ equipment.get_status_display }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No equipment due for maintenance.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+</main><!-- End #main -->
+
+{% endblock %}

@@ -396,6 +396,7 @@ h6 {
   cursor: pointer;
   /* color: #012970; */
   color: black;
+  font-weight: 5px;
 }
 
 .header .search-bar {
@@ -687,7 +688,7 @@ h6 {
 .sidebar-nav .nav-link {
   display: flex;
   align-items: center;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   /* color: #4154f1; */
   color: black;
@@ -708,7 +709,7 @@ h6 {
 .sidebar-nav .nav-link.collapsed {
   /* color: #012970; */
   color: black;
-  background: #fff;
+  background: rgb(230, 255, 230)
 }
 
 .sidebar-nav .nav-link.collapsed i {
