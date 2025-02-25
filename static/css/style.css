@@ -397,6 +397,11 @@ h6 {
   /* color: #012970; */
   color: black;
   font-weight: 5px;
+  /* added to move the hamburger to left works on browser not on here*/
+  margin-right: 50px;
+  margin-bottom: -40px;
+  margin-left:-20px ;
+  width:30px;
 }
 
 .header .search-bar {

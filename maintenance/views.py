@@ -1798,27 +1798,27 @@ def restock_spare_part_page(request):
 
 #     return render(request,'maintenance_due.html', {'active_page':'maintenance_due','notifications':notifications})
 
-# def maintenance_due(request):
-#     user_branch = request.user.branch
-#     today = timezone.now().date()
-#     due_date = today + timedelta(days=5)
+def maintenance_due(request):
+    user_branch = request.user.branch
+    today = timezone.now().date()
+    due_date = today + timedelta(days=5)
 
-#     due_equipment = Equipment.objects.filter(
-#         branch=user_branch,
-#         next_maintenance_date__lte=due_date,
-#         next_maintenance_date__gte=today
-#     )
+    due_equipment = Equipment.objects.filter(
+        branch=user_branch,
+        next_maintenance_date__lte=due_date,
+        next_maintenance_date__gte=today
+    )
 
-#     # Notify MD managers in the same branch
-#     md_managers = User.objects.filter(
-#         branch=user_branch,
-#         role__in=['MD manager', 'Maintenance Department Manager']
-#     )
+    # Notify MD managers in the same branch
+    md_managers = User.objects.filter(
+        branch=user_branch,
+        role__in=['MD manager', 'Maintenance Department Manager']
+    )
 
-#     for manager in md_managers:
-#         messages.warning(
-#             request,
-#             f"Equipment {equipment.name} is due for maintenance on {equipment.next_maintenance_date}."
-#         )
+    for manager in md_managers:
+        messages.warning(
+            request,
+            f"Equipment {equipment.name} is due for maintenance on {equipment.next_maintenance_date}."
+        )
 
-#     return render(request, 'maintenance_due.html', {'due_equipment': due_equipment})
+    return render(request, 'maintenance_due.html', {'due_equipment': due_equipment})
