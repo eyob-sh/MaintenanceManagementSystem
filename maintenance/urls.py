@@ -128,5 +128,9 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
         path('restock_spare_part_page/', views.restock_spare_part_page, name='restock_spare_part_page'),
 
 
+#--------------------------------------------------------------------------------------------------------------------
 
+
+path('chemical_usage/', views.chemical_usage, name= 'chemical_usage'),
+path('chemical_usage_list/', views.chemical_usage_list, name= 'chemical_usage_list')
 ]

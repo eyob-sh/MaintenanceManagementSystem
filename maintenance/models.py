@@ -360,6 +360,18 @@ class Chemical(models.Model):
         verbose_name = "Chemical"
         verbose_name_plural = "Chemicals"
         ordering = ['chemical_name']
+
+
+class ChemicalUsage(models.Model):
+    chemical = models.ForeignKey(Chemical, on_delete=models.CASCADE, related_name='usage_records')
+    quantity_used = models.FloatField(validators=[MinValueValidator(0.01)])
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chemical_usage')
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='chemical_usage')
+    purpose = models.TextField()
+    date_used = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.chemical.chemical_name} - {self.quantity_used} {self.chemical.unit_of_measurement} by {self.user.get_full_name()} on {self.date_used.strftime('%Y-%m-%d')}"
     
     
 

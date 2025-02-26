@@ -325,6 +325,21 @@
                     <span>Chemicals</span>
                 </a>
             </li>
+
+            
+            <li class="nav-item">
+                <a class="nav-link {% if active_page != 'chemical_usage' %}collapsed{% endif %}" href="{% url 'chemical_usage' %}">
+                  <i class="bi bi-droplet"></i>
+                    <span>Chemical Usage</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link {% if active_page != 'chemical_usage_list' %}collapsed{% endif %}" href="{% url 'chemical_usage_list' %}">
+                <i class="bi bi-droplet"></i>
+                  <span>Log</span>
+              </a>
+          </li>
         {% endif %}
 
         <!-- Client -->

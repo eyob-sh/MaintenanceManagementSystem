@@ -1822,3 +1822,63 @@ def maintenance_due(request):
         )
 
     return render(request, 'maintenance_due.html', {'due_equipment': due_equipment})
+
+def chemical_usage(request):
+    chemicals = Chemical.objects.all()  # Filter chemicals by user's branch
+    context = {
+        'chemicals': chemicals,
+        'active_page': 'chemical_usage',
+        'branch': request.user.userprofile.branch,  # Default branch based on the user
+    }
+
+    if request.method == 'POST':
+        chemical_id = request.POST.get('chemical')
+        quantity = float(request.POST.get('quantity'))
+        purpose = request.POST.get('purpose')
+
+        try:
+            chemical = Chemical.objects.get(id=chemical_id)
+
+            # Check if there's enough quantity
+            if chemical.quantity_available >= quantity:
+                # Decrease the quantity
+                chemical.quantity_available -= quantity
+                chemical.save()
+
+                # Log the usage in the Chemical model (optional)
+                if chemical.usage_log:
+                    chemical.usage_log += f"\n{request.user.get_full_name()} used {quantity} {chemical.unit_of_measurement} for {purpose} on {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}."
+                else:
+                    chemical.usage_log = f"{request.user.get_full_name()} used {quantity} {chemical.unit_of_measurement} for {purpose} on {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}."
+                chemical.save()
+
+                # Create a ChemicalUsage record
+                ChemicalUsage.objects.create(
+                    chemical=chemical,
+                    quantity_used=quantity,
+                    user=request.user,
+                    branch=request.user.userprofile.branch,
+                    purpose=purpose,
+                    date_used=timezone.now()
+                )
+
+                messages.success(request, f"{quantity} {chemical.unit_of_measurement} of {chemical.chemical_name} used.")
+            else:
+                messages.error(request, f"Insufficient quantity available for {chemical.chemical_name}.")
+
+        except Chemical.DoesNotExist:
+            messages.error(request, "Invalid chemical selected.")
+
+        return redirect('chemical_usage')
+
+    return render(request, 'chemical_usage.html', context)
+
+def chemical_usage_list(request):
+    usage_list = ChemicalUsage.objects.all().order_by('-date_used')
+    
+    context = {
+        'usage_list': usage_list,
+        'active_page': 'chemical_usage_list',
+    }
+    
+    return render(request, 'chemical_usage_list.html', context)
