@@ -984,7 +984,7 @@ def edit_chemical(request, id):
     notifications = get_notifications(request.user)
 
     chemical = get_object_or_404(Chemical, id=id)  # Fetch the chemical instance
-
+    Log = ChemicalUsage.object.filter(chemical = chemical)
     if request.method == 'POST':
         form = ChemicalForm(request.POST, instance=chemical)
         if form.is_valid():
@@ -994,7 +994,7 @@ def edit_chemical(request, id):
     else:
         form = ChemicalForm(instance=chemical)  # Pre-fill the form with the current data
 
-    return render(request, 'edit_chemical.html', {'form': form, 'chemical': chemical, 'active_page': 'chemical_list','notifications':notifications
+    return render(request, 'edit_chemical.html', {'form': form, 'chemical': chemical, 'active_page': 'chemical_list','notifications':notifications, 'log':Log
 })
     
     

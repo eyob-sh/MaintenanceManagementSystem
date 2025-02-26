@@ -87,6 +87,15 @@
                                             {{ form.batch_lot_number }}
                                         </div>
                                     </div>
+
+                                    <!-- Hazard Classification -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_hazard_classification" class="form-label">Hazard
+                                                Classification</label>
+                                            {{ form.hazard_classification }}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- Right Column -->
@@ -157,22 +166,17 @@
                                         </div>
                                     </div>
 
-                                    <!-- Hazard Classification -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_hazard_classification" class="form-label">Hazard
-                                                Classification</label>
-                                            {{ form.hazard_classification }}
-                                        </div>
-                                    </div>
+                                    
 
-                                    <!-- Usage Log -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_usage_log" class="form-label">Usage Log</label>
-                                            {{ form.usage_log }}
-                                        </div>
-                                    </div>
+                                    
+                                </div>
+                            </div>
+
+                            <!-- Usage Log -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="id_usage_log" class="form-label">Usage Log</label>
+                                    {{ form.usage_log }}
                                 </div>
                             </div>
 
