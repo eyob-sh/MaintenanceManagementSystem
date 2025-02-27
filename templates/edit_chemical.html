@@ -18,7 +18,7 @@
     <!-- End Messages Block -->
 
     <div class="pagetitle">
-        <h1>Edit Chemical: {{ chemical.chemical_name }}</h1>
+        <h1>Chemical: {{ chemical.chemical_name }}</h1>
     </div><!-- End Page Title -->
 
     <section class="section">
@@ -28,9 +28,19 @@
                     <div class="card-body">
                         <h5 class="card-title"></h5>
 
+
+
                         <!-- General Form Elements -->
                         <form method="POST" id="chemicalForm" novalidate>
                             {% csrf_token %}
+                            <!-- Submit Button -->
+                            <div class="row mb-3">
+                                <div class="col-md-12 text-center">
+                                    <button type="submit" class="btn btn-primary"
+                                        style="position: absolute; right: 30px; top: 10px;">Save Changes</button>
+                                </div>
+                            </div>
+
 
                             <div class="row">
                                 <!-- Left Column -->
@@ -99,7 +109,9 @@
                                 </div>
 
                                 <!-- Right Column -->
+
                                 <div class="col-md-6">
+
                                     <!-- Quantity Available -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
@@ -166,27 +178,67 @@
                                         </div>
                                     </div>
 
-                                    
 
-                                    
+
+
                                 </div>
                             </div>
 
-                            <!-- Usage Log -->
+                            <!-- Usage Log
                             <div class="row mb-3">
                                 <div class="col-md-12">
                                     <label for="id_usage_log" class="form-label">Usage Log</label>
                                     {{ form.usage_log }}
                                 </div>
-                            </div>
+                            </div> -->
 
-                            <!-- Submit Button -->
+                            <!-- Submit Button
                             <div class="row mb-3">
                                 <div class="col-md-12 text-center">
                                     <button type="submit" class="btn btn-primary">Save Changes</button>
                                 </div>
-                            </div>
+                            </div> -->
                         </form><!-- End General Form Elements -->
+                        <!-- Usage Log -->
+
+
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Usage Log</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <h5 class="form-label"></h5>
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date Used</th>
+                                            <th>Quantity Used</th>
+                                            <th>User</th>
+                                            <th>Branch</th>
+                                            <th>Purpose</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for log in Log %}
+                                        <tr>
+                                            <td>{{ log.date_used|date:"Y-m-d H:i" }}</td>
+                                            <td>{{ log.quantity_used }} {{ log.chemical.unit_of_measurement }}</td>
+                                            <td>{{ log.user.get_full_name }}</td>
+                                            <td>{{ log.branch.name }}</td>
+                                            <td>{{ log.purpose }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center">No usage logs available for this
+                                                chemical.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

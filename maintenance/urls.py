@@ -132,5 +132,8 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
 
 
 path('chemical_usage/', views.chemical_usage, name= 'chemical_usage'),
-path('chemical_usage_list/', views.chemical_usage_list, name= 'chemical_usage_list')
+path('chemical_usage_list/', views.chemical_usage_list, name= 'chemical_usage_list'),
+ path('chemical_restock_list/', views.chemical_restock_list, name='chemical_restock_list'),
+    path('restock_chemical/', views.restock_chemical, name='restock_chemical'),
+    path('expiring_chemical/', views.expiring_chemical, name='expiring_chemical'),
 ]

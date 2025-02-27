@@ -7,7 +7,8 @@ from django.http import Http404
 from datetime import datetime
 from django.db.models import Count, Q
 from datetime import datetime, timedelta
-from .Forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ChemicalForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTypeForm, BranchForm, UserProfileForm, RestockSparePartForm
+from django.utils import timezone
+from .Forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ChemicalForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTypeForm, BranchForm, UserProfileForm, RestockSparePartForm, RestockChemicalForm
 
 from django.contrib.auth import authenticate, login, logout
 
@@ -984,7 +985,7 @@ def edit_chemical(request, id):
     notifications = get_notifications(request.user)
 
     chemical = get_object_or_404(Chemical, id=id)  # Fetch the chemical instance
-    Log = ChemicalUsage.object.filter(chemical = chemical)
+    Log = ChemicalUsage.objects.filter(chemical = chemical).order_by('-date_used')
     if request.method == 'POST':
         form = ChemicalForm(request.POST, instance=chemical)
         if form.is_valid():
@@ -994,7 +995,7 @@ def edit_chemical(request, id):
     else:
         form = ChemicalForm(instance=chemical)  # Pre-fill the form with the current data
 
-    return render(request, 'edit_chemical.html', {'form': form, 'chemical': chemical, 'active_page': 'chemical_list','notifications':notifications, 'log':Log
+    return render(request, 'edit_chemical.html', {'form': form, 'chemical': chemical, 'active_page': 'chemical_list','notifications':notifications, 'Log':Log
 })
     
     
@@ -1487,6 +1488,8 @@ def mark_notification_as_read(request, notification_id):
                 return redirect('low_maintenance')  # Adjust the URL name as necessary
             elif notification.type == 'low_spare_part':
                 return redirect('low_spare_part')  # Adjust the URL name as necessary
+            elif notification.type == 'expiration_list':
+                return redirect('expired_chemical.html')
             
         except Notification.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Notification not found'})
@@ -1882,3 +1885,98 @@ def chemical_usage_list(request):
     }
     
     return render(request, 'chemical_usage_list.html', context)
+
+def restock_chemical(request):
+    notifications = get_notifications(request.user)
+
+    if request.method == 'POST':
+        selected_chemical_id = request.POST.get('chemical')  # Get the selected chemical ID
+        chemical = get_object_or_404(Chemical, id=selected_chemical_id)  # Fetch the chemical instance
+
+        form = RestockChemicalForm(request.POST, request.FILES)
+        if form.is_valid():
+            restock = form.save(commit=False)
+            restock.chemical = chemical  # Associate the restock with the chemical
+            restock.restock_date = timezone.now()  # Set the restock date to the current time
+            restock.save()
+
+            # Update the chemical quantity and last_restock_date
+            chemical.quantity_available += restock.quantity  # Assuming quantity is a field in Chemical
+            chemical.last_restock_date = restock.restock_date  # Assuming this field exists
+            chemical.save()
+
+            messages.success(request, f'{restock.quantity} units of {chemical.chemical_name} restocked successfully!')
+            return redirect('chemical_list')  # Redirect to the appropriate page
+    else:
+        form = RestockChemicalForm()
+
+    # Pass a list of chemicals to the template
+    # user_branch = request.user.userprofile.branch
+    chemicals = Chemical.objects.all()
+
+    context = {
+        'form': form,
+        'chemicals': chemicals,  # Ensure you pass all chemicals to the template
+        'active_page': 'chemical_list',
+        'notifications': notifications,
+    }
+    return render(request, 'restock_chemical.html', context)
+
+def chemical_restock_list(request):
+    # Get the user's branch
+    
+
+    # Fetch restock records for chemicals in the user's branch
+    restock_list = RestockChemical.objects.all().order_by('-restock_date')
+
+    # Get notifications for the user
+    notifications = get_notifications(request.user)
+
+    context = {
+        'restock_list': restock_list,
+        'active_page': 'chemical_restock_list',
+        'notifications': notifications,
+        'title': 'Chemical Restock List',
+    }
+
+    return render(request, 'chemical_restock_list.html', context)
+
+def expiring_chemical(request):
+    # Fetch users with the role 'CO'
+    users = User.objects.filter(userprofile__role='CO')
+
+    # Get today's date
+    today = timezone.now().date()
+
+    # Calculate the threshold date (10 days from today)
+    threshold_date = today + timezone.timedelta(days=10)
+
+    # Fetch chemicals that are expiring in 10 days or less
+    expiring_chemicals = Chemical.objects.filter(expiration_date__lte=threshold_date)
+
+    # Calculate days until expiration for each chemical
+    for chemical in expiring_chemicals:
+        if chemical.expiration_date:
+            delta = (chemical.expiration_date - today).days
+            chemical.days_until_expiration = delta
+        else:
+            chemical.days_until_expiration = None
+
+    # Get notifications for the user
+    notifications = get_notifications(request.user)
+
+    # Create notifications for expiring chemicals
+    for chemical in expiring_chemicals:
+        expiration_date_formatted = chemical.expiration_date.strftime('%Y-%m-%d')
+        notification_message = f"{chemical.chemical_name} is expiring on {expiration_date_formatted}."
+        for user in users:
+            Notification.objects.create(user=user,type ='expiration_list', message=notification_message)
+
+    context = {
+        'expiring_chemicals': expiring_chemicals,
+        'active_page': 'expiring_chemical',
+        'notifications': notifications,
+        'title': 'Expiring Chemicals',
+    }
+
+    return render(request, 'expired_chemical.html', context)

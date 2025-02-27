@@ -28,32 +28,45 @@
                 <div class="card">
                     <div class="card-body">
 
+                        <div class="d-flex justify-content-end mb-3" style="margin-top: 20px;">
+                            <a href="{% url 'restock_chemical' %}" class="btn btn-success bg-success">
+                                <i class="bi bi-plus"></i> Restock
+                            </a>
+                        </div>
+
                         <table class="table datatable">
                             <thead>
                                 <tr>
-                                    <th>Chemical Name</th>
+                                    <th>Chemical</th>
                                     <th>Branch</th>
-                                    <th>Expiration Date</th>
-                                    <th>Days Until Expiration</th>
+                                    <th>Quantity Restocked</th>
+                                    <th>Restock Date</th>
+                                    <th>Attachment</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for chemical in expiring_chemicals %}
+                                {% for restock in restock_list %}
                                 <tr>
-                                    <td>{{ chemical.chemical_name }}</td>
-                                    <td>{{ chemical.branch.name }}</td>
-                                    <td>{{ chemical.expiration_date|date:"Y-m-d" }}</td>
                                     <td>
-                                        {% if chemical.days_until_expiration is not None %}
-                                            {{ chemical.days_until_expiration }} days
+                                        {{ restock.chemical.chemical_name }}
+                                    </td>
+                                    <td>{{ restock.chemical.branch.name }}</td>
+                                    <td>{{ restock.quantity }}</td>
+                                    <td>{{ restock.restock_date|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if restock.attachment %}
+                                        <a href="{{ restock.attachment.url }}" target="_blank"
+                                            class="btn btn-sm btn-outline-primary">
+                                            Open Attachment
+                                        </a>
                                         {% else %}
-                                            N/A
+                                        No Attachment
                                         {% endif %}
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="4" class="text-center">No expiring chemicals found.</td>
+                                    <td colspan="5" class="text-center">No restock records found.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

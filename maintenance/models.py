@@ -362,6 +362,16 @@ class Chemical(models.Model):
         ordering = ['chemical_name']
 
 
+class RestockChemical(models.Model):
+    chemical = models.ForeignKey(Chemical, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(default=0)
+    restock_date = models.DateTimeField(auto_now_add=True)
+    attachment = models.FileField(upload_to='restock_attachments/', null=True, blank=True)  # Optional attachment
+
+    def __str__(self):
+        return f"Restock {self.quantity} units of {self.chemical.name} on {self.restock_date}"
+
+
 class ChemicalUsage(models.Model):
     chemical = models.ForeignKey(Chemical, on_delete=models.CASCADE, related_name='usage_records')
     quantity_used = models.FloatField(validators=[MinValueValidator(0.01)])
@@ -373,7 +383,7 @@ class ChemicalUsage(models.Model):
     def __str__(self):
         return f"{self.chemical.chemical_name} - {self.quantity_used} {self.chemical.unit_of_measurement} by {self.user.get_full_name()} on {self.date_used.strftime('%Y-%m-%d')}"
     
-    
+
 
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')

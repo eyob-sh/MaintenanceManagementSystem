@@ -1,5 +1,5 @@
 from django import forms
-from .models import Equipment, SparePart, Manufacturer, DecommissionedEquipment, MaintenanceType ,MaintenanceRecord, WorkOrder, SparePartUsage, Chemical, Branch, UserProfile, RestockSparePart
+from .models import Equipment, SparePart, Manufacturer, DecommissionedEquipment, MaintenanceType ,MaintenanceRecord, WorkOrder, SparePartUsage, Chemical, Branch, UserProfile, RestockSparePart, RestockChemical
 class EquipmentForm(forms.ModelForm):
     class Meta:
         model = Equipment
@@ -230,6 +230,11 @@ class ChemicalForm(forms.ModelForm):
             field.widget.attrs.update({'class': 'form-control'})
         if self.instance and self.instance.pk:  # Check if the form is for an existing instance
             self.fields['quantity_available'].widget.attrs['readonly'] = True  # Make it read-only
+
+class RestockChemicalForm(forms.ModelForm):
+    class Meta:
+        model = RestockChemical
+        fields = ['chemical', 'quantity', 'attachment']
             
             
             

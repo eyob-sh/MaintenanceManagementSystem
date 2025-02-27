@@ -53,7 +53,7 @@
       <a href="index.html" class="logo d-flex align-items-center">
         <img src="{% static 'img/logo.png' %}" alt="">
       </a>
-      
+
     </div><!-- End Logo -->
 
 
@@ -69,39 +69,41 @@
 
         <li class="nav-item dropdown">
           <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
-              <i class="bi bi-bell" style="color: black;"></i>
-              <span class="badge bg-primary badge-number">{{ notifications|length }}</span>
+            <i class="bi bi-bell" style="color: black;"></i>
+            <span class="badge bg-primary badge-number">{{ notifications|length }}</span>
           </a><!-- End Notification Icon -->
-      
+
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications">
-              <li class="dropdown-header">
-                  You have {{ notifications|length }} new notifications
-                  {% comment %} <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a> {% endcomment %}
-              </li>
-              <li>
-                  <hr class="dropdown-divider">
-              </li>
-      
-              {% for notification in notifications %}
-              <li class="notification-item">
-                <a href="{% url 'mark_notification_as_read' notification.id %}" style="text-decoration: none; color: inherit;">
-                  <i class="bi bi-exclamation-circle text-warning"></i>
-                  <div>
-                      <h4>{{ notification.message }}</h4>
-                      <p>{{ notification.timestamp|timesince }} ago</p>
-                  </div>
-                </a>
-              </li>
-              <li>
-                  <hr class="dropdown-divider">
-              </li>
-              {% endfor %}
-      
-              <li class="dropdown-footer">
-                  {% comment %} <a href="#">Show all notifications</a> {% endcomment %}
-              </li>
+            <li class="dropdown-header">
+              You have {{ notifications|length }} new notifications
+              <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a>
+              
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+
+            {% for notification in notifications %}
+            <li class="notification-item">
+              <a href="{% url 'mark_notification_as_read' notification.id %}"
+                style="text-decoration: none; color: inherit;">
+                <i class="bi bi-exclamation-circle text-warning"></i>
+                <div>
+                  <h4>{{ notification.message }}</h4>
+                  <p>{{ notification.timestamp|timesince }} ago</p>
+                </div>
+              </a>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+            {% endfor %}
+
+            <li class="dropdown-footer">
+              <a href="#">Show all notifications</a> 
+            </li>
           </ul><!-- End Notification Dropdown Items -->
-      </li><!-- End Notification Nav -->
+        </li><!-- End Notification Nav -->
         {% comment %} <li class="nav-item dropdown">
 
           <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
@@ -148,7 +150,7 @@
               <hr class="dropdown-divider">
             </li>
 
-            <li class="message-item" >
+            <li class="message-item">
               <a href="#">
                 <img src="{% static 'img/messages-3.jpg' %}" alt="" class="rounded-circle">
 
@@ -175,7 +177,7 @@
 
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
             <i class="bi bi-person-circle" style="font-size: 1.5rem; color: black;"></i>
-            <span class="d-none d-md-block dropdown-toggle ps-2" style="color: black;">{{ request.user.username }}</span>
+            <span class="d-none d-md-block dropdown-toggle ps-2" style="color: black;">{{ request.user.username}}</span>
           </a><!-- End Profile Iamge Icon -->
 
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
@@ -197,10 +199,10 @@
               <hr class="dropdown-divider">
             </li>
 
-            
-            
-            
-            
+
+
+
+
 
             <li>
               <a class="dropdown-item d-flex align-items-center" href="{% url 'logout' %}">
@@ -220,243 +222,284 @@
   <!-- ======= Sidebar ======= -->
   <aside id="sidebar" class="sidebar">
     <ul class="sidebar-nav" id="sidebar-nav">
-        <!-- Dashboard and user profile (Visible to Everyone) -->
-        {% if not request.user.is_superuser %}
-        <li class="nav-item">
-          <a class="nav-link {% if active_page != 'profile' %}collapsed{% endif %}" href="{% url 'my_profile' %}">
-            <i class="bi bi-person"></i>
-            <span>Profile</span>
-          </a>
-        </li><!-- End Profile Page Nav -->
-        {% endif %}
-
-  
-        <li class="nav-heading">Reports and Analytics</li>
+      <!-- Dashboard and user profile (Visible to Everyone) -->
+      {% if not request.user.is_superuser %}
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'profile' %}collapsed{% endif %}" href="{% url 'my_profile' %}">
+          <i class="bi bi-person"></i>
+          <span>Profile</span>
+        </a>
+      </li><!-- End Profile Page Nav -->
+      {% endif %}
 
 
+      <li class="nav-heading">Reports and Analytics</li>
 
 
-        <li class="nav-item">
-            <a class="nav-link {% if active_page != 'dashboard' %}collapsed{% endif %}" href="{% url 'dashboard' %}">
-                <i class="bi bi-grid"></i>
-                <span>Dashboard</span>
-            </a>
-        </li>
-
-        <!-- Maintenance Department Manager, Technician, Maintenance Oversight -->
-        {% if request.user.userprofile.role in "MD manager TEC MO" and not request.user.is_superuser %}
-            <li class="nav-heading">Asset Management</li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'equipment_list' %}collapsed{% endif %}" href="{% url 'equipment_list' %}">
-                  <i class="bi bi-tools"></i>
-                    <span>Equipments</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'decommissioned_equipment_list' %}collapsed{% endif %}" href="{% url 'decommissioned_equipment_list' %}">
-                  <i class="bi bi-trash"></i>
-                    <span>Decommissioned Equipments</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'maintenance_list' %}collapsed{% endif %}" href="{% url 'maintenance_list' %}">
-                  <i class="bi bi-clipboard-data"></i>
-                    <span>Maintenance Records</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'work_order_list' %}collapsed{% endif %}" href="{% url 'work_order_list' %}">
-                  <i class="bi bi-file-earmark-text"></i>
-                    <span>Work Order</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'maintenance_type_list' %}collapsed{% endif %}" href="{% url 'maintenance_type_list' %}">
-                  <i class="bi bi-wrench"></i>
-                    <span>Maintenance Types</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'manufacturer_list' %}collapsed{% endif %}" href="{% url 'manufacturer_list' %}">
-                  <i class="bi bi-building"></i>
-                    <span>Manufacturer</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'spare_part_list' %}collapsed{% endif %}" href="{% url 'spare_part_list' %}">
-                  <i class="bi bi-gear"></i>
-                    <span>Spare Parts</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'spare_part_usage_list' %}collapsed{% endif %}" href="{% url 'spare_part_usage_list' %}">
-                  <i class="bi bi-gear-wide"></i>
-                    <span>Spare Part Usage</span>
-                </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {% if active_page != 'restock_list' %}collapsed{% endif %}" href="{% url 'restock_list' %}">
-                <i class="bi bi-box"></i>
-                  <span>Restock Spare Part</span>
-              </a>
-          </li>
-
-            <li class="nav-item">
-              <a class="nav-link {% if active_page != 'maintenance_due' %}collapsed{% endif %}" href="{% url 'maintenance_due' %}">
-                <i class="bi bi-tools text-danger"></i>
-                  <span>Maintenance Due</span>
-              </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link {% if active_page != 'low_spare_part' %}collapsed{% endif %}" href="{% url 'low_spare_part' %}">
-              <i class="bi bi-exclamation-triangle text-danger"></i>
-                <span>Low Spare Part</span>
-            </a>
-        </li>
-        {% endif %}
-
-        <!-- Chemical Oversight -->
-        {% if request.user.userprofile.role == 'CO' %}
-            <li class="nav-heading">Chemical Management</li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'chemical_list' %}collapsed{% endif %}" href="{% url 'chemical_list' %}">
-                  <i class="bi bi-droplet"></i>
-                    <span>Chemicals</span>
-                </a>
-            </li>
-
-            
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'chemical_usage' %}collapsed{% endif %}" href="{% url 'chemical_usage' %}">
-                  <i class="bi bi-droplet"></i>
-                    <span>Chemical Usage</span>
-                </a>
-            </li>
-
-            <li class="nav-item">
-              <a class="nav-link {% if active_page != 'chemical_usage_list' %}collapsed{% endif %}" href="{% url 'chemical_usage_list' %}">
-                <i class="bi bi-droplet"></i>
-                  <span>Log</span>
-              </a>
-          </li>
-        {% endif %}
-
-        <!-- Client -->
-        {% if request.user.userprofile.role == 'CL' %}
-            <li class="nav-heading">Work Order</li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'work_order_list' %}collapsed{% endif %}" href="{% url 'work_order_list' %}">
-                  <i class="bi bi-file-earmark-text"></i>
-                    <span>Work Order</span>
-                </a>
-            </li>
-        {% endif %}
-
-        <!-- Admin -->
-        {% if request.user.userprofile.role == 'AD' %}
-            <li class="nav-heading">Admin</li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'user_profile_list' %}collapsed{% endif %}" href="{% url 'user_profile_list' %}">
-                  <i class="bi bi-people"></i>
-                    <span>Users</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'branch_list' %}collapsed{% endif %}" href="{% url 'branch_list' %}">
-                  <i class="bi bi-diagram-3"></i>
-                    <span>Branch</span>
-                </a>
-            </li>
-        {% endif %}
-
-        <!-- Superuser (Display All) -->
-        {% if request.user.is_superuser %}
-            <li class="nav-heading">Asset Management</li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'equipment_list' %}collapsed{% endif %}" href="{% url 'equipment_list' %}">
-                  <i class="bi bi-tools"></i>
-                    <span>Equipments</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'decommissioned_equipment_list' %}collapsed{% endif %}" href="{% url 'decommissioned_equipment_list' %}">
-                  <i class="bi bi-trash"></i>
-                    <span>Decommissioned Equipments</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'maintenance_list' %}collapsed{% endif %}" href="{% url 'maintenance_list' %}">
-                  <i class="bi bi-clipboard-data"></i>
-                    <span>Maintenance Records</span>
-                </a>
-            </li>
-            
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'work_order_list' %}collapsed{% endif %}" href="{% url 'work_order_list' %}">
-                  <i class="bi bi-file-earmark-text"></i>
-                    <span>Work Order</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'maintenance_type_list' %}collapsed{% endif %}" href="{% url 'maintenance_type_list' %}">
-                  <i class="bi bi-wrench"></i>
-                    <span>Maintenance Types</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'manufacturer_list' %}collapsed{% endif %}" href="{% url 'manufacturer_list' %}">
-                  <i class="bi bi-building"></i>
-                    <span>Manufacturer</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'spare_part_list' %}collapsed{% endif %}" href="{% url 'spare_part_list' %}">
-                  <i class="bi bi-gear"></i>
-                    <span>Spare Parts</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'spare_part_usage_list' %}collapsed{% endif %}" href="{% url 'spare_part_usage_list' %}">
-                  <i class="bi bi-gear-wide"></i>
-                    <span>Spare Part Usage</span>
-                </a>
-            </li>
-            <li class="nav-heading">chemicals</li>
-            <li class="nav-item">
-              <a class="nav-link {% if active_page != 'chemical_list' %}collapsed{% endif %}" href="{% url 'chemical_list' %}">
-                <i class="bi bi-droplet"></i>
-                  <span>Chemicals</span>
-              </a>
-          </li>
 
 
-            <li class="nav-heading">Admin</li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'user_profile_list' %}collapsed{% endif %}" href="{% url 'user_profile_list' %}">
-                  <i class="bi bi-people"></i>
-                    <span>Users</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if active_page != 'branch_list' %}collapsed{% endif %}" href="{% url 'branch_list' %}">
-                  <i class="bi bi-diagram-3"></i>
-                    <span>Branch</span>
-                </a>
-            </li>
-        {% endif %}
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'dashboard' %}collapsed{% endif %}" href="{% url 'dashboard' %}">
+          <i class="bi bi-grid"></i>
+          <span>Dashboard</span>
+        </a>
+      </li>
 
-        <!-- Logout (Visible to Everyone) -->
-        <li class="nav-item">
-            <a class="nav-link collapsed" href="{% url 'logout' %}">
-                <i class="bi bi-box-arrow-in-right"></i>
-                <span>Log Out</span>
-            </a>
-        </li>
+      <!-- Maintenance Department Manager, Technician, Maintenance Oversight -->
+      {% if request.user.userprofile.role in "MD manager TEC MO" and not request.user.is_superuser %}
+      <li class="nav-heading">Asset Management</li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'equipment_list' %}collapsed{% endif %}"
+          href="{% url 'equipment_list' %}">
+          <i class="bi bi-tools"></i>
+          <span>Equipments</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'decommissioned_equipment_list' %}collapsed{% endif %}"
+          href="{% url 'decommissioned_equipment_list' %}">
+          <i class="bi bi-trash"></i>
+          <span>Decommissioned Equipments</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'maintenance_list' %}collapsed{% endif %}"
+          href="{% url 'maintenance_list' %}">
+          <i class="bi bi-clipboard-data"></i>
+          <span>Maintenance Records</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'work_order_list' %}collapsed{% endif %}"
+          href="{% url 'work_order_list' %}">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>Work Order</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'maintenance_type_list' %}collapsed{% endif %}"
+          href="{% url 'maintenance_type_list' %}">
+          <i class="bi bi-wrench"></i>
+          <span>Maintenance Types</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'manufacturer_list' %}collapsed{% endif %}"
+          href="{% url 'manufacturer_list' %}">
+          <i class="bi bi-building"></i>
+          <span>Manufacturer</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'spare_part_list' %}collapsed{% endif %}"
+          href="{% url 'spare_part_list' %}">
+          <i class="bi bi-gear"></i>
+          <span>Spare Parts</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'spare_part_usage_list' %}collapsed{% endif %}"
+          href="{% url 'spare_part_usage_list' %}">
+          <i class="bi bi-gear-wide"></i>
+          <span>Spare Part Usage</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'restock_list' %}collapsed{% endif %}" href="{% url 'restock_list' %}">
+          <i class="bi bi-box"></i>
+          <span>Restock Spare Part</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'maintenance_due' %}collapsed{% endif %}"
+          href="{% url 'maintenance_due' %}">
+          <i class="bi bi-tools text-danger"></i>
+          <span>Maintenance Due</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'low_spare_part' %}collapsed{% endif %}"
+          href="{% url 'low_spare_part' %}">
+          <i class="bi bi-exclamation-triangle text-danger"></i>
+          <span>Low Spare Part</span>
+        </a>
+      </li>
+      {% endif %}
+
+      <!-- Chemical Oversight -->
+      {% if request.user.userprofile.role == 'CO' %}
+      <li class="nav-heading">Chemical Management</li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'chemical_list' %}collapsed{% endif %}"
+          href="{% url 'chemical_list' %}">
+          <i class="bi bi-droplet"></i>
+          <span>Chemicals</span>
+        </a>
+      </li>
+
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'chemical_usage' %}collapsed{% endif %}"
+          href="{% url 'chemical_usage' %}">
+          <i class="bi bi-droplet"></i>
+          <span>Chemical Usage</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'chemical_usage_list' %}collapsed{% endif %}"
+          href="{% url 'chemical_usage_list' %}">
+          <i class="bi bi-journal-text"></i>
+          <span>Log</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'chemical_restock_list' %}collapsed{% endif %}"
+          href="{% url 'chemical_restock_list' %}">
+          <i class="bi bi-box-arrow-in-right"></i>
+          <span>Restock Chemical</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'expiring_chemical' %}collapsed{% endif %}"
+          href="{% url 'expiring_chemical' %}">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>Expiring Chemicals</span>
+        </a>
+      </li>
+      {% endif %}
+
+      <!-- Client -->
+      {% if request.user.userprofile.role == 'CL' %}
+      <li class="nav-heading">Work Order</li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'work_order_list' %}collapsed{% endif %}"
+          href="{% url 'work_order_list' %}">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>Work Order</span>
+        </a>
+      </li>
+      {% endif %}
+
+      <!-- Admin -->
+      {% if request.user.userprofile.role == 'AD' %}
+      <li class="nav-heading">Admin</li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'user_profile_list' %}collapsed{% endif %}"
+          href="{% url 'user_profile_list' %}">
+          <i class="bi bi-people"></i>
+          <span>Users</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'branch_list' %}collapsed{% endif %}" href="{% url 'branch_list' %}">
+          <i class="bi bi-diagram-3"></i>
+          <span>Branch</span>
+        </a>
+      </li>
+      {% endif %}
+
+      <!-- Superuser (Display All) -->
+      {% if request.user.is_superuser %}
+      <li class="nav-heading">Asset Management</li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'equipment_list' %}collapsed{% endif %}"
+          href="{% url 'equipment_list' %}">
+          <i class="bi bi-tools"></i>
+          <span>Equipments</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'decommissioned_equipment_list' %}collapsed{% endif %}"
+          href="{% url 'decommissioned_equipment_list' %}">
+          <i class="bi bi-trash"></i>
+          <span>Decommissioned Equipments</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'maintenance_list' %}collapsed{% endif %}"
+          href="{% url 'maintenance_list' %}">
+          <i class="bi bi-clipboard-data"></i>
+          <span>Maintenance Records</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'work_order_list' %}collapsed{% endif %}"
+          href="{% url 'work_order_list' %}">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>Work Order</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'maintenance_type_list' %}collapsed{% endif %}"
+          href="{% url 'maintenance_type_list' %}">
+          <i class="bi bi-wrench"></i>
+          <span>Maintenance Types</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'manufacturer_list' %}collapsed{% endif %}"
+          href="{% url 'manufacturer_list' %}">
+          <i class="bi bi-building"></i>
+          <span>Manufacturer</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'spare_part_list' %}collapsed{% endif %}"
+          href="{% url 'spare_part_list' %}">
+          <i class="bi bi-gear"></i>
+          <span>Spare Parts</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'spare_part_usage_list' %}collapsed{% endif %}"
+          href="{% url 'spare_part_usage_list' %}">
+          <i class="bi bi-gear-wide"></i>
+          <span>Spare Part Usage</span>
+        </a>
+      </li>
+      <li class="nav-heading">chemicals</li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'chemical_list' %}collapsed{% endif %}"
+          href="{% url 'chemical_list' %}">
+          <i class="bi bi-droplet"></i>
+          <span>Chemicals</span>
+        </a>
+      </li>
+
+
+      <li class="nav-heading">Admin</li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'user_profile_list' %}collapsed{% endif %}"
+          href="{% url 'user_profile_list' %}">
+          <i class="bi bi-people"></i>
+          <span>Users</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'branch_list' %}collapsed{% endif %}" href="{% url 'branch_list' %}">
+          <i class="bi bi-diagram-3"></i>
+          <span>Branch</span>
+        </a>
+      </li>
+      {% endif %}
+
+      <!-- Logout (Visible to Everyone) -->
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="{% url 'logout' %}">
+          <i class="bi bi-box-arrow-in-right"></i>
+          <span>Log Out</span>
+        </a>
+      </li>
     </ul>
-</aside>
+  </aside>
 
-  
+
 
   {% block content %}
 
@@ -468,14 +511,14 @@
   {% block active_page %}
 
 
-{% endblock %}
+  {% endblock %}
 
 
   <!-- ======= Footer ======= -->
   <footer id="footer" class="footer">
     <div class="copyright">
       &copy; Copyright <strong><span>Industrial Parks Development Corporation</span></strong>. All Rights Reserved
-      
+
     </div>
     <div class="credits">
       <!-- All the links in the footer should remain intact. -->
@@ -505,4 +548,3 @@
 </body>
 
 </html>
-
