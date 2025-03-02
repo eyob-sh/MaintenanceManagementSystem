@@ -2,13 +2,36 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+
     path('login/', views.loginPage, name = "login"),
-    path('logout/', views.logoutUser,  name = "logout" ),
-    # path('register/', views.register, name = "register"),
-    # path('add_user/', views.add_user, name = "add_user"),
-    # path('add_branch_page/', views.add_branch_page, name = "add_branch_page"),
-    # path('add_branch/', views.add_branch, name = "add_branch"),
-    #----------------------------------------------------------------------------------------------------
+path('logout/', views.logoutUser,  name = "logout" ),
+# path('register/', views.register, name = "register"),
+# path('add_user/', views.add_user, name = "add_user"),
+# path('add_branch_page/', views.add_branch_page, name = "add_branch_page"),
+# path('add_branch/', views.add_branch, name = "add_branch"),
+#----------------------------------------------------------------------------------------------------
+
+path('add_branch_page/', views.add_branch_page, name = "add_branch"),
+
+    path('add_branch/', views.add_branch, name = "add_branch"),
+    
+    path('branch/', views.branch_list, name='branch_list'),
+    path('branch/edit/<int:id>/', views.edit_branch, name='edit_branch'),
+
+#---------------------------------------------------------------------------------------------------------
+ path('my_profile/', views.my_profile, name='my_profile'),
+
+path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_profile_page"),
+
+    path('add_user_profile/', views.add_user_profile, name = "add_user_profile"),
+    
+    path('user_profile/', views.user_profile_list, name='user_profile_list'),
+    path('user_profile/edit/<int:id>/', views.edit_user_profile, name='edit_user_profile'),
+     path('check-username/', views.check_username, name='check_username'),
+
+
+
+    
     path('add_manufacturer_page/', views.add_manufacturer_page, name = "add_manufacturer_page"),
 
     path('add_manufacturer/', views.add_manufacturer, name = "add_manufacturer"),
@@ -34,15 +57,7 @@ urlpatterns = [
     
     #---------------------------------------------------------------------------------------------------------
     
-    path('add_chemical_page/', views.add_chemical_page, name = "add_chemical_page"),
-
-    path('add_chemical/', views.add_chemical, name = "add_chemical"),
     
-    path('chemicals/', views.chemical_list, name='chemical_list'),
-    path('chemicals/edit/<int:id>/', views.edit_chemical, name='edit_chemical'),
-    
-    
-    #----------------------------------------------------------------------------------------------
     path('add_maintenance_page/', views.add_maintenance_page, name = "add_maintenance_page"),
 
     path('add_maintenance/', views.add_maintenance, name = "add_maintenance"),
@@ -86,23 +101,6 @@ path('add_maintenance_type_page/', views.add_maintenance_type_page, name = "add_
 
 #----------------------------------------------------------------------------------------------------------------
 
-path('add_branch_page/', views.add_branch_page, name = "add_branch"),
-
-    path('add_branch/', views.add_branch, name = "add_branch"),
-    
-    path('branch/', views.branch_list, name='branch_list'),
-    path('branch/edit/<int:id>/', views.edit_branch, name='edit_branch'),
-
-#---------------------------------------------------------------------------------------------------------
- path('my_profile/', views.my_profile, name='my_profile'),
-
-path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_profile_page"),
-
-    path('add_user_profile/', views.add_user_profile, name = "add_user_profile"),
-    
-    path('user_profile/', views.user_profile_list, name='user_profile_list'),
-    path('user_profile/edit/<int:id>/', views.edit_user_profile, name='edit_user_profile'),
-     path('check-username/', views.check_username, name='check_username'),
 
     path('dashboard', views.dashboard, name="dashboard"),
     
@@ -131,9 +129,5 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
 #--------------------------------------------------------------------------------------------------------------------
 
 
-path('chemical_usage/', views.chemical_usage, name= 'chemical_usage'),
-path('chemical_usage_list/', views.chemical_usage_list, name= 'chemical_usage_list'),
- path('chemical_restock_list/', views.chemical_restock_list, name='chemical_restock_list'),
-    path('restock_chemical/', views.restock_chemical, name='restock_chemical'),
-    path('expiring_chemical/', views.expiring_chemical, name='expiring_chemical'),
+
 ]

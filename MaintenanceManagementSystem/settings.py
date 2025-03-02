@@ -36,7 +36,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'maintenance.apps.MaintenanceConfig'
+    'maintenance.apps.MaintenanceConfig',
+    'chemical.apps.ChemicalConfig',
 ]
 
 MIDDLEWARE = [
