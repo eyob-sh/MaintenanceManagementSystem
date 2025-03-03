@@ -54,7 +54,7 @@
                                     <td>
                                         <a href="{% url edit_url maintenance.id %}">{{ maintenance.equipment.name }}</a>
                                     </td>
-                                    <td>{{ maintenance.maintenance_type.maintenance_type }}</td>
+                                    <td>{{ maintenance.maintenance_task.equipment_type }}</td>
                                     <td>
                                         {% for technician in maintenance.assigned_technicians.all %}
                                         {{ technician.get_full_name }}{% if not forloop.last %}, {% endif %}

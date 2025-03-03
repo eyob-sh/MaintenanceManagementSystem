@@ -64,7 +64,7 @@
                                                     </select>
                                                 </div>
                                                 <div class="col-md-2">
-                                                    <button type="button" class="btn btn-danger remove-technician" disabled>Remove</button>
+                                                    <button type="button" class="btn btn-primary-sm mb-3 remove-technician" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; " disabled>Remove</button>
                                                 </div>
                                             </div>
                                             <!-- End Initial Row -->
@@ -75,13 +75,15 @@
                                             <!-- Add More Button -->
                                             <div class="row mb-3">
                                                 <div class="col-md-12">
-                                                    <button type="button" class="btn btn-success" id="add-technician">
-                                                        <i class="bi bi-plus"></i> Add Technician
+                                                    <button type="button" class="btn btn-primary-sm mb-3" style="background-color:lightgreen;font-size: 12px;padding:5px 10px; "id="add-technician">
+                                                        <i class="bi bi-plus-circle"></i> Add Technician
                                                     </button>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
+
+                                    
 
                                     <!-- Branch -->
                                     <div class="row mb-3">
@@ -93,14 +95,14 @@
                                         </div>
                                     </div>
 
-                                    <!-- Maintenance Type -->
+                                    <!-- Maintenance Task -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
-                                            <label for="maintenance_type" class="form-label">Maintenance Type</label>
-                                            <select class="form-select" id="maintenance_type" name="maintenance_type" required>
+                                            <label for="maintenance_task" class="form-label">Maintenance Type</label>
+                                            <select class="form-select" id="maintenance_task" name="maintenance_task" required>
                                                 <option selected disabled value="">Select Maintenance Type</option>
-                                                {% for maintenance_type in maintenance_types %}
-                                                <option value="{{ maintenance_type.id }}">{{ maintenance_type.maintenance_type }}</option>
+                                                {% for maintenance_task in maintenance_tasks %}
+                                                <option value="{{ maintenance_task.id }}">{{ maintenance_task.maintenance_task }}</option>
                                                 {% endfor %}
                                             </select>
                                             <div class="invalid-feedback">Please select a maintenance type.</div>
@@ -128,7 +130,7 @@
                                                         name="spare_part_quantities[]" min="1" placeholder="Quantity">
                                                 </div>
                                                 <div class="col-md-2">
-                                                    <button type="button" class="btn btn-danger remove-spare-part"
+                                                    <button type="button" class="btn btn-primary-sm mb-3 remove-spare-part" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; "
                                                         disabled>Remove</button>
                                                 </div>
                                             </div>
@@ -140,8 +142,8 @@
                                             <!-- Add More Button -->
                                             <div class="row mb-3">
                                                 <div class="col-md-12">
-                                                    <button type="button" class="btn btn-success" id="add-spare-part">
-                                                        <i class="bi bi-plus"></i> Add Spare Part
+                                                    <button type="button" class="btn btn-primary-sm mb-3" style="background-color:lightgreen;font-size: 12px;padding:5px 10px; " id="add-spare-part">
+                                                        <i class="bi bi-plus-circle"></i> Add Spare Part
                                                     </button>
                                                 </div>
                                             </div>
@@ -213,6 +215,8 @@
 
 </main><!-- End #main -->
 
+
+
 <!-- Add JavaScript for Front-End Validation -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -243,7 +247,7 @@
                     <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity">
                 </div>
                 <div class="col-md-2">
-                    <button type="button" class="btn btn-danger remove-spare-part">Remove</button>
+                    <button type="button" class="btn btn-primary-sm mb-3 remove-spare-part" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; ">Remove</button>
                 </div>
             `;
 
@@ -282,7 +286,7 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="button" class="btn btn-danger remove-technician">Remove</button>
+                    <button type="button" class="btn btn-primary-sm mb-3 remove-technician" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; " >Remove</button>
                 </div>
             `;
 
@@ -316,7 +320,7 @@
                 'equipment',
                 'assigned_technicians',
                 'branch',
-                'maintenance_type',
+                'maintenance_task',
                 'status',
             ];
 

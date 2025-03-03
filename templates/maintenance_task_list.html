@@ -29,26 +29,26 @@
                     <div class="card-body">
 
                         <div class="d-flex justify-content-end mb-3" style="margin-top: 20px;">
-                            <a href="{% url 'add_maintenance_type' %}" class="btn btn-success bg-success">
-                                <i class="bi bi-plus"></i> Add Maintenance Type
+                            <a href="{% url 'add_maintenance_task' %}" class="btn btn-success bg-success">
+                                <i class="bi bi-plus"></i> Add Maintenance Task
                             </a>
                         </div>
 
                         <table class="table datatable">
                             <thead>
                                 <tr>
-                                    <th>Maintenance Type</th>
+                                    <th>Equipment Type</th>
                                     <th>Description</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for maintenance_type in item_list %}
+                                {% for maintenance_task in item_list %}
                                 <tr>
                                     <td>
-                                        <a href="{% url edit_url maintenance_type.id %}">
-                                            {{ maintenance_type.maintenance_type }}</a>
+                                        <a href="{% url edit_url maintenance_task.id %}">
+                                            {{ maintenance_task.equipment_type }}</a>
                                     </td>
-                                    <td>{{ maintenance_type.description }}</td>
+                                    <td>{{ maintenance_task.description }}</td>
                                 </tr>
                                 {% empty %}
                                 <tr>

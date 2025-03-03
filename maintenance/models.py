@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 from django.db.models import UniqueConstraint
 from django.apps import apps
+from django.db.models import JSONField
 
 
 
@@ -40,26 +41,69 @@ class UserProfile(models.Model):
     
 
 
-class MaintenanceType(models.Model):
+# class MaintenanceTask(models.Model):
 
-    maintenance_type = models.CharField(
-        help_text="Enter a type of maintenance "
-                  "(e.g., 'Software Installation').",
+#     equipment_type = models.CharField(
+#         help_text="Enter a type of maintenance "
+#                   "(e.g., 'Software Installation').",
+#         max_length=255,
+#         unique=True,
+#     )
+#     # branch = models.ForeignKey('Branch' , on_delete=models.PROTECT)
+
+#     description = models.TextField(
+#         blank=True,
+#         help_text='Enter a description of the maintenance type.',
+#     )
+
+#     class Meta:
+#         ordering = ['equipment_type']
+
+#     def __str__(self):
+#         return self.equipment_type
+
+
+class MaintenanceTask(models.Model):
+    equipment_type = models.CharField(
+        help_text="Enter a type of maintenance (e.g., 'Software Installation').",
         max_length=255,
         unique=True,
     )
-    branch = models.ForeignKey('Branch' , on_delete=models.PROTECT)
-
     description = models.TextField(
         blank=True,
         help_text='Enter a description of the maintenance type.',
     )
 
     class Meta:
-        ordering = ['maintenance_type']
+        ordering = ['equipment_type']
 
     def __str__(self):
-        return self.maintenance_type
+        return self.equipment_type
+
+class TaskGroup(models.Model):
+    FREQUENCY_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('biannually', 'Biannually'),
+        ('annually', 'Annually'),
+    ]
+
+    maintenance_task = models.ForeignKey(MaintenanceTask, on_delete=models.CASCADE, related_name='task_groups')
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES)
+
+    def __str__(self):
+        return f"{self.maintenance_task.equipment_type} - {self.get_frequency_display()}"
+    
+
+
+class Task(models.Model):
+    task_group = models.ForeignKey(TaskGroup, on_delete=models.CASCADE, related_name='tasks')
+    description = models.TextField(help_text='Enter a description of the task.')
+
+
+    def __str__(self):
+        return self.description
 
 
 class Manufacturer(models.Model):
@@ -211,7 +255,7 @@ class MaintenanceRecord(models.Model):
     equipment = models.ForeignKey('Equipment', on_delete=models.PROTECT)
     assigned_technicians = models.ManyToManyField(User, related_name='maintenance_records')
     branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
-    maintenance_type = models.ForeignKey('MaintenanceType', on_delete=models.PROTECT)
+    maintenance_task = models.ForeignKey('MaintenanceTask', on_delete=models.PROTECT, null=True)
     spare_parts = models.ManyToManyField('SparePart', through='SparePartUsage')
     remark = models.TextField(blank=True, null=True)
     procedure = models.TextField(blank=True, null=True)
@@ -221,7 +265,7 @@ class MaintenanceRecord(models.Model):
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_maintenance')
 
     def __str__(self):
-        return f'{self.equipment} - {self.maintenance_type} ({self.datetime.date()})'
+        return f'{self.equipment} - {self.maintenance_task} ({self.datetime.date()})'
         
     
 class SparePartUsage(models.Model):

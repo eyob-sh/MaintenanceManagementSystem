@@ -9,9 +9,12 @@ from datetime import datetime
 from django.db.models import Count, Q
 from datetime import datetime, timedelta 
 from django.utils import timezone
-from .models import MaintenanceRecord, MaintenanceType, Manufacturer, SparePart, SparePartUsage, RestockSparePart, DecommissionedEquipment,Equipment, Notification,WorkOrder,Branch,UserProfile
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from .models import MaintenanceRecord, MaintenanceTask, Manufacturer, SparePart, SparePartUsage, RestockSparePart, DecommissionedEquipment,Equipment, Notification,WorkOrder,Branch,UserProfile, Task, TaskGroup
 
-from .forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTypeForm,  RestockSparePartForm, BranchForm
+from .forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTaskForm,  RestockSparePartForm, BranchForm, UserProfileForm, TaskForm, TaskGroupForm
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -675,95 +678,161 @@ def edit_decommissioned_equipment(request, id):
 
 
 #--------------------------------------------------------------------------------------
-def maintenance_type_list(request):
+def maintenance_task_list(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
 
 
-    maintenance_types = MaintenanceType.objects.filter(branch =user_branch )
+    maintenance_tasks = MaintenanceTask.objects.all()
     context = {
-        'active_page': 'maintenance_type_list',
-        'title': 'Maintenance Types',
-        'item_list': maintenance_types,
-        'edit_url': 'edit_maintenance_type',
+        'active_page': 'maintenance_task_list',
+        'title': 'Maintenance Task',
+        'item_list': maintenance_tasks,
+        'edit_url': 'edit_maintenance_task',
         'notifications':notifications
     }
-    return render(request, 'maintenance_type_list.html', context)
+    return render(request, 'maintenance_task_list.html', context)
 
-def add_maintenance_type_page(request):
+def add_maintenance_task_page(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
 
 
-    return render(request, 'add_maintenance_type.html',{ 'active_page': 'maintenance_type_list', 'branch': user_branch, 'notifications':notifications
+    return render(request, 'add_maintenance_task.html',{ 'active_page': 'maintenance_task_list', 'notifications':notifications
 })
 
-def add_maintenance_type(request):
+
+
+def add_maintenance_task(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
-   
 
     if request.method == 'POST':
-        maintenance_type = request.POST.get('maintenance_type')
-        branch_id = request.POST.get('branch')  # Get the branch ID from the form
-        description = request.POST.get('description')
+        maintenance_task_form = MaintenanceTaskForm(request.POST)
+        if maintenance_task_form.is_valid():
+            maintenance_task = maintenance_task_form.save()
 
-        if not maintenance_type:
-            messages.error(request, 'Please fill out all required fields.')
-            return render(request, 'add_maintenance_type.html', {
-                'active_page': 'maintenance_type_list',
-                'branch': user_branch,
-                'notifications':notifications
-                
-            })
+            frequencies = ['daily', 'weekly', 'monthly', 'biannually', 'annually']
+            for frequency in frequencies:
+                task_descriptions = request.POST.getlist(f'{frequency}_tasks[]')
+                if task_descriptions:
+                    task_group = TaskGroup.objects.create(maintenance_task=maintenance_task, frequency=frequency)
+                    for description in task_descriptions:
+                        Task.objects.create(task_group=task_group, description=description)
 
-        try:
-            # Fetch the Branch instance using the branch_id
-            branch = Branch.objects.get(id=branch_id)
+            messages.success(request, 'Maintenance Task and associated tasks added successfully!')
+            return redirect('maintenance_task_list')
+    else:
+        maintenance_task_form = MaintenanceTaskForm()
 
-            # Create the MaintenanceType object
-            MaintenanceType.objects.create(
-                maintenance_type=maintenance_type,
-                branch=branch,  # Pass the Branch instance
-                description=description
-            )
-            messages.success(request, 'Maintenance Type added successfully!')
-            return redirect('maintenance_type_list')
-        except Branch.DoesNotExist:
-            messages.error(request, 'Invalid branch selected.')
-            return render(request, 'add_maintenance_type.html', {
-                'active_page': 'maintenance_type_list',
-                'branch': user_branch
-            })
-        except Exception as e:
-            messages.error(request, f'An error occurred: {str(e)}')
-            return render(request, 'add_maintenance_type.html', {
-                'active_page': 'maintenance_type_list',
-                'branch': user_branch
-            })
-
-    # For GET requests, render the add maintenance type page with context
-    return render(request, 'add_maintenance_type.html', {
-        'active_page': 'maintenance_type_list',
-        'branch': user_branch
+    return render(request, 'add_maintenance_task.html', {
+        'active_page': 'maintenance_task_list',
+        'branch': user_branch,
+        'notifications': notifications,
+        'maintenance_task_form': maintenance_task_form,
+        'frequencies': ['daily', 'weekly', 'monthly', 'biannually', 'annually'],
     })
-def edit_maintenance_type(request, id):
+def edit_maintenance_task(request, id):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
 
 
-    maintenance_type = get_object_or_404(MaintenanceType, id=id)
+    maintenance_task = get_object_or_404(MaintenanceTask, id=id)
 
     if request.method == 'POST':
-        form = MaintenanceTypeForm(request.POST, instance=maintenance_type)
+        form = MaintenanceTaskForm(request.POST, instance=maintenance_task)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Maintenance Type updated successfully!')
-            return redirect('maintenance_type_list')
+            messages.success(request, 'Maintenance Task updated successfully!')
+            return redirect('maintenance_task_list')
     else:
-        form = MaintenanceTypeForm(instance=maintenance_type)
+        form = MaintenanceTaskForm(instance=maintenance_task)
 
-    return render(request, 'edit_maintenance_type.html', {'form': form, 'maintenance_type': maintenance_type,  'active_page': 'maintenance_type_list','notifications':notifications})
+    return render(request, 'edit_maintenance_task.html', {'form': form, 'maintenance_task': maintenance_task,  'active_page': 'maintenance_task_list','notifications':notifications})
+
+#-----------------------------------------------------------------add task for frequency----------------------------------------
+
+
+def add_tasks_for_frequency(request, frequency):
+    user_branch = request.user.userprofile.branch
+    notifications = get_notifications(request.user)
+
+    if request.method == 'POST':
+        # Get the maintenance task ID from the form (assuming it's passed as a hidden field)
+        maintenance_task_id = request.POST.get('maintenance_task_id')
+        if not maintenance_task_id:
+            messages.error(request, 'Maintenance Task ID is missing.')
+            return redirect('add_maintenance_task')
+
+        # Fetch the maintenance task
+        try:
+            maintenance_task = MaintenanceTask.objects.get(id=maintenance_task_id)
+        except MaintenanceTask.DoesNotExist:
+            messages.error(request, 'Invalid Maintenance Task.')
+            return redirect('add_maintenance_task')
+
+        # Create or fetch the TaskGroup for the given frequency
+        task_group, created = TaskGroup.objects.get_or_create(
+            maintenance_task=maintenance_task,
+            frequency=frequency
+        )
+
+        # Get the list of tasks from the form
+        task_descriptions = request.POST.getlist('tasks[]')
+        if not task_descriptions:
+            messages.error(request, 'No tasks provided.')
+            return redirect('add_maintenance_task')
+
+        # Save each task
+        for description in task_descriptions:
+            Task.objects.create(task_group=task_group, description=description)
+
+        messages.success(request, f'{frequency.capitalize()} tasks added successfully!')
+        return redirect('add_maintenance_task')
+
+    else:
+        # Render the form for adding tasks
+        maintenance_task_form = MaintenanceTaskForm()
+        task_form = TaskForm()
+
+    return render(request, 'add_tasks_for_frequency.html', {
+        'active_page': 'maintenance_task_list',
+        'branch': user_branch,
+        'notifications': notifications,
+        'maintenance_task_form': maintenance_task_form,
+        'task_form': task_form,
+        'frequency': frequency,
+    })
+
+
+@csrf_exempt
+def add_task(request, frequency):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        description = data.get('description')
+
+        # Fetch the maintenance task (you may need to pass the ID in the request)
+        maintenance_task = MaintenanceTask.objects.get(id=1)  # Replace with your logic
+
+        # Create or fetch the TaskGroup
+        task_group, created = TaskGroup.objects.get_or_create(
+            maintenance_task=maintenance_task,
+            frequency=frequency
+        )
+
+        # Create the task
+        Task.objects.create(task_group=task_group, description=description)
+
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False})
+
+@csrf_exempt
+def delete_task(request, task_id):
+    if request.method == 'POST':
+        task = Task.objects.get(id=task_id)
+        task.delete()
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False})
 #--------------------------------------------------------------------------------------------
 
 def equipment_list(request):
@@ -1034,7 +1103,7 @@ def add_maintenance_page(request):
             userprofile__role='TEC'  # Filter by role (Technician)
         ),
         'branch': user_branch,
-        'maintenance_types': MaintenanceType.objects.filter(branch=user_branch),
+        'maintenance_tasks': MaintenanceTask.objects.all(),
         'work_orders': WorkOrder.objects.filter(branch=user_branch),
         'spare_parts': SparePart.objects.filter(branch=user_branch),
         'active_page': 'maintenance_list',
@@ -1050,7 +1119,7 @@ def add_maintenance(request):
         'equipments': Equipment.objects.filter(branch=user_branch),
         'technicians': User.objects.filter(userprofile__branch=user_branch, userprofile__role='TEC'),
         'branch': user_branch,
-        'maintenance_types': MaintenanceType.objects.filter(branch=user_branch),
+        'maintenance_tasks': MaintenanceTask.objects.all(),
         'work_orders': WorkOrder.objects.filter(branch=user_branch),
         'spare_parts': SparePart.objects.filter(branch=user_branch),
         'active_page': 'maintenance_list',
@@ -1061,7 +1130,7 @@ def add_maintenance(request):
         equipment_id = request.POST.get('equipment')
         assigned_technicians = request.POST.getlist('assigned_technicians[]')
         branch_id = request.POST.get('branch')
-        maintenance_type_id = request.POST.get('maintenance_type')
+        maintenance_task_id = request.POST.get('maintenance_task')
         spare_parts = request.POST.getlist('spare_parts[]')
         spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
         remark = request.POST.get('remark')
@@ -1069,7 +1138,7 @@ def add_maintenance(request):
         problems = request.POST.get('problems')
         status = request.POST.get('status')
 
-        # if not equipment_id or not assigned_technicians or not branch_id or not maintenance_type_id or not status:
+        # if not equipment_id or not assigned_technicians or not branch_id or not maintenance_task_id or not status:
         #     messages.error(request, 'Please fill out all required fields.')
         #     return render(request, 'add_maintenance.html', context)
 
@@ -1077,7 +1146,7 @@ def add_maintenance(request):
             maintenance = MaintenanceRecord.objects.create(
                 equipment_id=equipment_id,
                 branch_id=branch_id,
-                maintenance_type_id=maintenance_type_id,
+                maintenance_task_id=maintenance_task_id,
                 remark=remark,
                 procedure=procedure,
                 problems=problems,
@@ -1154,7 +1223,7 @@ def edit_maintenance(request, id):
         equipment_id = request.POST.get('equipment')
         assigned_technicians = request.POST.getlist('assigned_technicians')
         branch_id = request.POST.get('branch')
-        maintenance_type_id = request.POST.get('maintenance_type')
+        maintenance_task_id = request.POST.get('maintenance_task')
         spare_parts_post = request.POST.getlist('spare_parts[]')
         spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
         remark = request.POST.get('remark')
@@ -1163,7 +1232,7 @@ def edit_maintenance(request, id):
         status = request.POST.get('status')
 
         # Validate required fields
-        # if not equipment_id  or not branch_id or not maintenance_type_id or not status:
+        # if not equipment_id  or not branch_id or not maintenance_task_id or not status:
         #     messages.error(request, 'Please fill out all required fields.')
         #     return render(request, 'edit_maintenance.html', {
         #         'maintenance': maintenance,
@@ -1178,7 +1247,7 @@ def edit_maintenance(request, id):
             # Update the MaintenanceRecord object
             # maintenance.equipment_id = equipment_id
             # maintenance.branch_id = branch_id
-            maintenance.maintenance_type_id = maintenance_type_id
+            maintenance.maintenance_task_id = maintenance_task_id
             maintenance.remark = remark
             maintenance.procedure = procedure
             maintenance.problems = problems
@@ -1212,7 +1281,7 @@ def edit_maintenance(request, id):
                         spare_part.quantity -= usage.quantity_used
                         spare_part.save()
                         
-                    return redirect(f'{request.path}?equipment={equipment_id}&maintenance_type={maintenance_type_id}&error=1')
+                    return redirect(f'{request.path}?equipment={equipment_id}&maintenance_task={maintenance_task_id}&error=1')
 
                 # Deduct the new quantity from the spare part
                 spare_part.quantity -= quantity_used

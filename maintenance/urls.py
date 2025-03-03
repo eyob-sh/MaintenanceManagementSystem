@@ -92,12 +92,17 @@ path('add_decommissioned_equipment_page/', views.add_decommissioned_equipment_pa
 
 
 #----------------------------------------------------------------------------------------------------------
-path('add_maintenance_type_page/', views.add_maintenance_type_page, name = "add_maintenance_type_page"),
+path('add_maintenance_task_page/', views.add_maintenance_task_page, name = "add_maintenance_task_page"),
 
-    path('add_maintenance_type/', views.add_maintenance_type, name = "add_maintenance_type"),
+    path('add_maintenance_task/', views.add_maintenance_task, name = "add_maintenance_task"),
     
-    path('maintenance_type/', views.maintenance_type_list, name='maintenance_type_list'),
-    path('maintenance_type/edit/<int:id>/', views.edit_maintenance_type, name='edit_maintenance_type'),
+    path('maintenance_task/', views.maintenance_task_list, name='maintenance_task_list'),
+    path('maintenance_task/edit/<int:id>/', views.edit_maintenance_task, name='edit_maintenance_task'),
+        path('add-tasks/<str:frequency>/', views.add_tasks_for_frequency, name='add_tasks_for_frequency'),
+
+        path('add-task/<str:frequency>/', views.add_task, name='add_task'),
+    path('delete-task/<int:task_id>/', views.delete_task, name='delete_task'),
+
 
 #----------------------------------------------------------------------------------------------------------------
 

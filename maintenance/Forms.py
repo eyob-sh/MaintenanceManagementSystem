@@ -1,5 +1,5 @@
 from django import forms
-from .models import Equipment, SparePart, Manufacturer, DecommissionedEquipment, MaintenanceType ,MaintenanceRecord, WorkOrder, SparePartUsage, RestockSparePart,Branch,UserProfile
+from .models import Equipment, SparePart, Manufacturer, DecommissionedEquipment, MaintenanceTask ,MaintenanceRecord, WorkOrder, SparePartUsage, RestockSparePart,Branch,UserProfile, Task, TaskGroup
 
 
 class BranchForm(forms.ModelForm):
@@ -132,24 +132,38 @@ class DecommissionedEquipmentForm(forms.ModelForm):
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
             
-class MaintenanceTypeForm(forms.ModelForm):
-    class Meta:
-        model = MaintenanceType
-        fields = [
-            'maintenance_type',
-            'branch',
-            'description',
-        ]
+# class MaintenanceTaskForm(forms.ModelForm):
+#     class Meta:
+#         model = MaintenanceTask
+#         fields = [
+#             'equipment_type',
+#             # 'branch',
+#             'description',
+#         ]
 
-    def __init__(self, *args, **kwargs):
-        super(MaintenanceTypeForm, self).__init__(*args, **kwargs)
-        # Add Bootstrap 'form-control' class to all fields
-        for field in self.fields.values():
-            field.widget.attrs.update({'class': 'form-control'})
+#     def __init__(self, *args, **kwargs):
+#         super(MaintenanceTaskForm, self).__init__(*args, **kwargs)
+#         # Add Bootstrap 'form-control' class to all fields
+#         for field in self.fields.values():
+#             field.widget.attrs.update({'class': 'form-control'})
+
+
+class MaintenanceTaskForm(forms.ModelForm):
+    class Meta:
+        model = MaintenanceTask
+        fields = ['equipment_type', 'description']
+
+class TaskGroupForm(forms.ModelForm):
+    class Meta:
+        model = TaskGroup
+        fields = ['frequency']
+
+class TaskForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = ['description']
             
-        if self.instance and self.instance.pk:  # Check if the form is for an existing instance
-            self.fields['branch'].disabled = True  # Disable the field
-            self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
+        
             
 class MaintenanceRecordForm(forms.ModelForm):
     class Meta:
@@ -158,7 +172,7 @@ class MaintenanceRecordForm(forms.ModelForm):
             'equipment',
             'assigned_technicians',
             'branch',
-            'maintenance_type',
+            'maintenance_task',
             'remark',
             'procedure',
             'problems',
