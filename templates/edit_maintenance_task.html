@@ -1,5 +1,6 @@
 {% extends 'index.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block content %}
 
@@ -32,38 +33,59 @@
                         <form method="POST" id="maintenanceTaskForm" novalidate>
                             {% csrf_token %}
 
+                            <!-- Equipment Type and Description -->
+                            <div class="row justify-content-center mb-4">
+                                <div class="col-md-6">
+                                    <div class="row mb-3">
+                                        <label for="id_equipment_type" class="form-label">Equipment Type</label>
+                                        {{ form.equipment_type }}
+                                        <div class="invalid-feedback">Please enter the equipment type.</div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <label for="id_description" class="form-label">Description</label>
+                                        {{ form.description }}
+                                        <div class="invalid-feedback">Please enter a description.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Task Groups -->
                             <div class="row">
-                                <!-- Left Column -->
-                                <div class="col-md-6">
-                                    <!-- Maintenance Task -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_maintenance_task" class="form-label">Equipment Type</label>
-                                            {{ form.equipment_type }}
-                                            <div class="invalid-feedback">Please enter the maintenance task.</div>
+                                {% for frequency in frequencies %}
+                                <div class="col-md-6 mb-4">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">{{ frequency|title }} Tasks</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <!-- Task List -->
+                                            <div id="{{ frequency }}-tasks" class="task-list">
+                                                {% for task in task_groups|get_item:frequency %}
+                                                <div class="task-item mb-3">
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" name="{{ frequency }}_tasks[]" value="{{ task.description }}" required>
+                                                        <button type="button" class="btn btn-danger btn-sm remove-task">Remove</button>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                                <div class="task-item mb-3">
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" name="{{ frequency }}_tasks[]" placeholder="Enter a task" required>
+                                                        <button type="button" class="btn btn-danger btn-sm remove-task">Remove</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Add Task Button -->
+                                            <div class="text-center mb-3">
+                                                <button type="button" class="btn btn-success btn-sm" onclick="addTask('{{ frequency }}')">
+                                                    <i class="bi bi-plus-circle"></i> Add Task
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <!-- <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_branch" class="form-label">Branch</label>
-                                            {{ form.branch }}
-                                            <div class="invalid-feedback">Please select a branch.</div>
-                                        </div>
-                                    </div> -->
-
                                 </div>
-
-                                <!-- Right Column -->
-                                <div class="col-md-6">
-                                    <!-- Description -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_description" class="form-label">Description</label>
-                                            {{ form.description }}
-                                        </div>
-                                    </div>
-                                </div>
+                                {% endfor %}
                             </div>
 
                             <!-- Submit Button -->
@@ -81,24 +103,78 @@
 
 </main><!-- End #main -->
 
-<!-- Add JavaScript for Front-End Validation -->
+<!-- Add JavaScript for Dynamic Task Management -->
 <script>
-    (function () {
-        'use strict';
+    // Add a new task
+    function addTask(frequency) {
+        const taskList = document.getElementById(`${frequency}-tasks`);
+        const newTask = document.createElement('div');
+        newTask.classList.add('task-item', 'mb-3');
+        newTask.innerHTML = `
+            <div class="input-group">
+                <input type="text" class="form-control" name="${frequency}_tasks[]" placeholder="Enter a task" required>
+                <button type="button" class="btn btn-danger btn-sm remove-task">Remove</button>
+            </div>
+        `;
+        taskList.appendChild(newTask);
+    }
 
-        // Fetch the form element
-        const form = document.getElementById('maintenanceTaskForm');
-
-        // Add event listener for form submission
-        form.addEventListener('submit', function (event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-
-            form.classList.add('was-validated');
-        }, false);
-    })();
+    // Remove a task
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('remove-task')) {
+            e.target.closest('.task-item').remove();
+        }
+    });
 </script>
+
+<!-- Add CSS for Styling -->
+<style>
+    /* Task List Styling */
+    .task-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .input-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    .input-group .form-control {
+        flex: 1;
+    }
+
+    .input-group .btn {
+        flex-shrink: 0;
+    }
+
+    /* Button Styling */
+    .btn-success {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+
+    .btn-primary {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .btn {
+        padding: 5px 10px;
+        font-size: 12px;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn:hover {
+        opacity: 0.9;
+    }
+</style>
 
 {% endblock %}

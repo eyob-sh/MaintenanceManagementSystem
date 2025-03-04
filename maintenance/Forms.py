@@ -35,10 +35,7 @@ class EquipmentForm(forms.ModelForm):
             'branch',
             'location',
             'installation_date',
-            'maintenance_interval_years',
-            'maintenance_interval_months',
-            'maintenance_interval_weeks',
-            'maintenance_interval_days',
+            
             'last_maintenance_date',
             'next_maintenance_date',
             'status',
@@ -152,6 +149,10 @@ class MaintenanceTaskForm(forms.ModelForm):
     class Meta:
         model = MaintenanceTask
         fields = ['equipment_type', 'description']
+        widgets = {
+            'equipment_type': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
 
 class TaskGroupForm(forms.ModelForm):
     class Meta:

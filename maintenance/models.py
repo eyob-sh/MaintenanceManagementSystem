@@ -14,9 +14,15 @@ from django.db.models import JSONField
 class Branch(models.Model):
     name = models.CharField(max_length=100)
     location = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']  # Use '-' for descending order
 
     def __str__(self):
         return self.name
+    
 
 class UserProfile(models.Model):
     # Define choices for departments
@@ -35,32 +41,18 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['-created_at']  # Use '-' for descending order
 
     def __str__(self):
         return self.user.username
     
 
 
-# class MaintenanceTask(models.Model):
-
-#     equipment_type = models.CharField(
-#         help_text="Enter a type of maintenance "
-#                   "(e.g., 'Software Installation').",
-#         max_length=255,
-#         unique=True,
-#     )
-#     # branch = models.ForeignKey('Branch' , on_delete=models.PROTECT)
-
-#     description = models.TextField(
-#         blank=True,
-#         help_text='Enter a description of the maintenance type.',
-#     )
-
-#     class Meta:
-#         ordering = ['equipment_type']
-
-#     def __str__(self):
-#         return self.equipment_type
 
 
 class MaintenanceTask(models.Model):
@@ -73,9 +65,12 @@ class MaintenanceTask(models.Model):
         blank=True,
         help_text='Enter a description of the maintenance type.',
     )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
-        ordering = ['equipment_type']
+        ordering = ['-created_at']  # Use '-' for descending order
 
     def __str__(self):
         return self.equipment_type
@@ -85,12 +80,15 @@ class TaskGroup(models.Model):
         ('daily', 'Daily'),
         ('weekly', 'Weekly'),
         ('monthly', 'Monthly'),
-        ('biannually', 'Biannually'),
-        ('annually', 'Annually'),
+        ('biannual', 'Biannual'),
+        ('annual', 'Annual'),
     ]
 
     maintenance_task = models.ForeignKey(MaintenanceTask, on_delete=models.CASCADE, related_name='task_groups')
     frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
 
     def __str__(self):
         return f"{self.maintenance_task.equipment_type} - {self.get_frequency_display()}"
@@ -100,6 +98,8 @@ class TaskGroup(models.Model):
 class Task(models.Model):
     task_group = models.ForeignKey(TaskGroup, on_delete=models.CASCADE, related_name='tasks')
     description = models.TextField(help_text='Enter a description of the task.')
+    updated_at = models.DateTimeField(auto_now=True)
+
 
 
     def __str__(self):
@@ -113,6 +113,12 @@ class Manufacturer(models.Model):
     contact_email = models.EmailField(blank=True, null=True)
     contact_phone_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['-created_at']  # Use '-' for descending order
 
     def __str__(self):
         return self.name
@@ -133,14 +139,17 @@ class Equipment(models.Model):
     branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
     location = models.CharField(max_length=50)
     installation_date = models.DateField()
-    maintenance_interval_years = models.PositiveIntegerField(default=0)
-    maintenance_interval_months = models.PositiveIntegerField(default=0)
-    maintenance_interval_weeks = models.PositiveIntegerField(default=0)
-    maintenance_interval_days = models.PositiveIntegerField(default=0)
+    
     last_maintenance_date = models.DateField(null=True, blank=True)
     next_maintenance_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='operational')
     remark = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['-created_at']  # Use '-' for descending order
 
     def calculate_next_maintenance_date(self):
         from datetime import timedelta
@@ -173,6 +182,12 @@ class SparePart(models.Model):
     date_added = models.DateField(auto_now_add=True)  # Date when the part was added
     last_updated = models.DateField(auto_now=True)  # Date when the part was last updated
     last_restock_date = models.DateTimeField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['-created_at']  # Use '-' for descending order
     
     
 
@@ -184,6 +199,12 @@ class RestockSparePart(models.Model):
     quantity = models.PositiveIntegerField(default=0)
     restock_date = models.DateTimeField(auto_now_add=True)
     attachment = models.FileField(upload_to='restock_attachments/', null=True, blank=True)  # Optional attachment
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['-created_at']  # Use '-' for descending order
 
     def __str__(self):
         return f"Restock {self.quantity} units of {self.spare_part.name} on {self.restock_date}"
@@ -233,6 +254,8 @@ class WorkOrder(models.Model):
         auto_now=True,
         help_text='The date and time when the work order was last updated.',
     )
+    updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
         ordering = ['-created_at']
@@ -263,22 +286,48 @@ class MaintenanceRecord(models.Model):
     status = models.CharField(choices=STATUS_CHOICES, default='Not Started', max_length=15)
     datetime = models.DateTimeField(auto_now_add=True)
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_maintenance')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # New fields for task completion and technician acceptance
+    accepted_by = models.ManyToManyField(User, related_name='accepted_maintenance', blank=True)
+    completed_tasks = models.ManyToManyField('Task', through='TaskCompletion')
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
         return f'{self.equipment} - {self.maintenance_task} ({self.datetime.date()})'
-        
-    
+
+
+class TaskCompletion(models.Model):
+    maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE)
+    task = models.ForeignKey('Task', on_delete=models.CASCADE)
+    completed_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    completed_at = models.DateTimeField(auto_now_add=True)
 class SparePartUsage(models.Model):
     maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE, null=True)
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, null=True)
     spare_part = models.ForeignKey(SparePart, on_delete=models.CASCADE)
     quantity_used = models.IntegerField()  # Quantity of the spare part used
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['-created_at']  # Use '-' for descending order
     
 
 class DecommissionedEquipment(models.Model):
     equipment = models.OneToOneField('Equipment', on_delete=models.CASCADE)
     decommission_reason = models.TextField(blank=True, null=True)
     decommission_date = models.DateField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['-created_at']  # Use '-' for descending order
 
     def __str__(self):
         return f"{self.equipment.name} - Decommissioned on {self.decommission_date}"
@@ -294,6 +343,12 @@ class Notification(models.Model):
     timestamp = models.DateTimeField(default=timezone.now)
     is_read = models.BooleanField(default=False)
     url = models.URLField(blank=True, null=True)  # Optional: Link to a specific page
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['-created_at']  # Use '-' for descending order
 
     def __str__(self):
         return f'{self.user.username} - {self.message}'

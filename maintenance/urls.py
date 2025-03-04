@@ -64,6 +64,7 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
     
     path('maintenance/', views.maintenance_list, name='maintenance_list'),
     path('maintenance/edit/<int:id>/', views.edit_maintenance, name='edit_maintenance'),
+    path('get-tasks/', views.get_tasks, name='get_tasks'),
     
 #--------------------------------------------------------------------------------------------------------
 

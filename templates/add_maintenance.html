@@ -95,20 +95,33 @@
                                         </div>
                                     </div>
 
-                                    <!-- Maintenance Task -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="maintenance_task" class="form-label">Maintenance Type</label>
-                                            <select class="form-select" id="maintenance_task" name="maintenance_task" required>
-                                                <option selected disabled value="">Select Maintenance Type</option>
-                                                {% for maintenance_task in maintenance_tasks %}
-                                                <option value="{{ maintenance_task.id }}">{{ maintenance_task.maintenance_task }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <div class="invalid-feedback">Please select a maintenance type.</div>
-                                        </div>
-                                    </div>
+                                    <!-- Maintenance Type -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <label for="maintenance_type" class="form-label">Maintenance Type</label>
+        <select class="form-select" id="maintenance_type" name="maintenance_type" required>
+            <option selected disabled value="">Select Maintenance Type</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="biannually">Biannual</option>
+            <option value="annually">Annual</option>
+        </select>
+        <div class="invalid-feedback">Please select a maintenance type.</div>
+    </div>
+</div>
 
+<!-- Tasks Section -->
+<div id="tasks-section" class="d-none">
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <label class="form-label">Tasks</label>
+            <div id="tasks-list">
+                <!-- Tasks will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+</div>
                                     <!-- Spare Parts Section -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
@@ -220,132 +233,185 @@
 <!-- Add JavaScript for Front-End Validation -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const addSparePartButton = document.getElementById('add-spare-part');
-        const sparePartContainer = document.getElementById('additional-spare-parts');
+        // --- Dynamic Task Loading ---
+        const maintenanceTypeSelect = document.getElementById('maintenance_type');
+        const tasksSection = document.getElementById('tasks-section');
+        const tasksList = document.getElementById('tasks-list');
+    
+        if (maintenanceTypeSelect && tasksSection && tasksList) {
+        maintenanceTypeSelect.addEventListener('change', function () {
+            const maintenanceType = this.value; // e.g., 'daily', 'weekly', etc.
+            const equipmentId = document.getElementById('equipment').value;
+
+            if (!equipmentId) {
+                alert('Please select an equipment first.');
+                return;
+            }
+
+            // Fetch tasks for the selected maintenance type and equipment type
+            fetch(`/get-tasks/?equipment_id=${equipmentId}&maintenance_type=${maintenanceType}`)
+                .then(response => response.json())
+                .then(data => {
+                    tasksList.innerHTML = ''; // Clear existing tasks
+
+                    if (data.tasks.length > 0) {
+                        data.tasks.forEach(task => {
+                            const taskItem = document.createElement('div');
+                            taskItem.className = 'form-check mb-2';
+                            taskItem.innerHTML = `
+                                <input class="form-check-input" type="checkbox" name="tasks[]" value="${task.id}" id="task-${task.id}">
+                                <label class="form-check-label" for="task-${task.id}">
+                                    ${task.description}
+                                </label>
+                            `;
+                            tasksList.appendChild(taskItem);
+                        });
+
+                        tasksSection.classList.remove('d-none'); // Show the tasks section
+                    } else {
+                        tasksSection.classList.add('d-none'); // Hide the tasks section if no tasks are found
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching tasks:', error);
+                });
+        });
+    }
+    
+        // --- Dynamic Addition of Assigned Technicians ---
         const addTechnicianButton = document.getElementById('add-technician');
         const technicianContainer = document.getElementById('additional-technicians');
+    
+        if (addTechnicianButton && technicianContainer) {
+            addTechnicianButton.addEventListener('click', function () {
+                const newRow = document.createElement('div');
+                newRow.className = 'row mb-3 technician-row';
+    
+                newRow.innerHTML = `
+                    <div class="col-md-10">
+                        <select class="form-select technician-select" name="assigned_technicians[]" required>
+                            <option value="">Select Technician</option>
+                            {% for technician in technicians %}
+                            <option value="{{ technician.id }}">{{ technician.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-primary-sm mb-3 remove-technician" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; ">Remove</button>
+                    </div>
+                `;
+    
+                technicianContainer.appendChild(newRow);
+    
+                // Enable remove button for all rows
+                document.querySelectorAll('.remove-technician').forEach(button => {
+                    button.disabled = false;
+                });
+            });
+    
+            // Remove technician row
+            technicianContainer.addEventListener('click', function (event) {
+                if (event.target.classList.contains('remove-technician')) {
+                    event.target.closest('.technician-row').remove();
+    
+                    // Disable remove button if only one row is left
+                    if (document.querySelectorAll('.technician-row').length === 1) {
+                        document.querySelector('.remove-technician').disabled = true;
+                    }
+                }
+            });
+        }
+    
+        // --- Dynamic Addition of Spare Parts ---
+        const addSparePartButton = document.getElementById('add-spare-part');
+        const sparePartContainer = document.getElementById('additional-spare-parts');
+    
+        if (addSparePartButton && sparePartContainer) {
+            addSparePartButton.addEventListener('click', function () {
+                const newRow = document.createElement('div');
+                newRow.className = 'row mb-3 spare-part-row';
+    
+                newRow.innerHTML = `
+                    <div class="col-md-6">
+                        <select class="form-select spare-part-select" name="spare_parts[]">
+                            <option value="">Select Spare Part</option>
+                            {% for spare_part in spare_parts %}
+                            <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}">
+                                {{ spare_part.name }} ({{ spare_part.quantity }} available)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-primary-sm mb-3 remove-spare-part" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; ">Remove</button>
+                    </div>
+                `;
+    
+                sparePartContainer.appendChild(newRow);
+    
+                // Enable remove button for all rows
+                document.querySelectorAll('.remove-spare-part').forEach(button => {
+                    button.disabled = false;
+                });
+            });
+    
+            // Remove spare part row
+            sparePartContainer.addEventListener('click', function (event) {
+                if (event.target.classList.contains('remove-spare-part')) {
+                    event.target.closest('.spare-part-row').remove();
+    
+                    // Disable remove button if only one row is left
+                    if (document.querySelectorAll('.spare-part-row').length === 1) {
+                        document.querySelector('.remove-spare-part').disabled = true;
+                    }
+                }
+            });
+        }
+    
+        // --- Frontend Validation ---
         const form = document.getElementById('maintenanceForm');
         const errorMessagesContainer = document.getElementById('errorMessages');
-
-        // Add new spare part row
-        addSparePartButton.addEventListener('click', function () {
-            const newRow = document.createElement('div');
-            newRow.className = 'row mb-3 spare-part-row';
-
-            newRow.innerHTML = `
-                <div class="col-md-6">
-                    <select class="form-select spare-part-select" name="spare_parts[]">
-                        <option value="">Select Spare Part</option>
-                        {% for spare_part in spare_parts %}
-                        <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}">
-                            {{ spare_part.name }} ({{ spare_part.quantity }} available)
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity">
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-primary-sm mb-3 remove-spare-part" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; ">Remove</button>
-                </div>
-            `;
-
-            sparePartContainer.appendChild(newRow);
-
-            // Enable remove button for all rows
-            document.querySelectorAll('.remove-spare-part').forEach(button => {
-                button.disabled = false;
-            });
-        });
-
-        // Remove spare part row
-        sparePartContainer.addEventListener('click', function (event) {
-            if (event.target.classList.contains('remove-spare-part')) {
-                event.target.closest('.spare-part-row').remove();
-
-                // Disable remove button if only one row is left
-                if (document.querySelectorAll('.spare-part-row').length === 1) {
-                    document.querySelector('.remove-spare-part').disabled = true;
-                }
-            }
-        });
-
-        // Add new technician row
-        addTechnicianButton.addEventListener('click', function () {
-            const newRow = document.createElement('div');
-            newRow.className = 'row mb-3 technician-row';
-
-            newRow.innerHTML = `
-                <div class="col-md-10">
-                    <select class="form-select technician-select" name="assigned_technicians[]" required>
-                        <option value="">Select Technician</option>
-                        {% for technician in technicians %}
-                        <option value="{{ technician.id }}">{{ technician.get_full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-primary-sm mb-3 remove-technician" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; " >Remove</button>
-                </div>
-            `;
-
-            technicianContainer.appendChild(newRow);
-
-            // Enable remove button for all rows
-            document.querySelectorAll('.remove-technician').forEach(button => {
-                button.disabled = false;
-            });
-        });
-
-        // Remove technician row
-        technicianContainer.addEventListener('click', function (event) {
-            if (event.target.classList.contains('remove-technician')) {
-                event.target.closest('.technician-row').remove();
-
-                // Disable remove button if only one row is left
-                if (document.querySelectorAll('.technician-row').length === 1) {
-                    document.querySelector('.remove-technician').disabled = true;
-                }
-            }
-        });
-
-        // Frontend validation before form submission
-        form.addEventListener('submit', function (event) {
-            let isValid = true;
-            const errorMessages = [];
-
-            // Validate required fields (excluding spare part quantities)
-            const requiredFields = [
-                'equipment',
-                'assigned_technicians',
-                'branch',
-                'maintenance_task',
-                'status',
-            ];
-
-            requiredFields.forEach(fieldName => {
-                const field = form.querySelector(`[name="${fieldName}"]`);
-                if (!field.value) {
-                    isValid = false;
-                    errorMessages.push(`Please fill out the ${fieldName.replace('_', ' ')} field.`);
-                    field.classList.add('is-invalid');
+    
+        if (form && errorMessagesContainer) {
+            form.addEventListener('submit', function (event) {
+                let isValid = true;
+                const errorMessages = [];
+    
+                // Validate required fields (excluding spare part quantities)
+                const requiredFields = [
+                    'equipment',
+                    'assigned_technicians',
+                    'branch',
+                    'maintenance_task',
+                    'status',
+                ];
+    
+                requiredFields.forEach(fieldName => {
+                    const field = form.querySelector(`[name="${fieldName}"]`);
+                    if (!field.value) {
+                        isValid = false;
+                        errorMessages.push(`Please fill out the ${fieldName.replace('_', ' ')} field.`);
+                        field.classList.add('is-invalid');
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
+                });
+    
+                if (!isValid) {
+                    event.preventDefault(); // Prevent form submission
+    
+                    // Display error messages inline
+                    errorMessagesContainer.innerHTML = errorMessages.join('<br>'); // Join messages with line breaks
+                    errorMessagesContainer.classList.remove('d-none'); // Show the error container
                 } else {
-                    field.classList.remove('is-invalid');
+                    errorMessagesContainer.classList.add('d-none'); // Hide the error container if no errors
                 }
             });
-
-            if (!isValid) {
-                event.preventDefault(); // Prevent form submission
-
-                // Display error messages inline
-                errorMessagesContainer.innerHTML = errorMessages.join('<br>'); // Join messages with line breaks
-                errorMessagesContainer.classList.remove('d-none'); // Show the error container
-            } else {
-                errorMessagesContainer.classList.add('d-none'); // Hide the error container if no errors
-            }
-        });
+        }
     });
-</script>
+    </script>
 
 {% endblock %}

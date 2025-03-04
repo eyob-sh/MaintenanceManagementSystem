@@ -46,14 +46,18 @@
                                     </div>
 
                                     <!-- Equipment Type -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="equipmentType" class="form-label">Equipment Type</label>
-                                            <input type="text" class="form-control" id="equipmentType"
-                                                name="equipment_type" required>
-                                            <div class="invalid-feedback">Please enter the equipment type.</div>
-                                        </div>
-                                    </div>
+<div class="row mb-3">
+    <div class="col-md-12">
+        <label for="equipmentType" class="form-label">Equipment Type</label>
+        <select class="form-select" id="equipmentType" name="equipment_type" required>
+            <option selected disabled value="">Select Equipment Type</option>
+            {% for equipment_type in equipment_types %}
+            <option value="{{ equipment_type }}">{{ equipment_type }}</option>
+            {% endfor %}
+        </select>
+        <div class="invalid-feedback">Please select an equipment type.</div>
+    </div>
+</div>
 
                                     <!-- Manufacturer -->
                                     <div class="row mb-3">
@@ -148,32 +152,7 @@
                                 </div>
                             </div>
 
-                            <!-- Maintenance Intervals -->
-                            <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <label for="maintenanceYears" class="form-label">Maintenance Interval
-                                        (Years)</label>
-                                    <input type="number" class="form-control" id="maintenanceYears"
-                                        name="maintenance_interval_years" value="0" min="0">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="maintenanceMonths" class="form-label">Maintenance Interval
-                                        (Months)</label>
-                                    <input type="number" class="form-control" id="maintenanceMonths"
-                                        name="maintenance_interval_months" value="0" min="0">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="maintenanceWeeks" class="form-label">Maintenance Interval
-                                        (Weeks)</label>
-                                    <input type="number" class="form-control" id="maintenanceWeeks"
-                                        name="maintenance_interval_weeks" value="0" min="0">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="maintenanceDays" class="form-label">Maintenance Interval (Days)</label>
-                                    <input type="number" class="form-control" id="maintenanceDays"
-                                        name="maintenance_interval_days" value="0" min="0">
-                                </div>
-                            </div>
+                            
 
                             <!-- Submit Button -->
                             <div class="row mb-3">
@@ -206,51 +185,7 @@
                 event.stopPropagation();
             }
 
-            // Custom validation for maintenance intervals
-            const maintenanceYears = document.getElementById('maintenanceYears');
-            const maintenanceMonths = document.getElementById('maintenanceMonths');
-            const maintenanceWeeks = document.getElementById('maintenanceWeeks');
-            const maintenanceDays = document.getElementById('maintenanceDays');
-
-            // Check if all maintenance intervals are zero
-            if (
-                maintenanceYears.value == 0 &&
-                maintenanceMonths.value == 0 &&
-                maintenanceWeeks.value == 0 &&
-                maintenanceDays.value == 0
-            ) {
-                // Prevent form submission
-                event.preventDefault();
-                event.stopPropagation();
-
-                // Add error message and styling
-                const errorMessage = document.createElement('div');
-                errorMessage.className = 'invalid-feedback';
-                errorMessage.textContent = 'Please provide at least one maintenance interval (years, months, weeks, or days).';
-
-                // Append the error message below the maintenance interval fields
-                const maintenanceIntervalGroup = document.querySelector('.row.mb-3');
-                if (!maintenanceIntervalGroup.querySelector('.invalid-feedback')) {
-                    maintenanceIntervalGroup.appendChild(errorMessage);
-                }
-
-                // Add invalid class to the fields
-                maintenanceYears.classList.add('is-invalid');
-                maintenanceMonths.classList.add('is-invalid');
-                maintenanceWeeks.classList.add('is-invalid');
-                maintenanceDays.classList.add('is-invalid');
-            } else {
-                // Remove error message and styling if validation passes
-                const errorMessage = document.querySelector('.row.mb-3 .invalid-feedback');
-                if (errorMessage) {
-                    errorMessage.remove();
-                }
-
-                maintenanceYears.classList.remove('is-invalid');
-                maintenanceMonths.classList.remove('is-invalid');
-                maintenanceWeeks.classList.remove('is-invalid');
-                maintenanceDays.classList.remove('is-invalid');
-            }
+           
 
             // Add Bootstrap's validation class to the form
             form.classList.add('was-validated');

@@ -38,38 +38,51 @@
                         <form method="POST" action="{% url 'add_maintenance_task' %}" id="maintenanceTaskForm" novalidate>
                             {% csrf_token %}
 
-                            <div class="row">
-                                <!-- Left Column -->
-                                <div class="col-md-5">
-                                    <!-- Equipment Type -->
+                            <!-- Equipment Type and Description -->
+                            <div class="row justify-content-center mb-4">
+                                <div class="col-md-6">
                                     <div class="row mb-3">
                                         <label for="equipment_type" class="form-label">Equipment Type</label>
-                                        <div class="col-md-7">
-                                            <input type="text" class="form-control" id="equipment_type" name="equipment_type" required>
-                                            <div class="invalid-feedback">Please enter the equipment type.</div>
-                                        </div>
+                                        <input type="text" class="form-control" id="equipment_type" name="equipment_type" required>
+                                        <div class="invalid-feedback">Please enter the equipment type.</div>
                                     </div>
-                                    <!-- Description -->
                                     <div class="row mb-3">
-                                        <label for="description" class="col-md-12 col-form-label">Description</label>
-                                        <div class="col-md-9">
-                                            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
-                                            <div class="invalid-feedback">Please enter a description.</div>
+                                        <label for="description" class="form-label">Description</label>
+                                        <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                                        <div class="invalid-feedback">Please enter a description.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Task Groups -->
+                            <div class="row">
+                                {% for frequency in frequencies %}
+                                <div class="col-md-6 mb-4">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">{{ frequency|title }} Tasks</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <!-- Task List -->
+                                            <div id="{{ frequency }}-tasks" class="task-list">
+                                                <div class="task-item mb-3">
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" name="{{ frequency }}_tasks[]" placeholder="Enter a task" required>
+                                                        <button type="button" class="btn btn-danger btn-sm remove-task">Remove</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Add Task Button -->
+                                            <div class="text-center mb-3">
+                                                <button type="button" class="btn btn-success btn-sm" onclick="addTask('{{ frequency }}')">
+                                                    <i class="bi bi-plus-circle"></i> Add Task
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                <!-- Right Column -->
-                                <div class="col-md-7">
-                                    <!-- Task Frequency Links -->
-                                    <div class="task-frequency-links mb-3">
-                                        <button type="button" class="btn btn-outline-primary" onclick="openSidebar('daily')">Daily Tasks</button>
-                                        <button type="button" class="btn btn-outline-primary" onclick="openSidebar('weekly')">Weekly Tasks</button>
-                                        <button type="button" class="btn btn-outline-primary" onclick="openSidebar('monthly')">Monthly Tasks</button>
-                                        <button type="button" class="btn btn-outline-primary" onclick="openSidebar('biannually')">Biannual Tasks</button>
-                                        <button type="button" class="btn btn-outline-primary" onclick="openSidebar('annually')">Annual Tasks</button>
-                                    </div>
-                                </div>
+                                {% endfor %}
                             </div>
 
                             <!-- Submit Button -->
@@ -85,141 +98,79 @@
         </div>
     </section>
 
-    <!-- Sidebar for Adding Tasks -->
-    <div id="taskSidebar" class="task-sidebar">
-        <div class="sidebar-content">
-            <h5 id="sidebarTitle">Add Tasks</h5>
-            <form id="taskForm">
-                <!-- Dynamic Task List -->
-                <div id="task-list">
-                    <div class="task-item mb-3">
-                        <div class="input-group">
-                            <input type="text" class="form-control" name="tasks[]" placeholder="Enter a task" required>
-                            <button type="button" class="btn btn-danger remove-task">Remove</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Add Task Button -->
-                <div class="text-center mb-3">
-                    <button type="button" class="btn btn-success" id="add-task">
-                        <i class="bi bi-plus-circle"></i> Add Task
-                    </button>
-                </div>
-
-                <!-- Save Tasks Button -->
-                <div class="text-center">
-                    <button type="button" class="btn btn-primary" onclick="saveTasks()">Save Tasks</button>
-                </div>
-            </form>
-        </div>
-    </div><!-- End Sidebar -->
-
 </main><!-- End #main -->
 
 <!-- Add JavaScript for Dynamic Task Management -->
 <script>
-    let currentFrequency = '';
-
-    // Open the sidebar for a specific frequency
-    function openSidebar(frequency) {
-        currentFrequency = frequency;
-        document.getElementById('sidebarTitle').innerText = `Add ${frequency.charAt(0).toUpperCase() + frequency.slice(1)} Tasks`;
-        document.getElementById('taskSidebar').style.width = '350px';
-    }
-
-    // Close the sidebar
-    function closeSidebar() {
-        document.getElementById('taskSidebar').style.width = '0';
-    }
-
     // Add a new task
-    document.getElementById('add-task').addEventListener('click', function () {
-        const taskList = document.getElementById('task-list');
+    function addTask(frequency) {
+        const taskList = document.getElementById(`${frequency}-tasks`);
         const newTask = document.createElement('div');
         newTask.classList.add('task-item', 'mb-3');
         newTask.innerHTML = `
             <div class="input-group">
-                <input type="text" class="form-control" name="tasks[]" placeholder="Enter a task" required>
-                <button type="button" class="btn btn-danger remove-task">Remove</button>
+                <input type="text" class="form-control" name="${frequency}_tasks[]" placeholder="Enter a task" required>
+                <button type="button" class="btn btn-danger btn-sm remove-task">Remove</button>
             </div>
         `;
         taskList.appendChild(newTask);
-    });
+    }
 
     // Remove a task
-    document.getElementById('task-list').addEventListener('click', function (e) {
+    document.addEventListener('click', function (e) {
         if (e.target.classList.contains('remove-task')) {
             e.target.closest('.task-item').remove();
         }
     });
-
-    // Save tasks
-    function saveTasks() {
-        const taskInputs = document.querySelectorAll(`#task-list input[name="tasks[]"]`);
-        const tasks = Array.from(taskInputs).map(input => input.value);
-
-        // Add tasks to the corresponding frequency section on the main page
-        const taskList = document.getElementById(`${currentFrequency}-tasks`);
-        taskList.innerHTML = ''; // Clear existing tasks
-
-        tasks.forEach(task => {
-            const taskItem = document.createElement('div');
-            taskItem.classList.add('task-item', 'mb-3');
-            taskItem.innerHTML = `
-                <div class="input-group">
-                    <input type="text" class="form-control" name="${currentFrequency}_tasks[]" value="${task}" readonly>
-                    <button type="button" class="btn btn-danger remove-task" onclick="this.parentElement.parentElement.remove()">Remove</button>
-                </div>
-            `;
-            taskList.appendChild(taskItem);
-        });
-
-        // Close the sidebar
-        closeSidebar();
-    }
 </script>
 
 <!-- Add CSS for Styling -->
 <style>
-    /* Task Sidebar Styling */
-    .task-sidebar {
-        height: calc(90% - 60px); /* Adjust height to avoid touching the navbar */
-        width: 0;
-        position: fixed;
-        top: 90px; /* Position below the navbar */
-        right: 0; /* Move to the right side */
-        background-color: #fff;
-        overflow-x: hidden;
-        transition: 0.5s;
-        padding-top: 20px;
-        box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
-    }
-
-    .sidebar-content {
-        padding: 20px;
-    }
-
-    /* Task Frequency Links */
-    .task-frequency-links {
+    /* Task List Styling */
+    .task-item {
         display: flex;
+        align-items: center;
         gap: 10px;
-        margin-bottom: 15px;
     }
 
-    /* Task Item Styling */
-    .task-item .input-group {
+    .input-group {
         display: flex;
         gap: 10px;
     }
 
-    .task-item .input-group .form-control {
+    .input-group .form-control {
         flex: 1;
     }
 
-    .task-item .input-group .btn {
+    .input-group .btn {
         flex-shrink: 0;
+    }
+
+    /* Button Styling */
+    .btn-success {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+
+    .btn-primary {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .btn {
+        padding: 5px 10px;
+        font-size: 12px;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn:hover {
+        opacity: 0.9;
     }
 </style>
 
