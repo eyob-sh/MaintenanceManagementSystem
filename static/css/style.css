@@ -271,7 +271,11 @@ h6 {
   outline: 0;
   box-shadow: none;
 }
-/*  added to style the add more technician button*/
+/*  added to style the form labels */
+.form-label {
+  font-weight: bold;   /* Make labels bold */
+  font-size: 0.9em;    /* Set font size to a smaller value */
+}
 
 /* Accordion */
 .accordion-item {
