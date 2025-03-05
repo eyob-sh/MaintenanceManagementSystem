@@ -174,6 +174,7 @@ class MaintenanceRecordForm(forms.ModelForm):
             'assigned_technicians',
             'branch',
             'maintenance_task',
+            'maintenance_type',
             'remark',
             'procedure',
             'problems',
@@ -195,9 +196,8 @@ class MaintenanceRecordForm(forms.ModelForm):
         if self.instance and self.instance.pk:  # Check if the form is for an existing instance
             self.fields['branch'].disabled = True  # Disable the field
             self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
-            
-            
-            
+            self.fields['maintenance_task'].disabled = True  # Disable the maintenance task field
+            self.fields['maintenance_task'].widget.attrs['readonly'] = True  # Make it read-only
 class WorkOrderForm(forms.ModelForm):
     class Meta:
         model = WorkOrder

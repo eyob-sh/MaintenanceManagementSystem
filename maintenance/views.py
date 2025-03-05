@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-from .models import MaintenanceRecord, MaintenanceTask, Manufacturer, SparePart, SparePartUsage, RestockSparePart, DecommissionedEquipment,Equipment, Notification,WorkOrder,Branch,UserProfile, Task, TaskGroup
+from .models import MaintenanceRecord, MaintenanceTask, Manufacturer, SparePart, SparePartUsage, RestockSparePart, DecommissionedEquipment,Equipment, Notification,WorkOrder,Branch,UserProfile, Task, TaskGroup, TaskCompletion
 
 from .forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTaskForm,  RestockSparePartForm, BranchForm, UserProfileForm, TaskForm, TaskGroupForm
 
@@ -919,10 +919,10 @@ def add_equipment(request):
         serial_number = request.POST.get('serial_number')
         location = request.POST.get('location')
         installation_date = request.POST.get('installation_date')
-        maintenance_interval_years = request.POST.get('maintenance_interval_years', '0')
-        maintenance_interval_months = request.POST.get('maintenance_interval_months', '0')
-        maintenance_interval_weeks = request.POST.get('maintenance_interval_weeks', '0')
-        maintenance_interval_days = request.POST.get('maintenance_interval_days', '0')
+        # maintenance_interval_years = request.POST.get('maintenance_interval_years', '0')
+        # maintenance_interval_months = request.POST.get('maintenance_interval_months', '0')
+        # maintenance_interval_weeks = request.POST.get('maintenance_interval_weeks', '0')
+        # maintenance_interval_days = request.POST.get('maintenance_interval_days', '0')
         status = request.POST.get('status')
         remark = request.POST.get('remark')
 
@@ -943,10 +943,10 @@ def add_equipment(request):
             installation_date = datetime.strptime(installation_date, '%Y-%m-%d').date()
 
             # Convert maintenance intervals to integers
-            maintenance_interval_years = int(maintenance_interval_years)
-            maintenance_interval_months = int(maintenance_interval_months)
-            maintenance_interval_weeks = int(maintenance_interval_weeks)
-            maintenance_interval_days = int(maintenance_interval_days)
+            # maintenance_interval_years = int(maintenance_interval_years)
+            # maintenance_interval_months = int(maintenance_interval_months)
+            # maintenance_interval_weeks = int(maintenance_interval_weeks)
+            # maintenance_interval_days = int(maintenance_interval_days)
 
             # Create and save the Equipment object
             Equipment.objects.create(
@@ -958,10 +958,10 @@ def add_equipment(request):
                 branch=user_branch,
                 location=location,
                 installation_date=installation_date,
-                maintenance_interval_years=maintenance_interval_years,
-                maintenance_interval_months=maintenance_interval_months,
-                maintenance_interval_weeks=maintenance_interval_weeks,
-                maintenance_interval_days=maintenance_interval_days,
+                # maintenance_interval_years=maintenance_interval_years,
+                # maintenance_interval_months=maintenance_interval_months,
+                # maintenance_interval_weeks=maintenance_interval_weeks,
+                # maintenance_interval_days=maintenance_interval_days,
                 status=status,
                 remark=remark
             )
@@ -1171,7 +1171,7 @@ def add_maintenance(request):
         equipment_id = request.POST.get('equipment')
         assigned_technicians = request.POST.getlist('assigned_technicians[]')
         branch_id = request.POST.get('branch')
-        maintenance_task_id = request.POST.get('maintenance_task')
+        maintenance_type = request.POST.get('maintenance_type')  # e.g., daily, weekly
         spare_parts = request.POST.getlist('spare_parts[]')
         spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
         remark = request.POST.get('remark')
@@ -1180,10 +1180,25 @@ def add_maintenance(request):
         status = request.POST.get('status')
 
         try:
+            # Step 1: Get the selected equipment
+            equipment = Equipment.objects.get(id=equipment_id)
+
+            # Step 2: Get the equipment_type from the selected equipment
+            equipment_type = equipment.equipment_type
+
+            # Step 3: Fetch the maintenance_task associated with the equipment_type
+            maintenance_task = MaintenanceTask.objects.filter(equipment_type=equipment_type).first()
+
+            if not maintenance_task:
+                messages.error(request, f'No maintenance task found for equipment type: {equipment_type}.')
+                return render(request, 'add_maintenance.html', context)
+
+            # Step 4: Create the maintenance record
             maintenance = MaintenanceRecord.objects.create(
                 equipment_id=equipment_id,
                 branch_id=branch_id,
-                maintenance_task_id=maintenance_task_id,
+                maintenance_task=maintenance_task,  # Use the fetched maintenance_task
+                maintenance_type=maintenance_type,  # Save maintenance_type
                 remark=remark,
                 procedure=procedure,
                 problems=problems,
@@ -1191,6 +1206,7 @@ def add_maintenance(request):
             )
             maintenance.assigned_technicians.set(assigned_technicians)
 
+            # Step 5: Process spare parts
             for spare_part_id, quantity_used in zip(spare_parts, spare_part_quantities):
                 if not spare_part_id or not quantity_used:
                     continue
@@ -1213,7 +1229,7 @@ def add_maintenance(request):
                     quantity_used=quantity_used,
                 )
 
-            # Notify assigned technicians
+            # Step 6: Notify assigned technicians
             for technician_id in assigned_technicians:
                 technician = User.objects.get(id=technician_id)
                 Notification.objects.create(
@@ -1229,6 +1245,7 @@ def add_maintenance(request):
             return render(request, 'add_maintenance.html', context)
 
     return render(request, 'add_maintenance.html', context)
+
 def maintenance_list(request):
     notifications = get_notifications(request.user)
 
@@ -1252,34 +1269,65 @@ def edit_maintenance(request, id):
     spare_parts = SparePart.objects.filter(branch=user_branch)
     spare_part_usages = SparePartUsage.objects.filter(maintenance_record=maintenance)
 
+    # Fetch tasks associated with the maintenance task and maintenance type
+    tasks = Task.objects.filter(
+        task_group__maintenance_task=maintenance.maintenance_task,
+        task_group__frequency=maintenance.maintenance_type
+    )
+    completed_task_ids = maintenance.completed_tasks.values_list('id', flat=True)
+
     if request.method == 'POST':
         # Get form data
         equipment_id = request.POST.get('equipment')
         assigned_technicians = request.POST.getlist('assigned_technicians')
         branch_id = request.POST.get('branch')
-        maintenance_task_id = request.POST.get('maintenance_task')
+        maintenance_type = request.POST.get('maintenance_type')  # e.g., daily, weekly
         spare_parts_post = request.POST.getlist('spare_parts[]')
         spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
         remark = request.POST.get('remark')
         procedure = request.POST.get('procedure')
         problems = request.POST.get('problems')
         status = request.POST.get('status')
+        completed_tasks = request.POST.getlist('completed_tasks')  # Get completed tasks
 
         try:
-            # Update maintenance record
-            maintenance.maintenance_task_id = maintenance_task_id
+            # Step 1: Get the selected equipment
+            equipment = Equipment.objects.get(id=equipment_id)
+
+            # Step 2: Get the equipment_type from the selected equipment
+            equipment_type = equipment.equipment_type
+
+            # Step 3: Fetch the maintenance_task associated with the equipment_type
+            maintenance_task = MaintenanceTask.objects.filter(equipment_type=equipment_type).first()
+
+            if not maintenance_task:
+                messages.error(request, f'No maintenance task found for equipment type: {equipment_type}.')
+                return render(request, 'edit_maintenance.html', {
+                    'maintenance': maintenance,
+                    'spare_parts': spare_parts,
+                    'spare_part_usages': spare_part_usages,
+                    'tasks': tasks,
+                    'completed_task_ids': completed_task_ids,
+                    'active_page': 'maintenance_list',
+                    'notifications': notifications
+                })
+
+            # Step 4: Update maintenance record
+            maintenance.equipment_id = equipment_id
+            maintenance.maintenance_task = maintenance_task  # Use the fetched maintenance_task
+            maintenance.maintenance_type = maintenance_type  # Update maintenance_type
             maintenance.remark = remark
             maintenance.procedure = procedure
             maintenance.problems = problems
             maintenance.save()
 
-            # Step 1: Add back the old quantities to the spare parts
+            # Step 5: Add back the old quantities to the spare parts
             for usage in spare_part_usages:
                 spare_part = usage.spare_part
                 spare_part.quantity += usage.quantity_used
                 spare_part.save()
 
-            # Step 2: Process the new spare parts and quantities
+            # Step 6: Process the new spare parts and quantities
             for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
                 if not spare_part_id or not quantity_used:
                     continue  # Skip empty fields
@@ -1299,7 +1347,7 @@ def edit_maintenance(request, id):
                         spare_part.quantity -= usage.quantity_used
                         spare_part.save()
                         
-                    return redirect(f'{request.path}?equipment={equipment_id}&maintenance_task={maintenance_task_id}&error=1')
+                    return redirect(f'{request.path}?equipment={equipment_id}&maintenance_task={maintenance_task.id}&error=1')
 
                 # Deduct the new quantity from the spare part
                 spare_part.quantity -= quantity_used
@@ -1313,10 +1361,20 @@ def edit_maintenance(request, id):
                     defaults={'quantity_used': quantity_used},
                 )
 
-            # Step 3: Delete any remaining spare part usages that were not in the form
+            # Step 7: Delete any remaining spare part usages that were not in the form
             SparePartUsage.objects.filter(maintenance_record=maintenance).exclude(
                 spare_part_id__in=[int(id) for id in spare_parts_post]
             ).delete()
+
+            # Step 8: Update completed tasks
+            maintenance.completed_tasks.clear()  # Clear existing completed tasks
+            for task_id in completed_tasks:
+                task = Task.objects.get(id=task_id)
+                TaskCompletion.objects.create(
+                    maintenance_record=maintenance,
+                    task=task,
+                    completed_by=request.user
+                )
 
             messages.success(request, 'Maintenance record updated successfully!')
             return redirect('maintenance_list')
@@ -1326,6 +1384,8 @@ def edit_maintenance(request, id):
                 'maintenance': maintenance,
                 'spare_parts': spare_parts,
                 'spare_part_usages': spare_part_usages,
+                'tasks': tasks,
+                'completed_task_ids': completed_task_ids,
                 'active_page': 'maintenance_list',
                 'notifications': notifications
             })
@@ -1337,10 +1397,11 @@ def edit_maintenance(request, id):
         'maintenance': maintenance,
         'spare_parts': spare_parts,
         'spare_part_usages': spare_part_usages,
+        'tasks': tasks,
+        'completed_task_ids': completed_task_ids,
         'active_page': 'maintenance_list',
         'notifications': notifications
     })
-
 #-------------------------------------------------------------------get_tasks-------------------------------------
 def get_tasks(request):
     equipment_id = request.GET.get('equipment_id')

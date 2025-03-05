@@ -151,20 +151,20 @@ class Equipment(models.Model):
     class Meta:
         ordering = ['-created_at']  # Use '-' for descending order
 
-    def calculate_next_maintenance_date(self):
-        from datetime import timedelta
-        next_date = self.installation_date
-        next_date += timedelta(days=self.maintenance_interval_days)
-        next_date += timedelta(weeks=self.maintenance_interval_weeks)
-        next_date += timedelta(days=30 * self.maintenance_interval_months)
-        next_date += timedelta(days=365 * self.maintenance_interval_years)
-        return next_date
+    # def calculate_next_maintenance_date(self):
+    #     from datetime import timedelta
+    #     next_date = self.installation_date
+    #     next_date += timedelta(days=self.maintenance_interval_days)
+    #     next_date += timedelta(weeks=self.maintenance_interval_weeks)
+    #     next_date += timedelta(days=30 * self.maintenance_interval_months)
+    #     next_date += timedelta(days=365 * self.maintenance_interval_years)
+    #     return next_date
 
-    def save(self, *args, **kwargs):
-        # Set the next maintenance date only when the instance is created
-        if not self.pk:  # Check if the instance is being created
-            self.next_maintenance_date = self.calculate_next_maintenance_date()
-        super().save(*args, **kwargs)  # Call the original save() method
+    # def save(self, *args, **kwargs):
+    #     # Set the next maintenance date only when the instance is created
+    #     if not self.pk:  # Check if the instance is being created
+    #         self.next_maintenance_date = self.calculate_next_maintenance_date()
+    #     super().save(*args, **kwargs)  # Call the original save() method
 
     def __str__(self):
         return f"{self.name} ({self.equipment_type} -- {self.serial_number})"
@@ -275,10 +275,19 @@ class MaintenanceRecord(models.Model):
         ('Failed', 'Failed'),
     ]
 
+    MAINTENANCE_TYPE_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('biannual', 'Biannual'),
+        ('annual', 'Annual'),
+    ]
+
     equipment = models.ForeignKey('Equipment', on_delete=models.PROTECT)
     assigned_technicians = models.ManyToManyField(User, related_name='maintenance_records')
     branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
     maintenance_task = models.ForeignKey('MaintenanceTask', on_delete=models.PROTECT, null=True)
+    maintenance_type = models.CharField(max_length=20, choices=MAINTENANCE_TYPE_CHOICES, null=True)  # New field
     spare_parts = models.ManyToManyField('SparePart', through='SparePartUsage')
     remark = models.TextField(blank=True, null=True)
     procedure = models.TextField(blank=True, null=True)
@@ -298,8 +307,6 @@ class MaintenanceRecord(models.Model):
 
     def __str__(self):
         return f'{self.equipment} - {self.maintenance_task} ({self.datetime.date()})'
-
-
 class TaskCompletion(models.Model):
     maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE)
     task = models.ForeignKey('Task', on_delete=models.CASCADE)
