@@ -1,5 +1,5 @@
 from django import forms
-from .models import Equipment, SparePart, Manufacturer, DecommissionedEquipment, MaintenanceTask ,MaintenanceRecord, WorkOrder, SparePartUsage, RestockSparePart,Branch,UserProfile, Task, TaskGroup
+from .models import Equipment, SparePart, Manufacturer, DecommissionedEquipment, MaintenanceTask ,MaintenanceRecord, WorkOrder, SparePartUsage, RestockSparePart,Branch,UserProfile, Task, TaskGroup, TaskCompletion
 
 
 class BranchForm(forms.ModelForm):
@@ -179,6 +179,7 @@ class MaintenanceRecordForm(forms.ModelForm):
             'procedure',
             'problems',
             'status',
+            'completed_tasks',
         ]
         widgets = {
             'assigned_technicians': forms.SelectMultiple(attrs={'class': 'form-select'}),
@@ -196,8 +197,8 @@ class MaintenanceRecordForm(forms.ModelForm):
         if self.instance and self.instance.pk:  # Check if the form is for an existing instance
             self.fields['branch'].disabled = True  # Disable the field
             self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
-            self.fields['maintenance_task'].disabled = True  # Disable the maintenance task field
-            self.fields['maintenance_task'].widget.attrs['readonly'] = True  # Make it read-only
+            # self.fields['maintenance_task'].disabled = True  # Disable the maintenance task field
+            # self.fields['maintenance_task'].widget.attrs['readonly'] = True  # Make it read-only
 class WorkOrderForm(forms.ModelForm):
     class Meta:
         model = WorkOrder

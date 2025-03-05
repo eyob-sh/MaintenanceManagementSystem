@@ -40,6 +40,8 @@
                                         <div class="col-md-12">
                                             <label for="id_equipment" class="form-label">Equipment</label>
                                             <input type="text" class="form-control" value="{{ maintenance.equipment }}" readonly>
+                                            <!-- Add a hidden input field for equipment_id -->
+                                            <input type="hidden" name="equipment" value="{{ maintenance.equipment.id }}">
                                             <div class="invalid-feedback">Please select an equipment.</div>
                                         </div>
                                     </div>
@@ -67,16 +69,19 @@
                                         </div>
                                     </div>
 
-                                    <!-- Maintenance Type (Read-Only) -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="id_maintenance_task" class="form-label">Maintenance Type</label>
-                                            <input type="text" class="form-control" value="{{ maintenance.maintenance_task }}" readonly>
-                                            <div class="invalid-feedback">Please select a maintenance type.</div>
-                                        </div>
-                                    </div>
+                                    <!-- Maintenance Type (Read-Only Display) -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <label for="id_maintenance_task" class="form-label">Maintenance Type</label>
+        <input type="text" class="form-control" value="{{ maintenance.maintenance_type }}" readonly>
+        <div class="invalid-feedback">Please select a maintenance type.</div>
+    </div>
+</div>
 
-                                    <!-- Tasks Section -->
+<!-- Hidden Input for maintenance_type -->
+<input type="hidden" name="maintenance_type" value="{{ maintenance.maintenance_type }}">
+
+                                    
                                     <!-- Tasks Section -->
 <div id="tasks-section">
     <div class="row mb-3">

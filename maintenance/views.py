@@ -1171,7 +1171,7 @@ def add_maintenance(request):
         equipment_id = request.POST.get('equipment')
         assigned_technicians = request.POST.getlist('assigned_technicians[]')
         branch_id = request.POST.get('branch')
-        maintenance_type = request.POST.get('maintenance_type')  # e.g., daily, weekly
+        maintenance_type = request.POST.get('maintenance_type')  # Ensure this matches the form field name
         spare_parts = request.POST.getlist('spare_parts[]')
         spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
         remark = request.POST.get('remark')
@@ -1197,8 +1197,8 @@ def add_maintenance(request):
             maintenance = MaintenanceRecord.objects.create(
                 equipment_id=equipment_id,
                 branch_id=branch_id,
-                maintenance_task=maintenance_task,  # Use the fetched maintenance_task
-                maintenance_type=maintenance_type,  # Save maintenance_type
+                maintenance_task=maintenance_task,
+                maintenance_type=maintenance_type,  # Ensure this is correctly saved
                 remark=remark,
                 procedure=procedure,
                 problems=problems,
@@ -1245,7 +1245,6 @@ def add_maintenance(request):
             return render(request, 'add_maintenance.html', context)
 
     return render(request, 'add_maintenance.html', context)
-
 def maintenance_list(request):
     notifications = get_notifications(request.user)
 

@@ -167,7 +167,7 @@ class Equipment(models.Model):
     #     super().save(*args, **kwargs)  # Call the original save() method
 
     def __str__(self):
-        return f"{self.name} ({self.equipment_type} -- {self.serial_number})"
+        return f"{self.name} ({self.serial_number})"
     
 
 class SparePart(models.Model):
