@@ -205,6 +205,7 @@ class WorkOrderForm(forms.ModelForm):
         fields = [
             'requester',
             'branch',
+            'location',
             'equipment',
             'description',
             'status',

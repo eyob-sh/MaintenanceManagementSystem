@@ -435,6 +435,15 @@
           <span>Work Order</span>
         </a>
       </li>
+      { comment }
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'follow_up_list' %}collapsed{% endif %}"
+          href="{% url 'follow_up_list' %}">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>Follow Up Tasks</span>
+        </a>
+      </li>
+      { endcomment }
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'maintenance_task_list' %}collapsed{% endif %}"
           href="{% url 'maintenance_task_list' %}">

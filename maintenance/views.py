@@ -10,6 +10,8 @@ from django.db.models import Count, Q
 from datetime import datetime, timedelta 
 from django.utils import timezone
 from django.http import JsonResponse
+from django.urls import reverse
+from django.db.models.deletion import ProtectedError, Collector
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import MaintenanceRecord, MaintenanceTask, Manufacturer, SparePart, SparePartUsage, RestockSparePart, DecommissionedEquipment,Equipment, Notification,WorkOrder,Branch,UserProfile, Task, TaskGroup, TaskCompletion
@@ -410,10 +412,13 @@ def add_work_order(request):
     if request.method == 'POST':
         branch = request.POST.get('branch')
         equipment_id = request.POST.get('equipment')
+        location = request.POST.get('location')
         description = request.POST.get('description')
         status = 'Pending'  # Default status
+        if(request.user.userprofile.role == 'MD manager'):
+            status = 'accepted'
 
-        if not branch or not equipment_id or not description:
+        if not branch or not description:
             messages.error(request, 'Please fill out all required fields.')
             return redirect('add_work_order_page')
 
@@ -422,6 +427,7 @@ def add_work_order(request):
                 requester=request.user,
                 branch_id=branch,
                 equipment_id=equipment_id,
+                location = location,
                 description=description,
                 status=status
             )
@@ -433,7 +439,7 @@ def add_work_order(request):
                 Notification.objects.create(
                     user=manager,
                     type = "maintenance",
-                    message=f'New work order: {work_order.equipment.name}.',
+                    message=f'New work order: {work_order.location}.',
                 )
 
             return redirect('work_order_list')
@@ -449,6 +455,7 @@ def edit_work_order(request, id):
     spare_parts = SparePart.objects.filter(branch=user_branch)
     work_order = get_object_or_404(WorkOrder, id=id)
     assigned_technician_ids = work_order.assigned_technicians.values_list('id', flat=True)
+    equipments = Equipment.objects.filter(branch=user_branch)
 
     if request.method == 'POST':
         # Get form data
@@ -538,6 +545,7 @@ def edit_work_order(request, id):
         'active_page': 'work_order_list',
         'notifications': notifications,
         'spare_parts': spare_parts,
+        'equipments':equipments,
     }
     return render(request, 'edit_work_order.html', context)
 
@@ -689,6 +697,7 @@ def maintenance_task_list(request):
         'title': 'Maintenance Task',
         'item_list': maintenance_tasks,
         'edit_url': 'edit_maintenance_task',
+        'delete_url':'delete_maintenance_task',
         'notifications':notifications
     }
     return render(request, 'maintenance_task_list.html', context)
@@ -780,6 +789,40 @@ def edit_maintenance_task(request, id):
         'frequencies': frequencies,
         'task_groups': task_groups,
         'active_page': 'maintenance_task_list',
+        'notifications': notifications,
+    })
+
+
+def delete_maintenance_task(request, id):
+    # Fetch the MaintenanceTask instance or return a 404 error if not found
+    maintenancetask = get_object_or_404(MaintenanceTask, id=id)
+    notifications = get_notifications(request.user)
+    
+    if request.method == 'POST':
+        # Check if any Equipment objects reference this MaintenanceTask's equipment_type
+        related_equipment = Equipment.objects.filter(equipment_type=maintenancetask.equipment_type)
+        
+        if related_equipment.exists():
+            # If there are related Equipment objects, render the protected page
+            messages.error(request, 'This maintenance task cannot be deleted because there are equipments with this type of maitnenance task.')
+            return render(request, 'confirm_delete_protected.html', {
+                'active_page': 'maintenance_task_list',
+                'object': maintenancetask,
+                'protected_objects': related_equipment,  # Pass the related Equipment objects
+                'model_name': 'Maintenance Task',  # Dynamic model name
+                'notifications': notifications,
+            })
+        
+        # If no related Equipment objects, delete the MaintenanceTask
+        maintenancetask.delete()
+        messages.success(request, 'The maintenance task was deleted successfully.')
+        return redirect(reverse('maintenance_task_list'))  # Redirect to the list view
+    
+    # If it's a GET request, render the confirmation page
+    return render(request, 'confirm_delete.html', {
+        'active_page': 'maintenance_task_list',
+        'object': maintenancetask,
+        'model_name': 'Maintenance Task',  # Dynamic model name
         'notifications': notifications,
     })
 #-----------------------------------------------------------------add task for frequency----------------------------------------
@@ -878,6 +921,7 @@ def equipment_list(request):
         'title': 'Equipments',
         'item_list': equipments,
         'edit_url': 'edit_equipment',  # Assuming you have an edit view set up
+        'delete_url':'delete_equipment',
         'notifications':notifications
     }
     return render(request, 'equipment_list.html', context)
@@ -1021,6 +1065,35 @@ def edit_equipment(request, id):
         'notifications': notifications
     })
 
+def delete_equipment(request, id):
+    equipment = get_object_or_404(Equipment, id=id)
+    notifications = get_notifications(request.user)
+
+    
+    if request.method == 'POST':
+        try:
+            equipment.delete()
+            messages.success(request, 'The equipment was deleted successfully.')
+            return redirect(reverse('equipment_list'))
+        except ProtectedError as e:
+            messages.error(request, 'This equipment cannot be deleted because it is referenced by other objects.')
+            return render(request, 'confirm_delete_protected.html', {
+                'object': equipment,
+                'protected_objects': e.protected_objects,
+                'model_name': 'Equipment',  # Dynamic model name
+                'active_page':'equipment_list',
+                'notifications':notifications
+            })
+    
+    return render(request, 'confirm_delete.html', {
+        'object': equipment,
+        'model_name': 'Equipment',  # Dynamic model name
+        'active_page':'equipment_list',
+
+        'notifications':notifications
+
+    })
+
 #-----------------------------------------------------------------------------------------------
 
 def spare_part_list(request):
@@ -1128,7 +1201,7 @@ def edit_spare_part(request, id):
 
  #-----------------------------------------------maintenance-----------------------------------------------------------
     
-    
+        
 
     
 
@@ -1256,6 +1329,7 @@ def maintenance_list(request):
         'title': 'Maintenance List',
         'item_list': maintenance_records,
         'edit_url': 'edit_maintenance',  # URL name for editing maintenance records
+        'delete_url':'delete_maintenance',
         'notifications':notifications
     }
     return render(request, 'maintenance_list.html', context)
@@ -1274,33 +1348,112 @@ def edit_maintenance(request, id):
         task_group__frequency=maintenance.maintenance_type
     )
     completed_task_ids = maintenance.completed_tasks.values_list('id', flat=True)
-
+    
     if request.method == 'POST':
-        # Get form data
-        equipment_id = request.POST.get('equipment')
-        assigned_technicians = request.POST.getlist('assigned_technicians')
-        branch_id = request.POST.get('branch')
-        maintenance_type = request.POST.get('maintenance_type')  # e.g., daily, weekly
-        spare_parts_post = request.POST.getlist('spare_parts[]')
-        spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
-        remark = request.POST.get('remark')
-        procedure = request.POST.get('procedure')
-        problems = request.POST.get('problems')
-        status = request.POST.get('status')
-        completed_tasks = request.POST.getlist('completed_tasks')  # Get completed tasks
+        if request.user in maintenance.assigned_technicians.all():
+            # Get form data
+            equipment_id = request.POST.get('equipment')
+            assigned_technicians = request.POST.getlist('assigned_technicians')
+            branch_id = request.POST.get('branch')
+            maintenance_type = request.POST.get('maintenance_type')  # e.g., daily, weekly
+            spare_parts_post = request.POST.getlist('spare_parts[]')
+            spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
+            remark = request.POST.get('remark')
+            procedure = request.POST.get('procedure')
+            problems = request.POST.get('problems')
+            status = request.POST.get('status')
+            completed_tasks = request.POST.getlist('completed_tasks')  # Get completed tasks
 
-        try:
-            # Step 1: Get the selected equipment
-            equipment = Equipment.objects.get(id=equipment_id)
+            try:
+                # Step 1: Get the selected equipment
+                equipment = Equipment.objects.get(id=equipment_id)
 
-            # Step 2: Get the equipment_type from the selected equipment
-            equipment_type = equipment.equipment_type
+                # Step 2: Get the equipment_type from the selected equipment
+                equipment_type = equipment.equipment_type
 
-            # Step 3: Fetch the maintenance_task associated with the equipment_type
-            maintenance_task = MaintenanceTask.objects.filter(equipment_type=equipment_type).first()
+                # Step 3: Fetch the maintenance_task associated with the equipment_type
+                maintenance_task = MaintenanceTask.objects.filter(equipment_type=equipment_type).first()
 
-            if not maintenance_task:
-                messages.error(request, f'No maintenance task found for equipment type: {equipment_type}.')
+                if not maintenance_task:
+                    messages.error(request, f'No maintenance task found for equipment type: {equipment_type}.')
+                    return render(request, 'edit_maintenance.html', {
+                        'maintenance': maintenance,
+                        'spare_parts': spare_parts,
+                        'spare_part_usages': spare_part_usages,
+                        'tasks': tasks,
+                        'completed_task_ids': completed_task_ids,
+                        'active_page': 'maintenance_list',
+                        'notifications': notifications
+                    })
+
+                # Step 4: Update maintenance record
+                maintenance.equipment_id = equipment_id
+                maintenance.maintenance_task = maintenance_task  # Use the fetched maintenance_task
+                maintenance.maintenance_type = maintenance_type  # Update maintenance_type
+                maintenance.remark = remark
+                maintenance.procedure = procedure
+                maintenance.problems = problems
+                maintenance.save()
+
+                # Step 5: Add back the old quantities to the spare parts
+                for usage in spare_part_usages:
+                    spare_part = usage.spare_part
+                    spare_part.quantity += usage.quantity_used
+                    spare_part.save()
+
+                # Step 6: Process the new spare parts and quantities
+                for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
+                    if not spare_part_id or not quantity_used:
+                        continue  # Skip empty fields
+
+                    spare_part_id = int(spare_part_id)
+                    quantity_used = int(quantity_used)
+
+                    # Get the spare part
+                    spare_part = SparePart.objects.get(id=spare_part_id)
+
+                    # Check if the new quantity exceeds the available stock
+                    if spare_part.quantity < quantity_used:
+                        messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
+                        # Rollback the old quantities
+                        for usage in spare_part_usages:
+                            spare_part = usage.spare_part
+                            spare_part.quantity -= usage.quantity_used
+                            spare_part.save()
+                            
+                        return redirect(f'{request.path}?equipment={equipment_id}&maintenance_task={maintenance_task.id}&error=1')
+
+                    # Deduct the new quantity from the spare part
+                    spare_part.quantity -= quantity_used
+                    spare_part.save()
+                    check_low_spare_parts(spare_part)
+
+                    # Create or update the SparePartUsage record
+                    SparePartUsage.objects.update_or_create(
+                        maintenance_record=maintenance,
+                        spare_part=spare_part,
+                        defaults={'quantity_used': quantity_used},
+                    )
+
+                # Step 7: Delete any remaining spare part usages that were not in the form
+                SparePartUsage.objects.filter(maintenance_record=maintenance).exclude(
+                    spare_part_id__in=[int(id) for id in spare_parts_post]
+                ).delete()
+
+                # Step 8: Update completed tasks
+                maintenance.completed_tasks.clear()  # Clear existing completed tasks
+                for task_id in completed_tasks:
+                    task = Task.objects.get(id=task_id)
+                    TaskCompletion.objects.create(
+                        maintenance_record=maintenance,
+                        task=task,
+                        completed_by=request.user
+                    )
+
+                messages.success(request, 'Maintenance record updated successfully!')
+                return redirect('maintenance_list')
+            except Exception as e:
+                messages.error(request, f'An error occurred: {str(e)}')
                 return render(request, 'edit_maintenance.html', {
                     'maintenance': maintenance,
                     'spare_parts': spare_parts,
@@ -1310,85 +1463,8 @@ def edit_maintenance(request, id):
                     'active_page': 'maintenance_list',
                     'notifications': notifications
                 })
-
-            # Step 4: Update maintenance record
-            maintenance.equipment_id = equipment_id
-            maintenance.maintenance_task = maintenance_task  # Use the fetched maintenance_task
-            maintenance.maintenance_type = maintenance_type  # Update maintenance_type
-            maintenance.remark = remark
-            maintenance.procedure = procedure
-            maintenance.problems = problems
-            maintenance.save()
-
-            # Step 5: Add back the old quantities to the spare parts
-            for usage in spare_part_usages:
-                spare_part = usage.spare_part
-                spare_part.quantity += usage.quantity_used
-                spare_part.save()
-
-            # Step 6: Process the new spare parts and quantities
-            for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
-                if not spare_part_id or not quantity_used:
-                    continue  # Skip empty fields
-
-                spare_part_id = int(spare_part_id)
-                quantity_used = int(quantity_used)
-
-                # Get the spare part
-                spare_part = SparePart.objects.get(id=spare_part_id)
-
-                # Check if the new quantity exceeds the available stock
-                if spare_part.quantity < quantity_used:
-                    messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
-                    # Rollback the old quantities
-                    for usage in spare_part_usages:
-                        spare_part = usage.spare_part
-                        spare_part.quantity -= usage.quantity_used
-                        spare_part.save()
-                        
-                    return redirect(f'{request.path}?equipment={equipment_id}&maintenance_task={maintenance_task.id}&error=1')
-
-                # Deduct the new quantity from the spare part
-                spare_part.quantity -= quantity_used
-                spare_part.save()
-                check_low_spare_parts(spare_part)
-
-                # Create or update the SparePartUsage record
-                SparePartUsage.objects.update_or_create(
-                    maintenance_record=maintenance,
-                    spare_part=spare_part,
-                    defaults={'quantity_used': quantity_used},
-                )
-
-            # Step 7: Delete any remaining spare part usages that were not in the form
-            SparePartUsage.objects.filter(maintenance_record=maintenance).exclude(
-                spare_part_id__in=[int(id) for id in spare_parts_post]
-            ).delete()
-
-            # Step 8: Update completed tasks
-            maintenance.completed_tasks.clear()  # Clear existing completed tasks
-            for task_id in completed_tasks:
-                task = Task.objects.get(id=task_id)
-                TaskCompletion.objects.create(
-                    maintenance_record=maintenance,
-                    task=task,
-                    completed_by=request.user
-                )
-
-            messages.success(request, 'Maintenance record updated successfully!')
-            return redirect('maintenance_list')
-        except Exception as e:
-            messages.error(request, f'An error occurred: {str(e)}')
-            return render(request, 'edit_maintenance.html', {
-                'maintenance': maintenance,
-                'spare_parts': spare_parts,
-                'spare_part_usages': spare_part_usages,
-                'tasks': tasks,
-                'completed_task_ids': completed_task_ids,
-                'active_page': 'maintenance_list',
-                'notifications': notifications
-            })
-
+        else:
+            messages.error(request, 'You are not assigned to this task.')
     # For GET requests, pre-fill the form and spare parts
     form = MaintenanceRecordForm(instance=maintenance)
     return render(request, 'edit_maintenance.html', {
@@ -1400,6 +1476,41 @@ def edit_maintenance(request, id):
         'completed_task_ids': completed_task_ids,
         'active_page': 'maintenance_list',
         'notifications': notifications
+    })
+
+#------------------------------------------------------------delete maintenance------------------------------------------
+def delete_maintenance(request, id):
+    # Fetch the MaintenanceRecord instance or return a 404 error if not found
+    maintenance_record = get_object_or_404(MaintenanceRecord, id=id)
+    notifications = get_notifications(request.user)
+
+    
+    if request.method == 'POST':
+        # If the user confirms deletion, attempt to delete the record
+        try:
+            maintenance_record.delete()
+            messages.success(request, 'The record was deleted successfully.')
+            return redirect(reverse('maintenance_list'))  # Redirect to the list view
+        except ProtectedError as e:
+            # If there are protected objects, render the protected page
+            messages.error(request, 'This record cannot be deleted because it is referenced by other objects.')
+            return render(request, 'confirm_delete_protected.html', {
+                'object': maintenance_record,
+                'protected_objects': e.protected_objects,
+                'model_name': 'Maintenance Record',  # Dynamic model name
+                'active_page':'maintenance_list',
+                'notifications': notifications,
+
+
+            })
+    
+    # If it's a GET request, render the confirmation page
+    return render(request, 'confirm_delete.html', {
+        'object': maintenance_record,
+        'model_name': 'Maintenance Record',  # Dynamic model name
+        'active_page':'maintenance_list',
+        'notifications': notifications
+
     })
 #-------------------------------------------------------------------get_tasks-------------------------------------
 def get_tasks(request):
@@ -1438,15 +1549,28 @@ def get_tasks(request):
 
 
 def accept_maintenance(request, maintenance_id):
-    maintenance = MaintenanceRecord.objects.get(id=maintenance_id)
+    # Fetch the MaintenanceRecord instance or return a 404 error if not found
+    maintenance = get_object_or_404(MaintenanceRecord, id=maintenance_id)
+    
+    # Check if the current user is assigned to the maintenance task
     if request.user in maintenance.assigned_technicians.all():
+        # Update the status to 'Accepted'
         maintenance.status = 'Accepted'
-        maintenance.accepted_by = request.user
+        
+        # Add the current user to the accepted_by ManyToManyField
+        maintenance.accepted_by.add(request.user)
+        
+        # Save the changes
         maintenance.save()
+        
+        # Display a success message
         messages.success(request, 'Maintenance task accepted.')
     else:
+        # Display an error message if the user is not assigned to the task
         messages.error(request, 'You are not assigned to this task.')
-    return redirect('maintenance_list')
+    
+    # Redirect to the maintenance list page
+    return redirect('edit_maintenance',id = maintenance_id)
 
 #--------------------------------------complete maintenance-----------------------------------------------------------
 
@@ -1471,22 +1595,45 @@ def complete_maintenance(request, maintenance_id):
         
     else:
         messages.error(request, 'You are not assigned to this task.')
-    return redirect('maintenance_list')
+    return redirect('edit_maintenance',id = maintenance_id)
 
 #-------------------------------------approve maintenance-----------------------------------------------------
 
 def approve_maintenance(request, maintenance_id):
     maintenance = MaintenanceRecord.objects.get(id=maintenance_id)
+    maintenance_type = maintenance.maintenance_type
     if request.user.userprofile.role == 'MD manager':
         maintenance.status = 'Approved'
         maintenance.approved_by = request.user
         maintenance.save()
 
+
         # Update equipment's last and next maintenance dates
-        equipment = maintenance.equipment
-        equipment.last_maintenance_date = timezone.now().date()
-        equipment.next_maintenance_date = calculate_next_maintenance_date(equipment)
-        equipment.save()
+        if maintenance_type == 'daily':
+            equipment = maintenance.equipment
+            equipment.last_daily_maintenance_date = timezone.now().date()
+            equipment.next_daily_maintenance_date = calculate_next_maintenance_date(maintenance_type)
+            equipment.save()
+        elif maintenance_type == 'weekly':
+            equipment = maintenance.equipment
+            equipment.last_weekly_maintenance_date = timezone.now().date()
+            equipment.next_weekly_maintenance_date = calculate_next_maintenance_date(maintenance_type)
+            equipment.save()
+        elif maintenance_type == 'monthly':
+            equipment = maintenance.equipment
+            equipment.last_monthly_maintenance_date = timezone.now().date()
+            equipment.next_monthly_maintenance_date = calculate_next_maintenance_date(maintenance_type)
+            equipment.save()
+        elif maintenance_type == 'annual':
+            equipment = maintenance.equipment
+            equipment.last_annual_maintenance_date = timezone.now().date()
+            equipment.next_annual_maintenance_date = calculate_next_maintenance_date(maintenance_type)
+            equipment.save()
+        elif maintenance_type == 'biannual':
+            equipment = maintenance.equipment
+            equipment.last_biannual_maintenance_date = timezone.now().date()
+            equipment.next_biannual_maintenance_date = calculate_next_maintenance_date(maintenance_type)
+            equipment.save()
 
         messages.success(request, 'Maintenance task approved.')
     else:
@@ -1574,14 +1721,35 @@ def approve_work_order(request, work_order_id):
 
 #-----------------------------------------calculate next maintenance date--------------------------------------------------
 
-def calculate_next_maintenance_date(equipment):
-    from datetime import timedelta
-    next_date = equipment.last_maintenance_date
-    next_date += timedelta(days=equipment.maintenance_interval_days)
-    next_date += timedelta(weeks=equipment.maintenance_interval_weeks)
-    next_date += timedelta(days=30 * equipment.maintenance_interval_months)
-    next_date += timedelta(days=365 * equipment.maintenance_interval_years)
-    return next_date
+def calculate_next_maintenance_date(maintenance_type):
+    """
+    Calculate the next maintenance date based on the maintenance type.
+    """
+    today = timezone.now().date()
+
+    if maintenance_type == 'daily':
+        # For daily maintenance, add 1 day
+        return today + timedelta(days=1)
+    
+    elif maintenance_type == 'weekly':
+        # For weekly maintenance, add 1 week
+        return today + timedelta(weeks=1)
+    
+    elif maintenance_type == 'monthly':
+        # For monthly maintenance, add 1 month (approximated as 30 days)
+        return today + timedelta(days=30)
+    
+    elif maintenance_type == 'annual':
+        # For annual maintenance, add 1 year (approximated as 365 days)
+        return today + timedelta(days=365)
+    
+    elif maintenance_type == 'biannual':
+        # For biannual maintenance, add 6 months (approximated as 182 days)
+        return today + timedelta(days=182)
+    
+    else:
+        # Default fallback: return today + 1 day
+        return today + timedelta(days=1)
 
 #-------------------------------------------mark notification as read--------------------------------------------------------
 

@@ -46,6 +46,8 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
     
     path('equipments/', views.equipment_list, name='equipment_list'),
     path('equipments/edit/<int:id>/', views.edit_equipment, name='edit_equipment'),
+    path('equipment/delete/<int:id>/',views.delete_equipment, name = 'delete_equipment'),
+
     #---------------------------------------------------------------------------------------------------------
 
     path('add_spare_part_page/', views.add_spare_part_page, name = "add_spare_part_page"),
@@ -64,6 +66,7 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
     
     path('maintenance/', views.maintenance_list, name='maintenance_list'),
     path('maintenance/edit/<int:id>/', views.edit_maintenance, name='edit_maintenance'),
+    path('maintenance/delete/<int:id>/',views.delete_maintenance, name = 'delete_maintenance'),
     path('get-tasks/', views.get_tasks, name='get_tasks'),
     
 #--------------------------------------------------------------------------------------------------------
@@ -99,6 +102,7 @@ path('add_maintenance_task_page/', views.add_maintenance_task_page, name = "add_
     
     path('maintenance_task/', views.maintenance_task_list, name='maintenance_task_list'),
     path('maintenance_task/edit/<int:id>/', views.edit_maintenance_task, name='edit_maintenance_task'),
+    path('maintenance_task/delete/<int:id>/', views.delete_maintenance_task, name='delete_maintenance_task'),
         path('add-tasks/<str:frequency>/', views.add_tasks_for_frequency, name='add_tasks_for_frequency'),
 
         path('add-task/<str:frequency>/', views.add_task, name='add_task'),

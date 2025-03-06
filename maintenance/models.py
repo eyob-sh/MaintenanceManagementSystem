@@ -139,6 +139,17 @@ class Equipment(models.Model):
     branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
     location = models.CharField(max_length=50)
     installation_date = models.DateField()
+    last_daily_maintenance_date = models.DateField(null=True, blank=True)
+    next_daily_maintenance_date = models.DateField(null=True, blank=True)
+    last_weekly_maintenance_date = models.DateField(null=True, blank=True)
+    next_weekly_maintenance_date = models.DateField(null=True, blank=True)
+    last_monthly_maintenance_date = models.DateField(null=True, blank=True)
+    next_monthly_maintenance_date = models.DateField(null=True, blank=True)
+    last_biannual_maintenance_date = models.DateField(null=True, blank=True)
+    next_biannual_maintenance_date = models.DateField(null=True, blank=True)
+    last_annual_maintenance_date = models.DateField(null=True, blank=True)
+    next_annual_maintenance_date = models.DateField(null=True, blank=True)
+
     
     last_maintenance_date = models.DateField(null=True, blank=True)
     next_maintenance_date = models.DateField(null=True, blank=True)
@@ -223,6 +234,7 @@ class WorkOrder(models.Model):
     equipment = models.ForeignKey(
         'Equipment',
         on_delete=models.PROTECT,
+        null=True,
         help_text='Select the equipment that needs maintenance.',
     )
     

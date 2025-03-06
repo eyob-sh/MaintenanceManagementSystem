@@ -60,6 +60,14 @@
                                     <td>{{ equipment.location }}</td>
                                     <td>{{ equipment.installation_date }}</td>
                                     <td>{{ equipment.get_status_display }}</td>
+                                    <td>
+                                        
+                                        
+                                        <a href="{% url delete_url equipment.id %}" class="btn btn-danger btn-sm">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </a>
+
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr>

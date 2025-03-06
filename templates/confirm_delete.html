@@ -1,0 +1,24 @@
+{% extends 'index.html' %}  <!-- Assuming you have a base template -->
+{% load static %}
+
+
+{% block content %}
+
+<main id="main" class="main">
+
+<div class="container">
+    <div class="pagetitle">
+    <h2>Delete {{ model_name }}</h2>
+</div>
+    <p>Are you sure you want to delete the {{ model_name }} <strong>{{ object }}</strong>?</p>
+    <p>This action cannot be undone.</p>
+
+    <form method="post" action="">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        <a href="{% url active_page %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+</main>>
+
+{% endblock %}

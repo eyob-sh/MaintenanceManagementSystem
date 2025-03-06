@@ -49,6 +49,14 @@
                                             {{ maintenance_task.equipment_type }}</a>
                                     </td>
                                     <td>{{ maintenance_task.description }}</td>
+                                    <td>
+                                        
+                                        
+                                        <a href="{% url delete_url maintenance_task.id %}" class="btn btn-danger btn-sm">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </a>
+
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr>

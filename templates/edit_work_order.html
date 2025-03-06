@@ -36,11 +36,49 @@
                                 <!-- Left Column -->
                                 <div class="col-md-7">
                                     <!-- Equipment -->
+
+                                    {% if request.user.userprofile.role in "MD manager" and not request.user.is_superuser %}
+
+                                    <!-- Equipment -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="equipment" class="form-label">Equipment</label>
+                                            <select class="form-select" id="equipment" name="equipment" required>
+                                                <option selected disabled value="">Select Equipment</option>
+                                                {% for equipment in equipments %}
+                                                <option value="{{ equipment.id }}">{{ equipment.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="invalid-feedback">Please select an equipment.</div>
+                                        </div>
+                                    </div>
+                                    {% elif request.user.userprofile.role in "TEC" and not request.user.is_superuser %}
+
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="equipment" class="form-label">Equipment</label>
                                             <input type="text" class="form-control" id="equipment" value="{{ work_order.equipment.name }}" readonly>
                                             <div class="invalid-feedback">Please select an equipment.</div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Location -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="location" class="form-label">Location</label>
+                                            <input type="text" class="form-control" id="location" value="{{ work_order.location }}" readonly>
+
+                                            <div class="invalid-feedback">Please enter the location.</div>
+                                        </div>
+                                    </div>
+                                    <!-- Branch -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="branch" class="form-label">Branch</label>
+                                            <input type="text" class="form-control" id="branch" value="{{ work_order.branch.name }}" readonly>
+                                            <input type="hidden" name="branch" value="{{ work_order.branch.id }}">
+                                            <div class="invalid-feedback">Branch is required.</div>
                                         </div>
                                     </div>
 
@@ -99,24 +137,9 @@
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <!-- Branch -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="branch" class="form-label">Branch</label>
-                                            <input type="text" class="form-control" id="branch" value="{{ work_order.branch.name }}" readonly>
-                                            <input type="hidden" name="branch" value="{{ work_order.branch.id }}">
-                                            <div class="invalid-feedback">Branch is required.</div>
-                                        </div>
-                                    </div>
+                                    
 
-                                    <!-- Description -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="description" class="form-label">Description</label>
-                                            <textarea class="form-control" id="description" name="description" rows="3" readonly>{{ work_order.description }}</textarea>
-                                            <div class="invalid-feedback">Please enter a description.</div>
-                                        </div>
-                                    </div>
+                                    
 
                                     <!-- Spare Parts Section -->
                                      {% if request.user.userprofile.role == 'MD manager' or request.user.userprofile.role == 'TEC'%}
@@ -158,6 +181,15 @@
 
                                 <!-- Right Column -->
                                 <div class="col-md-4">
+
+                                    <!-- Description -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="description" class="form-label">Description</label>
+                                            <textarea class="form-control" id="description" name="description" rows="3" readonly>{{ work_order.description }}</textarea>
+                                            <div class="invalid-feedback">Please enter a description.</div>
+                                        </div>
+                                    </div>
                                     <!-- Status -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">

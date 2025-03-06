@@ -52,7 +52,7 @@
                                             <label class="form-label">Assigned Technicians</label>
                                             <ul class="list-group mb-3">
                                                 {% for technician in maintenance.assigned_technicians.all %}
-                                                    <li class="list-group-item">{{ technician.get_full_name }}</li>
+                                                    <li class="list-group-item">{{ technician.username }}</li>
                                                 {% empty %}
                                                     <li class="list-group-item">No technicians assigned.</li>
                                                 {% endfor %}

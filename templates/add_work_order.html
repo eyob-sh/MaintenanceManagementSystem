@@ -35,6 +35,27 @@
                             <div class="row">
                                 <!-- Left Column -->
                                 <div class="col-md-6">
+                                    <!-- Requester -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="requester" class="form-label">Requester</label>
+                                            <input type="text" class="form-control" id="requester" name="requester" value="{{ request.user.username }}" readonly>
+                                            <div class="invalid-feedback">Requester is required.</div>
+                                        </div>
+                                    </div>
+                                    
+
+                                    <!-- Branch -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="branch" class="form-label">Branch</label>
+                                            <input type="text" class="form-control" id="branch" name="branch_name" value="{{ request.user.userprofile.branch.name }}" readonly>
+                                            <input type="hidden" name="branch" value="{{ request.user.userprofile.branch.id }}">
+                                            <div class="invalid-feedback">Branch is required.</div>
+                                        </div>
+                                    </div>
+                                    {% if request.user.userprofile.role in "MD manager" and not request.user.is_superuser %}
+
                                     <!-- Equipment -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
@@ -48,17 +69,23 @@
                                             <div class="invalid-feedback">Please select an equipment.</div>
                                         </div>
                                     </div>
+                                    {% endif %}
 
-                                    <!-- Branch -->
+                                    <!-- Location -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
-                                            <label for="branch" class="form-label">Branch</label>
-                                            <input type="text" class="form-control" id="branch" name="branch_name" value="{{ request.user.userprofile.branch.name }}" readonly>
-                                            <input type="hidden" name="branch" value="{{ request.user.userprofile.branch.id }}">
-                                            <div class="invalid-feedback">Branch is required.</div>
+                                            <label for="location" class="form-label">Location</label>
+                                            <input type="text" class="form-control" id="location" name="location"
+                                                required>
+                                            <div class="invalid-feedback">Please enter the location.</div>
                                         </div>
                                     </div>
 
+                                    
+                                </div>
+
+                                <!-- Right Column -->
+                                <div class="col-md-6">
                                     <!-- Description -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
@@ -67,18 +94,7 @@
                                             <div class="invalid-feedback">Please enter a description.</div>
                                         </div>
                                     </div>
-                                </div>
-
-                                <!-- Right Column -->
-                                <div class="col-md-6">
-                                    <!-- Requester -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="requester" class="form-label">Requester</label>
-                                            <input type="text" class="form-control" id="requester" name="requester" value="{{ request.user.username }}" readonly>
-                                            <div class="invalid-feedback">Requester is required.</div>
-                                        </div>
-                                    </div>
+                                    
 
                                     <!-- Status -->
                                     <div class="row mb-3">

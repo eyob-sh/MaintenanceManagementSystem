@@ -1,0 +1,26 @@
+{% extends 'index.html' %}  <!-- Assuming you have a base template -->
+{% load static %}
+
+{% block content %}
+<main id="main" class="main">
+
+
+<div class="container">
+    <div class="pagetitle">
+    <h2>Cannot Delete {{ model_name }}</h2>
+</div>
+    <p>The {{ model_name }} <strong>{{ object }}</strong> cannot be deleted because it is associated with the following items:</p>
+
+    <ul>
+        {% for obj in protected_objects %}
+            <li>{{ obj }}</li>
+        {% endfor %}
+    </ul>
+
+    <p>Please delete or update these objects before attempting to delete this {{ model_name }}.</p>
+
+    <a href="{% url active_page %}" class="btn btn-secondary">Back to List</a>
+</div>
+</main>
+
+{% endblock %}
