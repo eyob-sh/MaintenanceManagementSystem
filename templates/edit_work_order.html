@@ -40,18 +40,31 @@
                                     {% if request.user.userprofile.role in "MD manager" and not request.user.is_superuser %}
 
                                     <!-- Equipment -->
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="equipment" class="form-label">Equipment</label>
-                                            <select class="form-select" id="equipment" name="equipment" required>
-                                                <option selected disabled value="">Select Equipment</option>
-                                                {% for equipment in equipments %}
-                                                <option value="{{ equipment.id }}">{{ equipment.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <div class="invalid-feedback">Please select an equipment.</div>
-                                        </div>
-                                    </div>
+                                    <!-- Equipment Dropdown for MD Manager -->
+{% if work_order.status != 'Approved' %}                                  
+<div class="row mb-3">
+    <div class="col-md-12">
+        <label for="equipment" class="form-label">Equipment</label>
+        <select class="form-select" id="equipment" name="equipment" required>
+            <option value="">Select Equipment</option>
+            {% for equipment in equipments %}
+                <option value="{{ equipment.id }}" {% if equipment.id == selected_equipment_id %}selected{% endif %}>
+                    {{ equipment.name }}
+                </option>
+            {% endfor %}
+        </select>
+        <div class="invalid-feedback">Please select an equipment.</div>
+    </div>
+</div>
+{% elif work_order.status == 'Approved' %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <label for="equipment" class="form-label">Equipment</label>
+        <input type="text" class="form-control" id="equipment" value="{{ work_order.equipment.name }}" readonly>
+        <div class="invalid-feedback">Please select an equipment.</div>
+    </div>
+</div>
+{% endif %}
                                     {% elif request.user.userprofile.role in "TEC" and not request.user.is_superuser %}
 
                                     <div class="row mb-3">
@@ -83,100 +96,112 @@
                                     </div>
 
                                     <!-- Assigned Technicians -->
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <!-- For MD Manager: Show Add/Remove Technicians -->
-                                            {% if request.user.userprofile.role == 'MD manager' %}
-                                            
-                                                
-                                                    <label class="form-label">Assigned Technicians</label>
-                                                <div class="row mb-3 technician-row">
-                                                    <div class="col-md-10">
-                                                        <select class="form-select technician-select" name="assigned_technicians[]" required>
-                                                            <option value="">Select Technician</option>
-                                                            {% for technician in technicians %}
-                                                            <option value="{{ technician.id }}" {% if technician.id in assigned_technician_ids %}selected{% endif %}>
-                                                                {{ technician.get_full_name }}
-                                                            </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <button type="button" class="btn btn-danger remove-technician" disabled>Remove</button>
-                                                    </div>
-                                                </div>
-                                    
-                                                <div id="additional-technicians"></div>
-                                    
-                                                <div class="row mb-3">
-                                                    <div class="col-md-12">
-                                                        <button type="button" class="btn btn-success" id="add-technician">
-                                                            <i class="bi bi-plus"></i> Add Technician
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                    
-                                            <!-- For Technician: Show Read-Only List of Assigned Technicians -->
+<!-- Assigned Technicians Section -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        
+        {% if request.user.userprofile.role == 'MD manager' %}
+            {% if work_order.status != 'Approved' %}
+        
+        <label class="form-label">Assigned Technicians</label>
+            <!-- For MD Manager: Show Add/Remove Technicians -->
+            <div class="row mb-3 technician-row">
+                <div class="col-md-10">
+                    <select class="form-select technician-select" name="assigned_technicians[]" required>
+                        <option value="">Select Technician</option>
+                        {% for technician in technicians %}
+                            <option value="{{ technician.id }}" {% if technician.id in assigned_technician_ids %}selected{% endif %}>
+                                {{ technician.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-danger remove-technician" disabled>Remove</button>
+                </div>
+            </div>
+            <div id="additional-technicians"></div>
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <button type="button" class="btn btn-success" id="add-technician">
+                        <i class="bi bi-plus"></i> Add Technician
+                    </button>
+                </div>
+            </div>
+            {% elif work_order.status == 'Approved' %}
+            <!-- For Technician: Show Read-Only List of Assigned Technicians -->
+            <label class="form-label">Assigned Technicians</label>
+            <ul class="list-group">
+                {% for technician in work_order.assigned_technicians.all %}
+                    <li class="list-group-item">{{ technician.username }}</li>
+                {% empty %}
+                    <li class="list-group-item">No technicians assigned.</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% elif request.user.userprofile.role == 'TEC' %}
+            <!-- For Technician: Show Read-Only List of Assigned Technicians -->
+            <ul class="list-group">
+                {% for technician in work_order.assigned_technicians.all %}
+                    <li class="list-group-item">{{ technician.username }}</li>
+                {% empty %}
+                    <li class="list-group-item">No technicians assigned.</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>
 
-                                            
-                                            {% elif request.user.userprofile.role == 'TEC' %}
-                                            <label class="form-label">Assigned Technicians</label>
-
-                                                <ul class="list-group">
-                                                    {% for technician in work_order.assigned_technicians.all %}
-                                                        <li class="list-group-item">{{ technician.get_full_name }}</li>
-                                                    {% empty %}
-                                                        <li class="list-group-item">No technicians assigned.</li>
-                                                    {% endfor %}
-                                                </ul>
-                                    
-                                            <!-- For Client: Hide the Assigned Technicians Section -->
-                                            {% elif request.user.userprofile.role == 'CL client' %}
-                                                <p class="text-muted"></p>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-
-                                    
-
-                                    <!-- Spare Parts Section -->
-                                     {% if request.user.userprofile.role == 'MD manager' or request.user.userprofile.role == 'TEC'%}
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label class="form-label">Spare Parts</label>
-                                            <div class="row mb-3 spare-part-row">
-                                                <div class="col-md-6">
-                                                    <select class="form-select spare-part-select" name="spare_parts[]">
-                                                        <option value="">Select Spare Part</option>
-                                                        {% for spare_part in spare_parts %}
-                                                        <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}">
-                                                            {{ spare_part.name }} ({{ spare_part.quantity }} available)
-                                                        </option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity">
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <button type="button" class="btn btn-danger remove-spare-part" disabled>Remove</button>
-                                                </div>
-                                            </div>
-
-                                            <div id="additional-spare-parts"></div>
-
-                                            <div class="row mb-3">
-                                                <div class="col-md-12">
-                                                    <button type="button" class="btn btn-success" id="add-spare-part">
-                                                        <i class="bi bi-plus"></i> Add Spare Part
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endif %}
+{% if request.user.userprofile.role != 'CL' %}
+    <!-- Spare Parts Section -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <label class="form-label">Spare Parts</label>
+            {% if request.user.userprofile.role == 'MD manager' or work_order.status == 'Approved' %}
+                <!-- For MD Manager or Approved Work Order: Show Read-Only List of Spare Parts -->
+                <ul class="list-group">
+                    {% for usage in spare_part_usages %}
+                        <li class="list-group-item">
+                            {{ usage.spare_part.name }} - Quantity Used: {{ usage.quantity_used }}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">No spare parts used.</li>
+                    {% endfor %}
+                </ul>
+            {% elif request.user.userprofile.role == 'TEC' and work_order.status != 'Approved' %}
+                <!-- For Technician: Allow Adding/Modifying Spare Parts -->
+                {% for usage in spare_part_usages %}
+                    <div class="row mb-3 spare-part-row">
+                        <div class="col-md-6">
+                            <select class="form-select spare-part-select" name="spare_parts[]">
+                                <option value="">Select Spare Part</option>
+                                {% for spare_part in spare_parts %}
+                                    <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}" {% if spare_part.id == usage.spare_part.id %}selected{% endif %}>
+                                        {{ spare_part.name }} ({{ spare_part.quantity }} available)
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity" value="{{ usage.quantity_used }}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-danger remove-spare-part">Remove</button>
+                        </div>
+                    </div>
+                {% endfor %}
+                <div id="additional-spare-parts"></div>
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <button type="button" class="btn btn-success" id="add-spare-part">
+                            <i class="bi bi-plus"></i> Add Spare Part
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
                                 </div>
 
                                 <!-- Right Column -->
@@ -204,19 +229,17 @@
                                             {% if request.user.userprofile.role == 'MD manager' %}
                                                 {% if work_order.status == 'Pending' %}
                                                     <a href="{% url 'accept_work_order' work_order.id %}" class="btn btn-warning">Accept</a>
+                                                {% elif work_order.status == 'Complete' %}
+                                                    <a href="{% url 'approve_work_order' work_order.id %}" class="btn btn-primary">Approve</a>
+                                                    <a href="{% url 'reject_work_order' work_order.id %}" class="btn btn-danger">Reject</a>
                                                 {% endif %}
                                             {% elif request.user.userprofile.role == 'TEC' %}
-                                                {% if work_order.status == 'Accepted' %}
+                                                {% if work_order.status == 'Accepted' or work_order.status == 'Rejected' %}
                                                     <a href="{% url 'complete_work_order' work_order.id %}" class="btn btn-success">Complete</a>
-                                                {% endif %}
-                                            {% elif request.user.userprofile.role == 'CL' %}
-                                                {% if work_order.status == 'Complete' %}
-                                                    <a href="{% url 'approve_work_order' work_order.id %}" class="btn btn-primary">Approve</a>
                                                 {% endif %}
                                             {% endif %}
                                         </div>
                                     </div>
-
 
 
 

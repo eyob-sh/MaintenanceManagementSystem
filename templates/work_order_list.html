@@ -39,6 +39,7 @@
                                 <tr>
                                     <th>Equipment</th>
                                     <th>Description</th>
+                                    <th>Location</th>
                                     <th>Requester</th>
                                     <th>Status</th>
                                     <th>Created At</th>
@@ -51,6 +52,7 @@
                                     {{ work_order.equipment.name }}
                                     </td>
                                     <td>{{ work_order.description }}</td>
+                                    <td>{{ work_order.location }}</td>
                                     <td>{{ work_order.requester.username }}</td>
                                     <td>{{ work_order.get_status_display }}</td>
                                     <td>{{ work_order.created_at }}</td>

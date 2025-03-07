@@ -459,75 +459,84 @@ def edit_work_order(request, id):
 
     if request.method == 'POST':
         # Get form data
+        equipment_id = request.POST.get('equipment')
         assigned_technicians = request.POST.getlist('assigned_technicians[]')
         spare_parts_post = request.POST.getlist('spare_parts[]')
         spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
 
         try:
-            # Update assigned technicians
-            work_order.assigned_technicians.set(assigned_technicians)
+            # Step 1: Update the equipment
+            if equipment_id:
+                equipment = Equipment.objects.get(id=equipment_id)
+                work_order.equipment = equipment
+                work_order.save()
 
-            # Step 1: Add back the old quantities to the spare parts
+            # Step 2: Update assigned technicians (only for MD manager)
+            if request.user.userprofile.role == 'MD manager':
+                work_order.assigned_technicians.set(assigned_technicians)
+
+            # Step 3: Add back the old quantities to the spare parts
             spare_part_usages = SparePartUsage.objects.filter(work_order=work_order)
             for usage in spare_part_usages:
                 spare_part = usage.spare_part
                 spare_part.quantity += usage.quantity_used
                 spare_part.save()
 
-            # Step 2: Process the new spare parts and quantities
-            for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
-                # Skip if spare_part_id or quantity_used is empty
-                if not spare_part_id.strip() or not quantity_used.strip():
-                    continue  # Skip empty fields
+            # Step 4: Process the new spare parts and quantities (only for Technician and if not approved)
+            if request.user.userprofile.role == 'TEC' and work_order.status != 'Approved':
+                for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
+                    # Skip if spare_part_id or quantity_used is empty
+                    if not spare_part_id.strip() or not quantity_used.strip():
+                        continue  # Skip empty fields
 
-                # Skip if spare_part_id is not a valid integer
-                try:
-                    spare_part_id = int(spare_part_id)
-                except ValueError:
-                    continue  # Skip invalid spare_part_id (e.g., non-numeric values)
+                    # Skip if spare_part_id is not a valid integer
+                    try:
+                        spare_part_id = int(spare_part_id)
+                    except ValueError:
+                        continue  # Skip invalid spare_part_id (e.g., non-numeric values)
 
-                # Skip if quantity_used is not a valid integer
-                try:
-                    quantity_used = int(quantity_used)
-                except ValueError:
-                    continue  # Skip invalid quantities (e.g., non-numeric values)
+                    # Skip if quantity_used is not a valid integer
+                    try:
+                        quantity_used = int(quantity_used)
+                    except ValueError:
+                        continue  # Skip invalid quantities (e.g., non-numeric values)
 
-                # Get the spare part
-                spare_part = SparePart.objects.get(id=spare_part_id)
+                    # Get the spare part
+                    spare_part = SparePart.objects.get(id=spare_part_id)
 
-                # Check if the new quantity exceeds the available stock
-                if spare_part.quantity < quantity_used:
-                    messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
-                    # Rollback the old quantities
-                    for usage in spare_part_usages:
-                        spare_part = usage.spare_part
-                        spare_part.quantity -= usage.quantity_used
-                        spare_part.save()
-                    return redirect('edit_work_order', id=work_order.id)
+                    # Check if the new quantity exceeds the available stock
+                    if spare_part.quantity < quantity_used:
+                        messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
+                        # Rollback the old quantities
+                        for usage in spare_part_usages:
+                            spare_part = usage.spare_part
+                            spare_part.quantity -= usage.quantity_used
+                            spare_part.save()
+                        return redirect('edit_work_order', id=work_order.id)
 
-                # Deduct the new quantity from the spare part
-                spare_part.quantity -= quantity_used
-                spare_part.save()
-                check_low_spare_parts(spare_part)
+                    # Deduct the new quantity from the spare part
+                    spare_part.quantity -= quantity_used
+                    spare_part.save()
+                    check_low_spare_parts(spare_part)
 
-                # Create or update the SparePartUsage record
-                SparePartUsage.objects.update_or_create(
-                    work_order=work_order,  # Use work_order instead of maintenance_record
-                    spare_part=spare_part,
-                    defaults={'quantity_used': quantity_used},
-                )
+                    # Create or update the SparePartUsage record
+                    SparePartUsage.objects.update_or_create(
+                        work_order=work_order,
+                        spare_part=spare_part,
+                        defaults={'quantity_used': quantity_used},
+                    )
 
-            # Step 3: Delete any remaining spare part usages that were not in the form
-            SparePartUsage.objects.filter(work_order=work_order).exclude(
-                spare_part_id__in=[int(id) for id in spare_parts_post if id.strip()]
-            ).delete()
+                # Step 5: Delete any remaining spare part usages that were not in the form
+                SparePartUsage.objects.filter(work_order=work_order).exclude(
+                    spare_part_id__in=[int(id) for id in spare_parts_post if id.strip()]
+                ).delete()
 
             # Notify assigned technicians
             for technician_id in assigned_technicians:
                 technician = User.objects.get(id=technician_id)
                 Notification.objects.create(
                     user=technician,
-                    type = "work_order",
+                    type="work_order",
                     message=f'You have been assigned a new work order task: {work_order}.',
                 )
 
@@ -545,11 +554,11 @@ def edit_work_order(request, id):
         'active_page': 'work_order_list',
         'notifications': notifications,
         'spare_parts': spare_parts,
-        'equipments':equipments,
+        'equipments': equipments,
+        'selected_equipment_id': work_order.equipment.id if work_order.equipment else None,
+        'spare_part_usages': SparePartUsage.objects.filter(work_order=work_order),
     }
     return render(request, 'edit_work_order.html', context)
-
-
 #------------------------------------------------------------------------------------
 
 
@@ -558,7 +567,9 @@ def spare_part_usage_list(request):
     notifications = get_notifications(request.user)
     user_branch = request.user.userprofile.branch
 
-    spare_part_usages = SparePartUsage.objects.filter(maintenance_record__branch=user_branch)
+    spare_part_usages = SparePartUsage.objects.filter(
+    Q(maintenance_record__branch=user_branch) | Q(work_order__branch=user_branch)
+)
     context = {
         'active_page': 'spare_part_usage_list',
         'title': 'Spare Part Usages',
@@ -760,13 +771,23 @@ def edit_maintenance_task(request, id):
                     frequency=frequency
                 )
 
-                # Delete existing tasks for this frequency
-                task_group.tasks.all().delete()
+                # Get existing tasks for this frequency
+                existing_tasks = task_group.tasks.all()
 
-                # Add new tasks
+                # Update or create tasks
+                new_tasks = []
                 for description in task_descriptions:
                     if description.strip():  # Ignore empty tasks
-                        Task.objects.create(task_group=task_group, description=description)
+                        # Check if a task with this description already exists
+                        task = existing_tasks.filter(description=description).first()
+                        if not task:
+                            # Create a new task if it doesn't exist
+                            task = Task.objects.create(task_group=task_group, description=description)
+                        new_tasks.append(task)
+
+                # Delete tasks that are no longer needed
+                tasks_to_delete = existing_tasks.exclude(id__in=[task.id for task in new_tasks])
+                tasks_to_delete.delete()
 
             messages.success(request, 'Maintenance Task updated successfully!')
             return redirect('maintenance_task_list')
@@ -791,8 +812,6 @@ def edit_maintenance_task(request, id):
         'active_page': 'maintenance_task_list',
         'notifications': notifications,
     })
-
-
 def delete_maintenance_task(request, id):
     # Fetch the MaintenanceTask instance or return a 404 error if not found
     maintenancetask = get_object_or_404(MaintenanceTask, id=id)
@@ -1652,7 +1671,19 @@ def accept_work_order(request, work_order_id):
         messages.success(request, 'Work order accepted.')
     else:
         messages.error(request, 'You are not assigned to this work order.')
-    return redirect('work_order_list')
+    return redirect('edit_work_order', id=work_order.id)
+
+def reject_work_order(request, work_order_id):
+    
+    work_order = get_object_or_404(WorkOrder, id=work_order_id)
+    if request.user.userprofile.role == 'MD manager':
+        work_order.status = 'rejected'
+        work_order.rejected_by = request.user
+        work_order.save()
+        messages.success(request, 'Work order rejected.')
+    else:
+        messages.error(request, 'You did not assign this work order.')
+    return redirect('edit_work_order', id=work_order.id)
 
 #-------------------------------------------------------complete work order--------------------
 
@@ -1700,20 +1731,20 @@ def complete_work_order(request, work_order_id):
 
 def approve_work_order(request, work_order_id):
     work_order = get_object_or_404(WorkOrder, id=work_order_id)
-    client = work_order.requester
+    # manager = work_order.
     
-    if request.user == client:
-        work_order.status = 'Approved'
-        work_order.approved_by = request.user
-        work_order.save()
+# if request.user == manager:
+    work_order.status = 'Approved'
+    work_order.approved_by = request.user
+    work_order.save()
 
-        # Update equipment's last and next maintenance dates if relevant
-        
-
-        messages.success(request, 'Work order approved.')
-    else:
-        messages.error(request, 'You are not authorized to approve this work order.')
+    # Update equipment's last and next maintenance dates if relevant
     
+
+    messages.success(request, 'Work order approved.')
+# else:
+#     messages.error(request, 'You are not authorized to approve this work order.')
+
     return redirect('work_order_list')
 
 

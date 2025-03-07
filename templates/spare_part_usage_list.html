@@ -37,7 +37,7 @@
                         <table class="table datatable">
                             <thead>
                                 <tr>
-                                    <th>Maintenance Record</th>
+                                    <th>Maintenance</th>
                                     <th>Spare Part</th>
                                     <th>Quantity Used</th>
                                 </tr>
@@ -46,7 +46,11 @@
                                 {% for spare_part_usage in item_list %}
                                 <tr>
                                     <td>
+                                        {% if spare_part_usage.maintenance_record != None %}
                                         {{spare_part_usage.maintenance_record }}
+                                        {% else %}
+                                        {{ spare_part_usage.work_order }}
+                                        {% endif %}
                                     </td>
                                     <td>{{ spare_part_usage.spare_part.name }}</td>
                                     <td>{{ spare_part_usage.quantity_used }}</td>
