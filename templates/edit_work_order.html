@@ -141,6 +141,7 @@
             {% endif %}
         {% elif request.user.userprofile.role == 'TEC' %}
             <!-- For Technician: Show Read-Only List of Assigned Technicians -->
+            <label class="form-label">Assigned Technicians</label>
             <ul class="list-group">
                 {% for technician in work_order.assigned_technicians.all %}
                     <li class="list-group-item">{{ technician.username }}</li>
@@ -314,7 +315,7 @@
                     <select class="form-select technician-select" name="assigned_technicians[]" required>
                         <option value="">Select Technician</option>
                         {% for technician in technicians %}
-                        <option value="{{ technician.id }}">{{ technician.get_full_name }}</option>
+                        <option value="{{ technician.id }}">{{ technician.username }}</option>
                         {% endfor %}
                     </select>
                 </div>

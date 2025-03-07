@@ -37,7 +37,9 @@
                         <table class="table datatable">
                             <thead>
                                 <tr>
+                                    {% if request.user.userprofile.role != 'CL' %}
                                     <th>Equipment</th>
+                                    {% endif %}
                                     <th>Description</th>
                                     <th>Location</th>
                                     <th>Requester</th>
@@ -48,9 +50,11 @@
                             <tbody>
                                 {% for work_order in item_list %}
                                 <tr>
+                                    {% if request.user.userprofile.role != 'CL' %}
                                     <td>
                                     {{ work_order.equipment.name }}
                                     </td>
+                                    {% endif %}
                                     <td>{{ work_order.description }}</td>
                                     <td>{{ work_order.location }}</td>
                                     <td>{{ work_order.requester.username }}</td>
