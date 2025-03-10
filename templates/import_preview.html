@@ -1,0 +1,63 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+<main id="main" class="main">
+    <div class="pagetitle">
+        <h1>Import Preview: {{ model_name }}</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Preview Data</h5>
+
+                        {% if errors %}
+                            <div class="alert alert-danger">
+                                <h5>Errors during import:</h5>
+                                <ul>
+                                    {% for error in errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    {% for header in preview_data.0.keys %}
+                                        <th>{{ header }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in preview_data %}
+                                    <tr>
+                                        {% for value in row.values %}
+                                            <td>{{ value }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="hidden" name="import_file" value="{{ request.FILES.import_file.name }}">
+                            <button type="submit" name="confirm_import" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Confirm Import
+                            </button>
+                            <a href="{% url 'import_data' model_name=model_name %}" class="btn btn-danger">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main><!-- End #main -->
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+<main id="main" class="main">
+    <div class="pagetitle">
+        <h1>Maintenance Oversight Dashboard</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section dashboard">
+        <div class="row">
+            <!-- Branch Filter -->
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Filter by Branch</h5>
+                        <form method="get">
+                            <select name="branch" class="form-select">
+                                <option value="">All Branches</option>
+                                {% for branch in branches %}
+                                    <option value="{{ branch.id }}" {% if selected_branch == branch.id %}selected{% endif %}>{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-primary mt-2">Apply Filter</button>
+                        </form>
+                    </div>
+                </div>
+            </div><!-- End Branch Filter -->
+
+            <!-- Metrics -->
+            <div class="col-lg-8">
+                <div class="row">
+                    <!-- Equipment Card -->
+                    <div class="col-xxl-4 col-md-6">
+                        <div class="card info-card sales-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Equipment <span>| Total</span></h5>
+                                <div class="d-flex align-items-center">
+                                    <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-tools"></i>
+                                    </div>
+                                    <div class="ps-3">
+                                        <h6>{{ equipment_count }}</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div><!-- End Equipment Card -->
+
+                    <!-- Work Orders Card -->
+                    <div class="col-xxl-4 col-md-6">
+                        <div class="card info-card revenue-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Work Orders <span>| Pending</span></h5>
+                                <div class="d-flex align-items-center">
+                                    <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-clipboard-check"></i>
+                                    </div>
+                                    <div class="ps-3">
+                                        <h6>{{ work_order_count }}</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div><!-- End Work Orders Card -->
+                </div>
+            </div><!-- End Metrics -->
+        </div>
+    </section>
+</main><!-- End #main -->
+{% endblock %}

@@ -277,6 +277,14 @@ h6 {
   font-size: 0.9em;    /* Set font size to a smaller value */
 }
 
+/*  added to style the heading on tables */
+th {
+  font-size: 12px; /* Adjust the font size as needed */
+}
+td {
+  font-size: 12px; /* Adjust the font size as needed */
+}
+
 /* Accordion */
 .accordion-item {
   border: 1px solid #ebeef4;

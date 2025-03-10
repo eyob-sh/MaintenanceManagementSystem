@@ -13,11 +13,20 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.db.models.deletion import ProtectedError, Collector
 from django.views.decorators.csrf import csrf_exempt
+
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+
 import json
+from import_export import resources
+from import_export.formats import base_formats
+from import_export.admin import ImportMixin, ExportMixin
 from .models import MaintenanceRecord, MaintenanceTask, Manufacturer, SparePart, SparePartUsage, RestockSparePart, DecommissionedEquipment,Equipment, Notification,WorkOrder,Branch,UserProfile, Task, TaskGroup, TaskCompletion
 
 from .forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTaskForm,  RestockSparePartForm, BranchForm, UserProfileForm, TaskForm, TaskGroupForm
-
+from .resources import EquipmentResource
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 
@@ -416,7 +425,7 @@ def add_work_order(request):
         description = request.POST.get('description')
         status = 'Pending'  # Default status
         if(request.user.userprofile.role == 'MD manager'):
-            status = 'accepted'
+            status = 'Accepted'
 
         if not branch or not description:
             messages.error(request, 'Please fill out all required fields.')
@@ -438,7 +447,7 @@ def add_work_order(request):
             if manager:
                 Notification.objects.create(
                     user=manager,
-                    type = "maintenance",
+                    type = "work_order",
                     message=f'New work order: {work_order.location}.',
                 )
 
@@ -929,24 +938,35 @@ def delete_task(request, task_id):
     return JsonResponse({'success': False})
 #--------------------------------------------------------------------------------------------
 
+
+
 def equipment_list(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
 
+    # Fetch all branches for the branch filter (only for Maintenance Oversight)
+    branches = Branch.objects.all()
 
-    equipments = Equipment.objects.filter(branch = user_branch)  # Fetch all equipment
+    # Fetch all equipment types from the MaintenanceTask model
+    equipment_types = MaintenanceTask.objects.values_list('equipment_type', flat=True).distinct()
+
+    # Filter equipment based on user role
+    if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
+        equipments = Equipment.objects.all()  # Show all equipment for MO
+    else:
+        equipments = Equipment.objects.filter(branch=user_branch)  # Filter by branch for other roles
+
     context = {
         'active_page': 'equipment_list',
         'title': 'Equipments',
         'item_list': equipments,
-        'edit_url': 'edit_equipment',  # Assuming you have an edit view set up
-        'delete_url':'delete_equipment',
-        'notifications':notifications
+        'edit_url': 'edit_equipment',
+        'delete_url': 'delete_equipment',
+        'notifications': notifications,
+        'branches': branches,
+        'equipment_types': equipment_types,
     }
     return render(request, 'equipment_list.html', context)
-
-
-
 def add_equipment_page(request):
     notifications = get_notifications(request.user)
     user_branch = request.user.userprofile.branch
@@ -1672,15 +1692,15 @@ def accept_work_order(request, work_order_id):
     else:
         messages.error(request, 'You are not assigned to this work order.')
     return redirect('edit_work_order', id=work_order.id)
-
+#------------------------------------------------------reject work order---------------------------------------------
 def reject_work_order(request, work_order_id):
     
     work_order = get_object_or_404(WorkOrder, id=work_order_id)
     if request.user.userprofile.role == 'MD manager':
-        work_order.status = 'rejected'
+        work_order.status = 'Rejected'
         work_order.rejected_by = request.user
         work_order.save()
-        messages.success(request, 'Work order rejected.')
+        messages.success(request, 'Work order Rejected.')
     else:
         messages.error(request, 'You did not assign this work order.')
     return redirect('edit_work_order', id=work_order.id)
@@ -1714,12 +1734,12 @@ def complete_work_order(request, work_order_id):
                 user=manager,
                 message=f'The work order for {work_order.equipment.name} has been marked as complete.',
             )
-        if client:
-             Notification.objects.create(
-                user=client,
-                type = "maintenance",
-                message=f'The work order for {work_order.equipment.name} has been marked as complete.',
-            )
+        # if client:
+        #      Notification.objects.create(
+        #         user=client,
+        #         type = "maintenance",
+        #         message=f'The work order for {work_order.equipment.name} has been marked as complete.',
+        #     )
             
     else:
         messages.error(request, 'You are not assigned to this work order.')
@@ -1739,7 +1759,12 @@ def approve_work_order(request, work_order_id):
     work_order.save()
 
     # Update equipment's last and next maintenance dates if relevant
-    
+    for technician in work_order.assigned_technicians.all():
+        Notification.objects.create(
+            user= technician,
+            type = 'work_order',
+            message=f'The work order for {work_order.equipment.name} has been approved by {work_order.approved_by}.',
+        )
 
     messages.success(request, 'Work order approved.')
 # else:
@@ -2027,12 +2052,12 @@ def dashboard(request):
 
         maintenance_completed = MaintenanceRecord.objects.filter(
             status='Complete',
-            completion_date__gte=last_week
+            # completion_date__gte=last_week
         ).count()
 
         work_order_completed = WorkOrder.objects.filter(
             status='Complete',
-            completion_date__gte=last_week
+            # completion_date__gte=last_week
         ).count()
 
         # Recent actions for all branches
@@ -2072,3 +2097,317 @@ def dashboard(request):
         })
 
     return render(request, 'dashboard.html', context)
+
+#----------------------------------------------------Import Export-------------------------------------------
+def export_data(request, model_name):
+    """
+    Generalized view for exporting data in Excel format (XLSX).
+    """
+    # Map model names to their respective resources
+    model_resource_map = {
+        'Equipment': EquipmentResource,  # Add more models here
+        # Example: 'Customer': CustomerResource,
+    }
+
+    if model_name not in model_resource_map:
+        return HttpResponse("Model not supported.", status=400)
+
+    # Get the resource class
+    resource_class = model_resource_map[model_name]
+    resource = resource_class()
+
+    # Export the data in Excel format (XLSX)
+    file_format = base_formats.XLSX()
+    dataset = resource.export()
+    response = HttpResponse(
+        file_format.export_data(dataset),
+        content_type=file_format.get_content_type()
+    )
+    response['Content-Disposition'] = f'attachment; filename={model_name}_export.xlsx'
+    return response
+def import_data(request, model_name):
+    """
+    Generalized view for importing data with a preview page.
+    """
+    # Map model names to their respective resources
+    model_resource_map = {
+        'Equipment': EquipmentResource,  # Add more models here
+        # Example: 'Customer': CustomerResource,
+    }
+
+    if model_name not in model_resource_map:
+        messages.error(request, "Model not supported.")
+        return redirect('home')  # Redirect to a safe page
+
+    # Get the resource class
+    resource_class = model_resource_map[model_name]
+    resource = resource_class()
+
+    if request.method == 'POST':
+        if 'confirm_import' in request.POST:
+            # Perform the actual import
+            import_file = request.FILES['import_file']
+            file_format = base_formats.XLSX()  # Only accept Excel files
+
+            # Check if the file is an Excel file
+            if not import_file.name.endswith('.xlsx'):
+                messages.error(request, "Please upload an Excel file (.xlsx).")
+                return redirect('import_data', model_name=model_name)
+
+            # Load the dataset
+            dataset = file_format.create_dataset(import_file)
+            result = resource.import_data(dataset, dry_run=False)  # Perform the actual import
+
+            if not result.has_errors():
+                messages.success(request, 'Data imported successfully.')
+            else:
+                # Collect errors and display them
+                error_messages = []
+                for row in result.invalid_rows:
+                    error_messages.append(f"Row {row.number}: {row.error}")
+                for row in result.row_errors():
+                    for error in row[1]:
+                        error_messages.append(f"Row {row[0]}: {error.error}")
+
+                # Pass errors to the template
+                return render(request, 'import_template.html', {
+                    'model_name': model_name,
+                    'errors': error_messages,
+                })
+
+            return redirect('equipment_list')  # Redirect to the equipment list page
+
+        elif 'import_file' in request.FILES:
+            # Perform a dry-run to preview the data
+            import_file = request.FILES['import_file']
+            file_format = base_formats.XLSX()  # Only accept Excel files
+
+            # Check if the file is an Excel file
+            if not import_file.name.endswith('.xlsx'):
+                messages.error(request, "Please upload an Excel file (.xlsx).")
+                return redirect('import_data', model_name=model_name)
+
+            # Load the dataset
+            dataset = file_format.create_dataset(import_file)
+            result = resource.import_data(dataset, dry_run=True)  # Perform a dry-run
+
+            # Prepare data for the preview
+            preview_data = []
+            for row in dataset.dict:
+                preview_data.append(row)
+
+            # Collect errors (if any)
+            error_messages = []
+            for row in result.invalid_rows:
+                error_messages.append(f"Row {row.number}: {row.error}")
+            for row in result.row_errors():
+                for error in row[1]:
+                    error_messages.append(f"Row {row[0]}: {error.error}")
+
+            return render(request, 'import_preview.html', {
+                'model_name': model_name,
+                'preview_data': preview_data,
+                'errors': error_messages,
+            })
+
+    return render(request, 'import_template.html', {
+        'model_name': model_name,
+    })
+    
+    
+def maintenance_dashboard(request):
+    user = request.user
+    user_role = user.userprofile.role
+    user_branch = user.userprofile.branch
+
+    # Get date range from request
+    from_date = request.GET.get('from_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    to_date = request.GET.get('to_date', datetime.now().strftime('%Y-%m-%d'))
+
+    # Equipment status counts
+    operational_count = Equipment.objects.filter(
+        branch=user_branch,
+        status='operational',
+        created_at__range=[from_date, to_date]
+    ).count()
+    non_operational_count = Equipment.objects.filter(
+        branch=user_branch,
+        status='non_operational',
+        created_at__range=[from_date, to_date]
+    ).count()
+    under_maintenance_count = Equipment.objects.filter(
+        branch=user_branch,
+        status='under_maintenance',
+        created_at__range=[from_date, to_date]
+    ).count()
+
+    # Maintenance by frequency counts
+    daily_maintenance_count = MaintenanceRecord.objects.filter(
+        branch=user_branch,
+        maintenance_type='daily',
+        datetime__range=[from_date, to_date]
+    ).count()
+    weekly_maintenance_count = MaintenanceRecord.objects.filter(
+        branch=user_branch,
+        maintenance_type='weekly',
+        datetime__range=[from_date, to_date]
+    ).count()
+    monthly_maintenance_count = MaintenanceRecord.objects.filter(
+        branch=user_branch,
+        maintenance_type='monthly',
+        datetime__range=[from_date, to_date]
+    ).count()
+    biannual_maintenance_count = MaintenanceRecord.objects.filter(
+        branch=user_branch,
+        maintenance_type='biannual',
+        datetime__range=[from_date, to_date]
+    ).count()
+    annual_maintenance_count = MaintenanceRecord.objects.filter(
+        branch=user_branch,
+        maintenance_type='annual',
+        datetime__range=[from_date, to_date]
+    ).count()
+
+    # Work orders counts
+    pending_work_orders = WorkOrder.objects.filter(
+        branch=user_branch,
+        status='Pending',
+        created_at__range=[from_date, to_date]
+    ).count()
+    completed_work_orders = WorkOrder.objects.filter(
+        branch=user_branch,
+        status='Complete',
+        created_at__range=[from_date, to_date]
+    ).count()
+
+    # Maintenance by month data
+    maintenance_months = []
+    maintenance_by_month_data = []
+    for i in range(1, 13):  # January to December
+        month = datetime(datetime.now().year, i, 1).strftime('%b')
+        maintenance_months.append(month)
+        maintenance_count = MaintenanceRecord.objects.filter(
+            branch=user_branch,
+            datetime__month=i,
+            datetime__year=datetime.now().year
+        ).count()
+        maintenance_by_month_data.append(maintenance_count)
+
+    # Work orders by month data
+    work_order_months = []
+    pending_work_orders_by_month = []
+    completed_work_orders_by_month = []
+    for i in range(1, 13):  # January to December
+        month = datetime(datetime.now().year, i, 1).strftime('%b')
+        work_order_months.append(month)
+        pending_count = WorkOrder.objects.filter(
+            branch=user_branch,
+            created_at__month=i,
+            created_at__year=datetime.now().year,
+            status='Pending'
+        ).count()
+        completed_count = WorkOrder.objects.filter(
+            branch=user_branch,
+            created_at__month=i,
+            created_at__year=datetime.now().year,
+            status='Complete'
+        ).count()
+        pending_work_orders_by_month.append(pending_count)
+        completed_work_orders_by_month.append(completed_count)
+
+    # Spare part usage data
+    spare_part_usage = SparePartUsage.objects.filter(
+        maintenance_record__branch=user_branch,
+        created_at__range=[from_date, to_date]
+    ).values('spare_part__name').annotate(total_used=Count('id'))
+    spare_part_labels = [item['spare_part__name'] for item in spare_part_usage]
+    spare_part_usage_data = [item['total_used'] for item in spare_part_usage]
+
+    context = {
+        'from_date': from_date,
+        'to_date': to_date,
+        'operational_count': operational_count,
+        'non_operational_count': non_operational_count,
+        'under_maintenance_count': under_maintenance_count,
+        'daily_maintenance_count': daily_maintenance_count,
+        'weekly_maintenance_count': weekly_maintenance_count,
+        'monthly_maintenance_count': monthly_maintenance_count,
+        'biannual_maintenance_count': biannual_maintenance_count,
+        'annual_maintenance_count': annual_maintenance_count,
+        'pending_work_orders': pending_work_orders,
+        'completed_work_orders': completed_work_orders,
+        'maintenance_months': maintenance_months,
+        'maintenance_by_month_data': maintenance_by_month_data,
+        'work_order_months': work_order_months,
+        'pending_work_orders_by_month': pending_work_orders_by_month,
+        'completed_work_orders_by_month': completed_work_orders_by_month,
+        'spare_part_labels': spare_part_labels,
+        'spare_part_usage_data': spare_part_usage_data,
+    }
+
+    return render(request, 'maintenance_dashboard.html', context)
+def maintenance_oversight_dashboard(request):
+    branches = Branch.objects.all()
+    selected_branch = request.GET.get('branch')
+
+    # Equipment count
+    if selected_branch:
+        equipment_count = Equipment.objects.filter(branch_id=selected_branch).count()
+        work_order_count = WorkOrder.objects.filter(branch_id=selected_branch).exclude(status='Complete').count()
+    else:
+        equipment_count = Equipment.objects.count()
+        work_order_count = WorkOrder.objects.exclude(status='Complete').count()
+
+    context = {
+        'branches': branches,
+        'selected_branch': selected_branch,
+        'equipment_count': equipment_count,
+        'work_order_count': work_order_count,
+    }
+
+    return render(request, 'maintenance_oversight_dashboard.html', context)
+
+
+def export_maintenance_report_pdf(request):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="maintenance_report.pdf"'
+
+    # Create a PDF document
+    doc = SimpleDocTemplate(response, pagesize=letter)
+    elements = []
+
+    # Add a title
+    styles = getSampleStyleSheet()
+    title = Paragraph("Maintenance Report", styles['Title'])
+    elements.append(title)
+
+    # Prepare data for the table
+    maintenance_records = MaintenanceRecord.objects.all()
+    data = [['Equipment', 'Maintenance Task', 'Status', 'Date', 'Tasks Completed']]
+    for record in maintenance_records:
+        tasks_completed = ', '.join([task.description for task in record.completed_tasks.all()])
+        data.append([
+            record.equipment.name,
+            record.maintenance_task.equipment_type,
+            record.status,
+            record.datetime.strftime('%Y-%m-%d'),
+            tasks_completed
+        ])
+
+    # Create a table
+    table = Table(data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+
+    elements.append(table)
+
+    # Build the PDF
+    doc.build(elements)
+    return response
