@@ -117,6 +117,7 @@ path('add_maintenance_task_page/', views.add_maintenance_task_page, name = "add_
     path('maintenance_dashboard' , views.maintenance_dashboard,name ="maintenance_dashboard" ),
     # path('maintenance_dashboard' , views.maintenance_dashboard,name ="maintenance_ashboard" ),
     path('export-maintenance-pdf/', views.export_maintenance_report_pdf, name='export_maintenance_pdf'),
+    path('generate_report', views.generate_report,name= 'generate_report'),
 
 
     

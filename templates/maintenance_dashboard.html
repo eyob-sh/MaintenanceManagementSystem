@@ -4,7 +4,10 @@
 {% block content %}
 <main id="main" class="main">
     <div class="pagetitle">
-        <h1>Maintenance Dashboard</h1>
+        <h1>Dashboard</h1>
+        <br>
+
+
         <!-- Date Range Filter -->
         <form method="get" class="row g-3">
             <div class="col-md-3">
@@ -15,8 +18,29 @@
                 <label for="to_date" class="form-label">To</label>
                 <input type="date" class="form-control form-control-sm" id="to_date" name="to_date" value="{{ to_date }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <button type="submit" class="btn btn-primary btn-sm mt-4">Apply Filter</button>
+            </div>
+
+            <div class="col-md-1">
+                <label for="format" class="form-label">Format</label>
+                <select class="form-select form-select-sm" id="format" name="format">
+                    <option value="pdf">PDF</option>
+                    <option value="docx">DOCX</option>
+                    
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="report_type" class="form-label">Generate Report</label>
+                <select class="form-select form-select-sm" id="report_type" name="report_type">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="biannual">Biannual</option>
+                    <option value="annual">Annual</option>
+                </select>
+                <button type="submit" class="btn btn-secondary btn-sm mt-2" formaction="{% url 'generate_report' %}">Generate Report</button>
             </div>
         </form>
     </div><!-- End Page Title -->
@@ -142,7 +166,7 @@
             datasets: [{
                 label: 'Maintenance Records',
                 data: {{ maintenance_by_month_data|safe }},
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                backgroundColor: 'rgba(54, 162, 235, 1)',
                 borderColor: 'rgba(54, 162, 235, 1)',
                 borderWidth: 1
             }]
@@ -175,14 +199,14 @@
                 {
                     label: 'Pending Work Orders',
                     data: {{ pending_work_orders_by_month|safe }},
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    backgroundColor: 'rgba(255, 99, 132, 1)',
                     borderColor: 'rgba(255, 99, 132, 1)',
                     borderWidth: 1
                 },
                 {
                     label: 'Completed Work Orders',
                     data: {{ completed_work_orders_by_month|safe }},
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    backgroundColor: 'rgba(75, 192, 192, 1)',
                     borderColor: 'rgba(75, 192, 192, 1)',
                     borderWidth: 1
                 }
@@ -221,11 +245,11 @@
                     {{ annual_maintenance_count }}
                 ],
                 backgroundColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(75, 192, 192, 0.2)',
-                    'rgba(153, 102, 255, 0.2)',
-                    'rgba(255, 159, 64, 0.2)'
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
                 ],
                 borderColor: [
                     'rgba(255, 99, 132, 1)',
@@ -251,41 +275,48 @@
     });
 
     // Spare Part Usage Chart
-    const sparePartUsageCtx = document.getElementById('sparePartUsageChart').getContext('2d');
-    const sparePartUsageChart = new Chart(sparePartUsageCtx, {
-        type: 'pie',
-        data: {
-            labels: {{ spare_part_labels|safe }},
-            datasets: [{
-                data: {{ spare_part_usage_data|safe }},
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(75, 192, 192, 0.2)',
-                    'rgba(153, 102, 255, 0.2)',
-                    'rgba(255, 159, 64, 0.2)'
-                ],
-                borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(255, 159, 64, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            plugins: {
-                legend: {
-                    labels: {
-                        font: {
-                            size: 10
-                        }
+    
+const sparePartLabels = {{ spare_part_labels|safe }};
+const sparePartData = {{ spare_part_usage_data|safe }};
+
+console.log("Spare Part Labels:", sparePartLabels);
+console.log("Spare Part Usage Data:", sparePartData);
+
+const sparePartUsageCtx = document.getElementById('sparePartUsageChart').getContext('2d');
+const sparePartUsageChart = new Chart(sparePartUsageCtx, {
+    type: 'pie',
+    data: {
+        labels: sparePartLabels,
+        datasets: [{
+            data: sparePartData,
+            backgroundColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        plugins: {
+            legend: {
+                labels: {
+                    font: {
+                        size: 10
                     }
                 }
             }
         }
-    });
+    }
+});
 </script>
 {% endblock %}

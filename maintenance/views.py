@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.http import Http404
 from datetime import datetime
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from datetime import datetime, timedelta 
 from django.utils import timezone
 from django.http import JsonResponse
@@ -18,6 +18,17 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.units import inch
+from docx.shared import Pt
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+from docx import Document
+from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from reportlab.lib.styles import ParagraphStyle
+
+
+import io
 
 import json
 from import_export import resources
@@ -75,7 +86,10 @@ def loginPage(request):
 
         if user is not None:
             login(request, user)
-            return redirect('dashboard')
+            if (request.user.userprofile.role in 'MD manager, TEC'):
+                return redirect('maintenance_dashboard')
+            elif (request.user.userprofile.role in 'MO'):
+                return redirect('maintenance_oversight_dashboard')
         else: 
             messages.error(request, 'Incorrect Username or Password')
         
@@ -2217,6 +2231,8 @@ def import_data(request, model_name):
     
 def maintenance_dashboard(request):
     user = request.user
+    notifications = get_notifications(request.user)
+
     user_role = user.userprofile.role
     user_branch = user.userprofile.branch
 
@@ -2317,12 +2333,22 @@ def maintenance_dashboard(request):
 
     # Spare part usage data
     spare_part_usage = SparePartUsage.objects.filter(
-        maintenance_record__branch=user_branch,
+        (Q(maintenance_record__branch=user_branch) | Q(work_order__branch=user_branch)),
         created_at__range=[from_date, to_date]
-    ).values('spare_part__name').annotate(total_used=Count('id'))
-    spare_part_labels = [item['spare_part__name'] for item in spare_part_usage]
-    spare_part_usage_data = [item['total_used'] for item in spare_part_usage]
+    ).values('spare_part__name').annotate(total_used=Sum('quantity_used'))
 
+    # Extract labels and data
+    spare_part_labels = [item['spare_part__name'] for item in spare_part_usage if item['spare_part__name']]
+    spare_part_usage_data = [item['total_used'] for item in spare_part_usage if item['spare_part__name']]
+
+    # Debugging
+    print("Spare Part Labels:", spare_part_labels)
+    print("Spare Part Usage Data:", spare_part_usage_data)
+
+    # Fallback for empty data
+    if not spare_part_labels:
+        spare_part_labels = ["No Data"]
+        spare_part_usage_data = [0]
     context = {
         'from_date': from_date,
         'to_date': to_date,
@@ -2343,9 +2369,226 @@ def maintenance_dashboard(request):
         'completed_work_orders_by_month': completed_work_orders_by_month,
         'spare_part_labels': spare_part_labels,
         'spare_part_usage_data': spare_part_usage_data,
+        'active_page':'dashboard',
+        # 'notifications':'notifications',
     }
 
     return render(request, 'maintenance_dashboard.html', context)
+
+#-----------------------------------------------------------------------------------------
+
+def generate_report(request):
+    user = request.user
+    user_branch = user.userprofile.branch
+
+    # Get date range and report type from request
+    from_date = request.GET.get('from_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    to_date = request.GET.get('to_date', datetime.now().strftime('%Y-%m-%d'))
+    report_type = request.GET.get('report_type', 'daily')
+    export_format = request.GET.get('format')  # Default to PDF
+
+    # Fetch maintenance records based on report type and date range
+    maintenance_records = MaintenanceRecord.objects.filter(
+        branch=user_branch,
+        maintenance_type=report_type,
+        datetime__range=[from_date, to_date]
+    ).order_by('datetime')
+
+    if export_format == 'docx':
+        return generate_editable_doc(maintenance_records, report_type, from_date, to_date)
+    else:
+        return generate_pdf(maintenance_records, report_type, from_date, to_date)
+
+def generate_pdf(maintenance_records, report_type, from_date, to_date):
+    # Create a PDF document
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{report_type}_maintenance_report.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=letter)
+    elements = []
+
+    # Add title
+    styles = getSampleStyleSheet()
+    title = Paragraph(f"{report_type.capitalize()} Maintenance Report", styles['Title'])
+    elements.append(title)
+
+    # Add branch and date range
+    elements.append(Paragraph(f"Branch: {maintenance_records[0].branch.name}", styles['Normal']))
+    elements.append(Paragraph(f"From  {from_date}  to  {to_date}", styles['Normal']))
+
+    space_style = ParagraphStyle(name='Space', spaceAfter=30)  # Adjust spaceAfter value as needed
+    elements.append(Paragraph("", space_style))  # Empty paragraph with spacing
+
+
+    for record in maintenance_records:
+        # Add header for each maintenance record
+        elements.append(Paragraph(f"Maintenance Date: {record.datetime.strftime('%Y-%m-%d')}, Time: {record.datetime.strftime('%H:%M')}", styles['Heading5']))
+        elements.append(Paragraph(f"Equipment: {record.equipment.name} (Serial: {record.equipment.serial_number}), Location: {record.equipment.location}", styles['Normal']))
+        space_style = ParagraphStyle(name='Space', spaceAfter=8)  # Adjust spaceAfter value as needed
+        elements.append(Paragraph("", space_style))  # Empty paragraph with spacing
+
+        # Create table data
+        data = [['No.', 'Inspection', 'Yes', 'No', 'Remarks']]
+        task_completions = TaskCompletion.objects.filter(maintenance_record=record)
+        for i, task_completion in enumerate(task_completions, start=1):
+            task = task_completion.task
+            data.append([
+                str(i),
+                task.description,
+                '✓' if task_completion.completed_by else '',
+                '✓' if not task_completion.completed_by else '',
+                ''  # Empty remarks column for editing
+            ])
+
+        # Create table
+        table = Table(data, colWidths=[0.3*inch, 4*inch, 0.3*inch, 0.3*inch, 2*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+
+        elements.append(table)
+        space_style = ParagraphStyle(name='Space', spaceAfter=8)  # Adjust spaceAfter value as needed
+        elements.append(Paragraph("", space_style))  # Empty paragraph with spacing
+
+        # Add inspected by and approved by sections
+        inspected_by = [tech.get_full_name() for tech in record.assigned_technicians.all()]
+        approved_by = record.approved_by.get_full_name() if record.approved_by else "N/A"
+
+        # Create a table with one row and two columns
+        table_data = [
+            [
+                Paragraph(f"<b>Inspected by:</b><br/><br/>" + "<br/><br/>".join(inspected_by)),  # Left column
+                Paragraph(f"<b>Approved by:</b><br/><br/>{approved_by}")  # Right column
+            ]
+        ]
+
+        # Define column widths (adjust as needed)
+        col_widths = [3 * inch, 3 * inch]  # Equal width for both columns
+
+        # Create the table
+        table = Table(table_data, colWidths=col_widths)
+        table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Align text to the left
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align text to the top
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),  # Add padding at the bottom
+        ]))
+
+        # Add the table to the elements
+        elements.append(table)
+                # Add space between records
+        elements.append(Paragraph("<br/><br/>", styles['Normal']))
+
+    # Build the PDF
+    doc.build(elements)
+    return response
+
+#-----------------------------------------------------------------------------------------
+
+def generate_editable_doc(maintenance_records, report_type, from_date, to_date):
+    # Create a Word document
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    response['Content-Disposition'] = f'attachment; filename="{report_type}_maintenance_report.docx"'
+
+    doc = Document()
+
+    # Add main title
+    title = doc.add_heading(f"{report_type.capitalize()} Maintenance Report", level=1)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER 
+    title.style.font.size = Pt(18)  # Make the title smaller
+
+    # Add branch and date range
+    branch_paragraph = doc.add_paragraph(f"Branch: {maintenance_records[0].branch.name}", style='Intense Quote' )
+    branch_paragraph.paragraph_format.space_after = Pt(0)
+    date_paragraph = doc.add_paragraph(f"From {from_date} to {to_date}", style='Intense Quote')
+    date_paragraph.paragraph_format.space_before = Pt(0)  # Remove space before this paragraph
+    date_paragraph.paragraph_format.space_after = Pt(20)  # add space before this paragraph
+
+
+    for record in maintenance_records:
+        # Add header for each maintenance record
+        doc.add_heading(f"Maintenance Date: {record.datetime.strftime('%Y-%m-%d')}, Time: {record.datetime.strftime('%H:%M')}", level=3)
+        doc.add_paragraph(f"Equipment: {record.equipment.name} (Serial: {record.equipment.serial_number}), Location: {record.equipment.location}")
+
+        # Create table
+        table = doc.add_table(rows=1, cols=5)
+        table.style = 'Table Grid'
+        table.autofit = False
+
+        # Set column widths
+        col_widths = [0.2, 4, 0.2, 0.2, 2]  # Widths in inches
+        for i, width in enumerate(col_widths):
+            col = table.columns[i]
+            col.width = Inches(width)
+
+        # Add table headers
+        hdr_cells = table.rows[0].cells
+        hdr_cells[0].text = 'No.'
+        hdr_cells[1].text = 'Inspection'
+        hdr_cells[2].text = 'Yes'
+        hdr_cells[3].text = 'No'
+        hdr_cells[4].text = 'Remarks'
+
+        # Access tasks through TaskCompletion
+        task_completions = TaskCompletion.objects.filter(maintenance_record=record)
+        for i, task_completion in enumerate(task_completions, start=1):
+            task = task_completion.task
+            row_cells = table.add_row().cells
+            row_cells[0].text = str(i)
+            row_cells[1].text = task.description
+            row_cells[2].text = '✓' if task_completion.completed_by else ''
+            row_cells[3].text = '✓' if not task_completion.completed_by else ''
+            row_cells[4].text = ''  # Empty remarks column for editing
+
+        space_paragraph = doc.add_paragraph()
+        space_paragraph.paragraph_format.space_after = Pt(0.1)  # Adjust the space as needed
+        # Add inspected by and approved by sections
+        inspected_by = [tech.get_full_name() for tech in record.assigned_technicians.all()]
+        approved_by = record.approved_by.get_full_name() if record.approved_by else "N/A"
+
+        # Create a table with one row and two columns
+        table = doc.add_table(rows=1, cols=2)
+        table.autofit = False
+
+        # Set column widths (adjust as needed)
+        table.columns[0].width = Inches(3)  # Width for the "Inspected by" column
+        table.columns[1].width = Inches(3)  # Width for the "Approved by" column
+
+        # Add "Inspected by" to the first cell
+        inspected_by_cell = table.rows[0].cells[0]
+        inspected_by_cell.text = "Inspected by:"
+        for paragraph in inspected_by_cell.paragraphs:
+            for run in paragraph.runs:
+                run.bold = True  # Make "Inspected by" bold
+
+        # Add technician names below "Inspected by"
+        for tech in inspected_by:
+            inspected_by_cell.add_paragraph(tech, style='List Bullet')
+
+        # Add "Approved by" to the second cell
+        approved_by_cell = table.rows[0].cells[1]
+        approved_by_paragraph = approved_by_cell.add_paragraph()
+        approved_by_paragraph.add_run("Approved by: ").bold = True  # Make "Approved by" bold
+        approved_by_paragraph.add_run(approved_by)
+
+        # Add space between records
+        doc.add_paragraph()
+    # Save the document to a BytesIO stream
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    response.write(buffer.getvalue())
+    buffer.close()
+
+    return response
+#----------------------------------------------------------------------------------------------------
+
+
 def maintenance_oversight_dashboard(request):
     branches = Branch.objects.all()
     selected_branch = request.GET.get('branch')
@@ -2363,6 +2606,7 @@ def maintenance_oversight_dashboard(request):
         'selected_branch': selected_branch,
         'equipment_count': equipment_count,
         'work_order_count': work_order_count,
+        'active_page':'dashboard'
     }
 
     return render(request, 'maintenance_oversight_dashboard.html', context)
