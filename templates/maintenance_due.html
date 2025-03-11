@@ -28,38 +28,32 @@
                 <div class="card">
                     <div class="card-body">
 
-                       
-
                         <table class="table datatable">
                             <thead>
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Type</th>
-                                    <th>Manufacturer</th>
-                                    <th>Serial Number</th>
+                                    <th>Equipment Name</th>
+                                    <th>Branch</th>
                                     <th>Location</th>
-                                    <th>Installation Date</th>
-                                    <th>Next Maintenance Date</th>
-                                    <th>Status</th>
+                                    <th>Monthly Due</th>
+                                    <th>Biannual Due</th>
+                                    <th>Annual Due</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for equipment in equipment_list %}
+                                {% for equipment in due_equipment %}
                                 <tr>
                                     <td>
                                         <a href="{% url 'edit_equipment' equipment.id %}">{{ equipment.name }}</a>
                                     </td>
-                                    <td>{{ equipment.equipment_type }}</td>
-                                    <td>{{ equipment.manufacturer }}</td>
-                                    <td>{{ equipment.serial_number }}</td>
+                                    <td>{{ equipment.branch.name }}</td>
                                     <td>{{ equipment.location }}</td>
-                                    <td>{{ equipment.installation_date }}</td>
-                                    <td>{{ equipment.next_maintenance_date }}</td>
-                                    <td>{{ equipment.get_status_display }}</td>
+                                    <td>{{ equipment.next_monthly_maintenance_date }}</td>
+                                    <td>{{ equipment.next_biannual_maintenance_date }}</td>
+                                    <td>{{ equipment.next_annual_maintenance_date }}</td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="8" class="text-center">No equipment due for maintenance.</td>
+                                    <td colspan="6" class="text-center">No equipment due for maintenance.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
