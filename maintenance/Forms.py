@@ -35,9 +35,15 @@ class EquipmentForm(forms.ModelForm):
             'branch',
             'location',
             'installation_date',
-            
-            'last_maintenance_date',
-            'next_maintenance_date',
+            'last_daily_maintenance_date', 
+            'last_weekly_maintenance_date', 
+            'next_weekly_maintenance_date' ,
+            'last_monthly_maintenance_date' ,
+            'next_monthly_maintenance_date',
+            'last_biannual_maintenance_date', 
+            'next_biannual_maintenance_date' ,
+            'last_annual_maintenance_date' ,
+            'next_annual_maintenance_date' ,
             'status',
             'remark',
         ]
@@ -50,6 +56,21 @@ class EquipmentForm(forms.ModelForm):
         if self.instance and self.instance.pk:  # Check if the form is for an existing instance
             self.fields['branch'].disabled = True  # Disable the field
             self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
+            self.fields['last_daily_maintenance_date' ].widget.attrs['readonly'] = True
+            self.fields['last_weekly_maintenance_date'].widget.attrs['readonly'] = True
+            self.fields['next_weekly_maintenance_date'].widget.attrs['readonly'] = True
+            self.fields['last_monthly_maintenance_date'].widget.attrs['readonly'] = True
+            self.fields['next_monthly_maintenance_date'].widget.attrs['readonly'] = True
+            self.fields['last_biannual_maintenance_date'].widget.attrs['readonly'] = True
+            self.fields['last_biannual_maintenance_date'].widget.attrs['readonly'] = True
+
+            self.fields['next_biannual_maintenance_date'].widget.attrs['readonly'] = True
+
+            self.fields['last_annual_maintenance_date'].widget.attrs['readonly'] = True
+            self.fields['next_annual_maintenance_date'].widget.attrs['readonly'] = True
+
+
+            
             
             
 

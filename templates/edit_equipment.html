@@ -149,15 +149,52 @@
                             <!-- last_maintenance_date -->
                             <div class="row mb-3">
                                 <div class="col-md-5" readonly>
-                                    <label for="id_last_maintenance_date" class="form-label">last_maintenance_date</label>
-                                    {{ form.last_maintenance_date }}
+                                    <label for="id_last_daily_maintenance_date" class="form-label">last_daily_maintenance_date</label>
+                                    {{ form.last_daily_maintenance_date }}
                                 </div>
                             </div>
 
                             <div class="row mb-3">
                                 <div class="col-md-5">
-                                    <label for="id_next_maintenance_date" class="form-label">next_maintenance_date</label>
-                                    {{ form.next_maintenance_date}}
+                                    <label for="id_last_weekly_maintenance_date" class="form-label">last_weekly_maintenance_date</label>
+                                    {{ form.last_weekly_maintenance_date }}
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="id_next_weekly_maintenance_date" class="form-label">next_weekly_maintenance_date</label>
+                                    {{ form.next_weekly_maintenance_date }}
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-5">
+                                    <label for="id_last_monthly_maintenance_date" class="form-label">last_monthly_maintenance_date</label>
+                                    {{ form.last_monthly_maintenance_date }}
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="id_next_monthly_maintenance_date" class="form-label">next_monthly_maintenance_date</label>
+                                    {{ form.next_monthly_maintenance_date }}
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-5">
+                                    <label for="id_last_biannual_maintenance_date" class="form-label">last_biannual_maintenance_date</label>
+                                    {{ form.last_biannual_maintenance_date }}
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="id_next_biannual_maintenance_date" class="form-label">next_biannual_maintenance_date</label>
+                                    {{ form.next_biannual_maintenance_date }}
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-5">
+                                    <label for="id_last_annual_maintenance_date" class="form-label">last_annual_maintenance_date</label>
+                                    {{ form.last_annual_maintenance_date }}
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="id_next_annual_maintenance_date" class="form-label">next_annual_maintenance_date</label>
+                                    {{ form.next_annual_maintenance_date }}
                                 </div>
                             </div>
 
