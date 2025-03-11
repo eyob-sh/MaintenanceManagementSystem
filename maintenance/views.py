@@ -2180,11 +2180,14 @@ def export_data(request, model_name):
     )
     response['Content-Disposition'] = f'attachment; filename={model_name}_export.xlsx'
     return response
+#----------------------------------------------------------import--------------------------------------------------
+
 def import_data(request, model_name):
     """
     Generalized view for importing data with a preview page.
     """
     # Map model names to their respective resources
+    notifications = get_notifications(request.user)
     model_resource_map = {
         'Equipment': EquipmentResource,  # Add more models here
         # Example: 'Customer': CustomerResource,
@@ -2263,10 +2266,14 @@ def import_data(request, model_name):
                 'model_name': model_name,
                 'preview_data': preview_data,
                 'errors': error_messages,
+                'active_page':'equipment_list',
+                'notifications':notifications,
             })
 
     return render(request, 'import_template.html', {
         'model_name': model_name,
+        'active_page':'equipment_list',
+        'notifications':notifications,
     })
     
     

@@ -5,6 +5,8 @@ from django.utils import timezone
 from django.db.models import UniqueConstraint
 from django.apps import apps
 from django.db.models import JSONField
+from datetime import timedelta 
+
 
 
 
@@ -164,20 +166,48 @@ class Equipment(models.Model):
     class Meta:
         ordering = ['-created_at']  # Use '-' for descending order
 
-    # def calculate_next_maintenance_date(self):
-    #     from datetime import timedelta
-    #     next_date = self.installation_date
-    #     next_date += timedelta(days=self.maintenance_interval_days)
-    #     next_date += timedelta(weeks=self.maintenance_interval_weeks)
-    #     next_date += timedelta(days=30 * self.maintenance_interval_months)
-    #     next_date += timedelta(days=365 * self.maintenance_interval_years)
-    #     return next_date
+    def calculate_next_maintenance_date(self,maintenance_type):
+        """
+        Calculate the next maintenance date based on the maintenance type.
+        """
+        today = self.installation_date
 
-    # def save(self, *args, **kwargs):
-    #     # Set the next maintenance date only when the instance is created
-    #     if not self.pk:  # Check if the instance is being created
-    #         self.next_maintenance_date = self.calculate_next_maintenance_date()
-    #     super().save(*args, **kwargs)  # Call the original save() method
+        if maintenance_type == 'daily':
+            # For daily maintenance, add 1 day
+            return today + timedelta(days=1)
+        
+        elif maintenance_type == 'weekly':
+            # For weekly maintenance, add 1 week
+            return today + timedelta(weeks=1)
+        
+        elif maintenance_type == 'monthly':
+            # For monthly maintenance, add 1 month (approximated as 30 days)
+            return today + timedelta(days=30)
+        
+        elif maintenance_type == 'annual':
+            # For annual maintenance, add 1 year (approximated as 365 days)
+            return today + timedelta(days=365)
+        
+        elif maintenance_type == 'biannual':
+            # For biannual maintenance, add 6 months (approximated as 182 days)
+            return today + timedelta(days=182)
+        
+        else:
+            # Default fallback: return today + 1 day
+            return today + timedelta(days=1)
+
+    def save(self, *args, **kwargs):
+        # Set the next maintenance date only when the instance is created
+        if not self.pk:  # Check if the instance is being created
+            self.next_weekly_maintenance_date = self.calculate_next_maintenance_date('weekly')
+            self.next_monthly_maintenance_date = self.calculate_next_maintenance_date('monthly')
+            self.next_biannual_maintenance_date = self.calculate_next_maintenance_date('biannual')
+            self.next_annual_maintenance_date = self.calculate_next_maintenance_date('annual')
+
+            
+
+
+        super().save(*args, **kwargs)  # Call the original save() method
 
     def __str__(self):
         return f"{self.name} ({self.serial_number})"
@@ -377,3 +407,8 @@ class Notification(models.Model):
 
 
 
+class SchedulerLock(models.Model):
+    locked = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Scheduler Lock (ID: {self.id}, Locked: {self.locked})"
