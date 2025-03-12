@@ -19,6 +19,7 @@
 
     <div class="pagetitle">
         <h1>Equipment Due for Maintenance</h1>
+        <br>
     </div><!-- End Page Title -->
 
     <section class="section">
@@ -27,12 +28,28 @@
 
                 <div class="card">
                     <div class="card-body">
+                        <!-- Import/Export Buttons -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <!-- Export Button -->
+                                <a href="{% url 'export_data' model_name='Equipment' %}" class="btn btn-link text-success">
+                                    <i class="bi bi-download"></i> Export
+                                </a>
+                                <!-- Import Button -->
+                                <a href="{% url 'import_data' model_name='Equipment' %}" class="btn btn-link text-success">
+                                    <i class="bi bi-upload"></i> Import
+                                </a>
+                            </div>
+                        </div>
 
-                        <table class="table datatable">
+                        <!-- Equipment Due for Maintenance Table -->
+                        <table id="equipment-due-table" class="table table-striped table-hover" style="width:100%">
                             <thead>
                                 <tr>
                                     <th>Equipment Name</th>
-                                    <th>Branch</th>
+                                    {% if request.user.userprofile.role == 'MO' %}
+                                    <th>Branch</th> <!-- Branch Column for MO Role -->
+                                    {% endif %}
                                     <th>Location</th>
                                     <th>Monthly Due</th>
                                     <th>Biannual Due</th>
@@ -45,7 +62,9 @@
                                     <td>
                                         <a href="{% url 'edit_equipment' equipment.id %}">{{ equipment.name }}</a>
                                     </td>
-                                    <td>{{ equipment.branch.name }}</td>
+                                    {% if request.user.userprofile.role == 'MO' %}
+                                    <td>{{ equipment.branch.name }}</td> <!-- Branch Column for MO Role -->
+                                    {% endif %}
                                     <td>{{ equipment.location }}</td>
                                     <td>{{ equipment.next_monthly_maintenance_date }}</td>
                                     <td>{{ equipment.next_biannual_maintenance_date }}</td>
@@ -53,7 +72,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center">No equipment due for maintenance.</td>
+                                    <td colspan="{% if request.user.userprofile.role == 'MO' %}6{% else %}5{% endif %}" class="text-center">No equipment due for maintenance.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -67,5 +86,87 @@
     </section>
 
 </main><!-- End #main -->
+
+<!-- Simple DataTables JS -->
+<script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.0.0/dist/umd/simple-datatables.min.js"></script>
+
+<!-- Initialize Simple DataTables -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const isMO = "{{ request.user.userprofile.role }}" === "MO"; // Check if user is MO
+        const columns = [
+            { select: 0, type: "string" }, // Equipment Name
+            {% if request.user.userprofile.role == 'MO' %}
+            { select: 1, type: "string" }, // Branch
+            { select: 2, type: "string" }, // Location
+            { select: 3, type: "date", format: "YYYY-MM-DD" }, // Monthly Due
+            { select: 4, type: "date", format: "YYYY-MM-DD" }, // Biannual Due
+            { select: 5, type: "date", format: "YYYY-MM-DD" } // Annual Due
+            {% else %}
+            { select: 1, type: "string" }, // Location
+            { select: 2, type: "date", format: "YYYY-MM-DD" }, // Monthly Due
+            { select: 3, type: "date", format: "YYYY-MM-DD" }, // Biannual Due
+            { select: 4, type: "date", format: "YYYY-MM-DD" } // Annual Due
+            {% endif %}
+        ];
+
+        const dataTable = new simpleDatatables.DataTable("#equipment-due-table", {
+            perPageSelect: [10, 25, 50, ["All", -1]], // Pagination options
+            columns: columns,
+            labels: {
+                placeholder: "Search by Equipment Name or Location...", // Global search placeholder
+                perPage: "Rows per page", // Pagination label
+                noRows: "No equipment due for maintenance", // No data message
+                info: "Showing {start} to {end} of {rows} entries" // Info text
+            },
+            tableRender: (_data, table, type) => {
+                if (type === "print") {
+                    return table;
+                }
+                const tHead = table.childNodes[0];
+                const filterHeaders = {
+                    nodeName: "TR",
+                    childNodes: tHead.childNodes[0].childNodes.map(
+                        (_th, index) => {
+                            return {
+                                nodeName: "TH",
+                                childNodes: [
+                                    {
+                                        nodeName: "INPUT",
+                                        attributes: {
+                                            class: "datatable-input",
+                                            type: "search",
+                                            "data-columns": `[${index}]`,
+                                            style: "width: 100%; max-width: 120px;" // Reduce input size
+                                        }
+                                    }
+                                ]
+                            };
+                        }
+                    )
+                };
+                tHead.childNodes.push(filterHeaders);
+                return table;
+            }
+        });
+    });
+</script>
+
+<style>
+    /* Custom CSS to make the upper search field bigger */
+    .datatable-search {
+        width: 300px; /* Adjust the width as needed */
+        padding: 0.5rem 5rem; /* Increase padding */
+        font-size: 1rem; /* Increase font size */
+    }
+
+    /* Custom CSS to reduce the size of column filter inputs */
+    .datatable-input {
+        width: 100%;
+        max-width: 120px; /* Adjust the width as needed */
+        padding: 0.25rem 0.5rem; /* Reduce padding */
+        font-size: 0.875rem; /* Reduce font size */
+    }
+</style>
 
 {% endblock %}

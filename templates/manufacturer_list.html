@@ -20,6 +20,7 @@
     <div class="pagetitle">
         <h1>{{ title }}</h1>
     </div><!-- End Page Title -->
+    <br>
 
     <section class="section">
         <div class="row">
@@ -27,33 +28,70 @@
 
                 <div class="card">
                     <div class="card-body">
+                        <!-- Add Manufacturer Button and Import/Export Buttons -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <!-- Export Button -->
+                                <a href="{% url 'export_data' model_name='Manufacturer' %}" class="btn btn-link text-success">
+                                    <i class="bi bi-download"></i> Export
+                                </a>
+                                <!-- Import Button -->
+                                <a href="{% url 'import_data' model_name='Manufacturer' %}" class="btn btn-link text-success">
+                                    <i class="bi bi-upload"></i> Import
+                                </a>
+                            </div>
 
-                        <div class="d-flex justify-content-end mb-3" style="margin-top: 20px;">
-                            <a href="{% url 'add_manufacturer' %}" class="btn btn-success bg-success">
-                                <i class="bi bi-plus"></i> Add Manufacturer
-                            </a>
+                            <!-- Add Manufacturer Button -->
+                            <div class="d-flex justify-content-end mb-3">
+                                <a href="{% url 'add_manufacturer' %}" class="btn btn-success bg-success">
+                                    <i class="bi bi-plus"></i> Add Manufacturer
+                                </a>
+                            </div>
                         </div>
 
-                        <table class="table datatable">
+                        <!-- Manufacturer List Table -->
+                        <table id="manufacturer-table" class="table table-striped table-hover" style="width:100%">
                             <thead>
                                 <tr>
                                     <th>Name</th>
                                     <th>Contact Email</th>
                                     <th>Address</th>
+                                    {% if request.user.userprofile.role == 'MO' %}
+                                    <th>Site</th> <!-- Site Column for MO Role -->
+                                    <th></th> <!-- Edit Action Column -->
+                                    <th></th> <!-- Delete Action Column -->
+                                    {% endif %}
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for manufacturer in item_list %}
                                 <tr>
                                     <td>
-                                        <a href="{% url edit_url manufacturer.id %}">{{ manufacturer.name }}</a>
+                                        {% if request.user.userprofile.role == 'MO' %}
+                                        <a href="{% url edit_url manufacturer.id %}">
+                                            {{ manufacturer.name }}
+                                        </a>
+                                        {% else %}
+                                        {{ manufacturer.name }}
+                                        {% endif %}
                                     </td>
                                     <td>{{ manufacturer.contact_email }}</td>
                                     <td>{{ manufacturer.address }}</td>
+                                    {% if request.user.userprofile.role == 'MO' %}
+                                    <td>{{ manufacturer.site }}</td> <!-- Site Column for MO Role -->
+                                    <td>
+                                        <a href="{% url edit_url manufacturer.id %}"><i class="bi bi-pencil-fill"></i></a>
+                                    </td>
+                                    <td>
+                                        <a href="{% url delete_url manufacturer.id %}" class="btn btn-danger btn-sm">
+                                            <i class="bi bi-trash"></i> 
+                                        </a>
+                                    </td>
+                                    {% endif %}
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="3" class="text-center">No manufacturers found.</td>
+                                    <td colspan="6" class="text-center">No manufacturers found.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -68,5 +106,85 @@
 
 </main><!-- End #main -->
 
-{% endblock %}
+<!-- Simple DataTables JS -->
+<script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.0.0/dist/umd/simple-datatables.min.js"></script>
 
+<!-- Initialize Simple DataTables -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const isMO = "{{ request.user.userprofile.role }}" === "MO"; // Check if user is MO
+        const columns = [
+            { select: 0, type: "string" }, // Name
+            { select: 1, type: "string" }, // Contact Email
+            { select: 2, type: "string" }, // Address
+            {% if request.user.userprofile.role == 'MO' %}
+            { select: 3, type: "string" }, // Site
+            { select: 4, sortable: false }, // Edit Action (not sortable)
+            { select: 5, sortable: false } // Delete Action (not sortable)
+            {% endif %}
+        ];
+
+        const dataTable = new simpleDatatables.DataTable("#manufacturer-table", {
+            perPageSelect: [10, 25, 50, ["All", -1]], // Pagination options
+            columns: columns,
+            labels: {
+                placeholder: "Search by Name, Email, or Address...", // Global search placeholder
+                perPage: "Rows per page", // Pagination label
+                noRows: "No manufacturers found", // No data message
+                info: "Showing {start} to {end} of {rows} entries" // Info text
+            },
+            tableRender: (_data, table, type) => {
+                if (type === "print") {
+                    return table;
+                }
+                const tHead = table.childNodes[0];
+                const filterHeaders = {
+                    nodeName: "TR",
+                    childNodes: tHead.childNodes[0].childNodes.map(
+                        (_th, index) => {
+                            // Skip filter input for action columns
+                            if (isMO && (index === 4 || index === 5)) {
+                                return { nodeName: "TH" }; // Return an empty header cell
+                            }
+                            return {
+                                nodeName: "TH",
+                                childNodes: [
+                                    {
+                                        nodeName: "INPUT",
+                                        attributes: {
+                                            class: "datatable-input",
+                                            type: "search",
+                                            "data-columns": `[${index}]`,
+                                            style: "width: 100%; max-width: 120px;" // Reduce input size
+                                        }
+                                    }
+                                ]
+                            };
+                        }
+                    )
+                };
+                tHead.childNodes.push(filterHeaders);
+                return table;
+            }
+        });
+    });
+</script>
+
+<style>
+    /* Custom CSS to make the upper search field bigger */
+    .datatable-search {
+        width: 300px; /* Adjust the width as needed */
+        padding: 0.5rem 5rem; /* Increase padding */
+        font-size: 1rem; /* Increase font size */
+    }
+
+    /* Custom CSS to reduce the size of column filter inputs */
+    .datatable-input {
+        width: 100%;
+        max-width: 120px; /* Adjust the width as needed */
+        padding: 0.25rem 0.5rem; /* Reduce padding */
+        font-size: 0.875rem; /* Reduce font size */
+    }
+</style>
+
+{% endblock %}

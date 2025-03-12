@@ -38,6 +38,7 @@ path('add_user_profile_page/', views.add_user_profile_page, name = "add_user_pro
 
     path('manufacturer/', views.manufacturer_list, name='manufacturer_list'),
     path('manufacturer/edit/<int:id>/', views.edit_manufacturer, name='edit_manufacturer'),
+    path('manufacturer/delete/<int:id>/',views.delete_manufacturer, name = 'delete_manufacturer'),
     #-------------------------------------------------------------------------------------------------------
 
     path('add_equipment_page/', views.add_equipment_page, name = "add_equipment_page"),

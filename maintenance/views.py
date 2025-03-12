@@ -320,7 +320,13 @@ def get_notifications(user):
 
 def manufacturer_list(request):
     user_branch = request.user.userprofile.branch
-    manufacturers = Manufacturer.objects.filter(site = user_branch)
+    
+    
+    if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
+         manufacturers = Manufacturer.objects.all()  
+    else:
+        manufacturers = Manufacturer.objects.filter(site = user_branch)
+        
     notifications = get_notifications(request.user)
 
     context = {
@@ -328,6 +334,7 @@ def manufacturer_list(request):
         'title': 'Manufacturers',
         'item_list': manufacturers,
         'edit_url': 'edit_manufacturer',
+        'delete_url': 'delete_manufacturer',
         'notifications':notifications
     }
     return render(request, 'manufacturer_list.html', context)
@@ -398,12 +405,48 @@ def edit_manufacturer(request, id):
 
     return render(request, 'edit_manufacturer.html', {'form': form, 'manufacturer': manufacturer,  'active_page': 'manufacturer_list', 'branch':branch, 'notifications':notifications})
 
+
+def delete_manufacturer(request, id):
+    manufacturer = get_object_or_404(Equipment, id=id)
+    notifications = get_notifications(request.user)
+
+    
+    if request.method == 'POST':
+        try:
+            manufacturer.delete()
+            messages.success(request, 'The manufacturer was deleted successfully.')
+            return redirect(reverse('manufacturer_list'))
+        except ProtectedError as e:
+            messages.error(request, 'This equipment cannot be deleted because it is referenced by other objects.')
+            return render(request, 'confirm_delete_protected.html', {
+                'object': manufacturer,
+                'protected_objects': e.protected_objects,
+                'model_name': 'Manufacturer',  # Dynamic model name
+                'active_page':'manufacturer_list',
+                'notifications':notifications
+            })
+    
+    return render(request, 'confirm_delete.html', {
+        'object': manufacturer,
+        'model_name': 'Manufacturer',  # Dynamic model name
+        'active_page':'manufacturer_list',
+
+        'notifications':notifications
+
+    })
+
+
 #----------------------------------------------------------------------------------
 
 def work_order_list(request):
     user_branch = request.user.userprofile.branch
+    
+    if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
+         work_orders = WorkOrder.objects.all()  # Show all equipment for MO
+    else:
+        work_orders = WorkOrder.objects.filter(branch = user_branch)
 
-    work_orders = WorkOrder.objects.filter(branch = user_branch)
+   
     notifications = get_notifications(request.user)
 
     context = {
@@ -589,10 +632,13 @@ def edit_work_order(request, id):
 def spare_part_usage_list(request):
     notifications = get_notifications(request.user)
     user_branch = request.user.userprofile.branch
-
-    spare_part_usages = SparePartUsage.objects.filter(
+    
+    if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
+         spare_part_usages = SparePartUsage.objects.all()
+    else:
+        spare_part_usages = SparePartUsage.objects.filter(
     Q(maintenance_record__branch=user_branch) | Q(work_order__branch=user_branch)
-)
+     )
     context = {
         'active_page': 'spare_part_usage_list',
         'title': 'Spare Part Usages',
@@ -658,7 +704,13 @@ def edit_spare_part_usage(request, id):
 
 #------------------------------------------------------------------------------------
 def decommissioned_equipment_list(request):
-    decommissioned_equipments = DecommissionedEquipment.objects.all()
+    user_branch = request.user.userprofile.branch
+    if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
+        decommissioned_equipments = DecommissionedEquipment.objects.all()  # Show all equipment for MO
+    else:
+        decommissioned_equipments = DecommissionedEquipment.objects.filter(branch=user_branch)
+    
+    
     notifications = get_notifications(request.user)
 
     context = {
@@ -1153,8 +1205,13 @@ def spare_part_list(request):
     notifications = get_notifications(request.user)
 
     user_branch = request.user.userprofile.branch
+    
+    if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
+         spare_parts = SparePart.objects.all()
+    else:
+        spare_parts = SparePart.objects.filter(branch = user_branch)
+        
 
-    spare_parts = SparePart.objects.filter(branch = user_branch)  # Fetch all sparepart
     context = {
         'active_page': 'spare_part_list',
         'title': 'Spare Parts',
@@ -1375,8 +1432,14 @@ def maintenance_list(request):
     notifications = get_notifications(request.user)
 
     user_branch = request.user.userprofile.branch
+    
+    # Filter equipment based on user role
+    if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
+        maintenance_records = MaintenanceRecord.objects.all()  # Show all equipment for MO
+    else:
+        maintenance_records = MaintenanceRecord.objects.filter(branch = user_branch ) # Filter by branch for other roles
 
-    maintenance_records = MaintenanceRecord.objects.filter(branch = user_branch )  # Fetch all maintenance records
+     # Fetch all maintenance records
     context = {
         'active_page': 'maintenance_list',
         'title': 'Maintenance List',
@@ -1876,9 +1939,14 @@ def check_low_spare_parts(spare_part):
 def low_spare_part(request):
     # Get the user's branch
     user_branch = request.user.userprofile.branch
+    
+    if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
+        spare_parts = SparePart.objects.filter(quantity__lt=5)
+
+    else:
+        spare_parts = SparePart.objects.filter(branch=user_branch, quantity__lt=5)  
 
     # Fetch spare parts with quantity below 5 for the user's branch
-    spare_parts = SparePart.objects.filter(branch=user_branch, quantity__lt=5)  # Changed variable name to match template
 
     # Get notifications for the user
     notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-timestamp')[:10]
@@ -1931,9 +1999,14 @@ def restock_spare_part(request):
 def restock_list(request):
     # Get the user's branch
     user_branch = request.user.userprofile.branch
+    
+    if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
+        restock_list = RestockSparePart.objects.all().order_by('-restock_date')
+
+    else:
+        restock_list = RestockSparePart.objects.filter(spare_part__branch=user_branch).order_by('-restock_date')
 
     # Fetch restock records for spare parts in the user's branch
-    restock_list = RestockSparePart.objects.filter(spare_part__branch=user_branch).order_by('-restock_date')
 
     # Get notifications for the user
     notifications = get_notifications(request.user)
@@ -1960,157 +2033,6 @@ def restock_spare_part_page(request):
     }
 
     return render(request, 'restock_spare_part.html', context)
-
-
-# def maintenance_due(request):
-#     notifications = get_notifications(request.user)
-
-#     return render(request,'maintenance_due.html', {'active_page':'maintenance_due','notifications':notifications})
-
-# def maintenance_due(request):
-#     user_branch = request.user.userprofile.branch
-#     today = timezone.now().date()
-#     due_date = today + timedelta(days=5)
-
-#     due_equipment = Equipment.objects.filter(
-#         branch=user_branch,
-#         next_maintenance_date__lte=due_date,
-#         next_maintenance_date__gte=today
-#     )
-
-#     # Notify MD managers in the same branch
-#     md_managers = User.objects.filter(
-#         branch=user_branch,
-#         role__in=['MD manager', 'Maintenance Department Manager']
-#     )
-
-#     for manager in md_managers:
-#         messages.warning(
-#             request,
-#             f"Equipment {equipment.name} is due for maintenance on {equipment.next_maintenance_date}."
-#         )
-
-#     return render(request, 'maintenance_due.html', {'due_equipment': due_equipment})
-
-
-
-
-# def dashboard(request):
-#     notifications = get_notifications(request.user)
-
-#     user = request.user
-#     user_role = user.userprofile.role
-#     user_branch = user.userprofile.branch
-
-#     context = {
-#         'active_page': 'dashboard',
-#         'user_role': user_role,
-#         'user_branch': user_branch,
-#         'notifications':notifications,
-        
-
-
-#     }
-
-#     # Common data for all roles
-#     today = datetime.now().date()
-#     last_week = today - timedelta(days=7)
-
-#     # Role-specific data
-#     if user_role in ['MD manager', 'TEC']:
-#         # Equipment count for the user's branch
-#         equipment_count = Equipment.objects.filter(branch=user_branch).count()
-
-#         # Maintenance records not completed for the user's branch
-#         maintenance_count = MaintenanceRecord.objects.filter(
-#             branch=user_branch
-#         ).exclude(status='Complete').count()
-
-#         # Work orders not completed for the user's branch
-#         work_order_count = WorkOrder.objects.filter(
-#             branch=user_branch
-#         ).exclude(status='Complete').count()
-
-#         # Maintenance and work orders completed in the last week (for graph)
-#         maintenance_completed = MaintenanceRecord.objects.filter(
-#             branch=user_branch,
-#             status='Complete',
-#             # completion_date__gte=last_week
-#         ).count()
-
-#         work_order_completed = WorkOrder.objects.filter(
-#             branch=user_branch,
-#             status='Complete',
-#             # completion_date__gte=last_week
-#         ).count()
-
-#         # Recent actions for the user
-#         recent_actions = MaintenanceRecord.objects.filter(
-#             assigned_technicians=user)
-#         # .order_by('-created_at')[:5]
-
-#         context.update({
-#             'equipment_count': equipment_count,
-#             'maintenance_count': maintenance_count,
-#             'work_order_count': work_order_count,
-#             'maintenance_completed': maintenance_completed,
-#             'work_order_completed': work_order_completed,
-#             'recent_actions': recent_actions,
-#         })
-
-#     elif user_role == 'MO':
-#         # Data for all branches
-#         equipment_count = Equipment.objects.count()
-#         maintenance_count = MaintenanceRecord.objects.exclude(status='Complete').count()
-#         work_order_count = WorkOrder.objects.exclude(status='Complete').count()
-
-#         maintenance_completed = MaintenanceRecord.objects.filter(
-#             status='Complete',
-#             # completion_date__gte=last_week
-#         ).count()
-
-#         work_order_completed = WorkOrder.objects.filter(
-#             status='Complete',
-#             # completion_date__gte=last_week
-#         ).count()
-
-#         # Recent actions for all branches
-#         recent_actions = MaintenanceRecord.objects.order_by('-created_at')[:5]
-
-#         context.update({
-#             'equipment_count': equipment_count,
-#             'maintenance_count': maintenance_count,
-#             'work_order_count': work_order_count,
-#             'maintenance_completed': maintenance_completed,
-#             'work_order_completed': work_order_completed,
-#             'recent_actions': recent_actions,
-#         })
-
-#     elif user_role == 'CL':
-#         # Work orders added by the client
-#         work_orders = WorkOrder.objects.filter(requester=user)
-#         work_order_count = work_orders.count()
-#         completed_work_orders = work_orders.filter(status='Complete').count()
-
-#         context.update({
-#             'work_order_count': work_order_count,
-#             'completed_work_orders': completed_work_orders,
-#             'work_orders': work_orders,
-#         })
-
-#     elif user_role == 'AD':
-#         # System-wide statistics
-#         user_count = User.objects.count()
-#         equipment_count = Equipment.objects.count()
-#         branch_count = User.objects.values('userprofile__branch').distinct().count()
-
-#         context.update({
-#             'user_count': user_count,
-#             'equipment_count': equipment_count,
-#             'branch_count': branch_count,
-#         })
-
-#     return render(request, 'dashboard.html', context)
 
 
 def maintenance_due(request):
@@ -2161,6 +2083,7 @@ def export_data(request, model_name):
     # Map model names to their respective resources
     model_resource_map = {
         'Equipment': EquipmentResource,  # Add more models here
+        'MaintenanceRecord':MaintenanceRecord,
         # Example: 'Customer': CustomerResource,
     }
 
@@ -2638,23 +2561,161 @@ def generate_editable_doc(maintenance_records, report_type, from_date, to_date):
 
 
 def maintenance_oversight_dashboard(request):
-    branches = Branch.objects.all()
-    selected_branch = request.GET.get('branch')
+    user = request.user
+    notifications = get_notifications(request.user)
 
-    # Equipment count
-    if selected_branch:
-        equipment_count = Equipment.objects.filter(branch_id=selected_branch).count()
-        work_order_count = WorkOrder.objects.filter(branch_id=selected_branch).exclude(status='Complete').count()
+    user_role = user.userprofile.role
+
+    # Get date range from request
+    from_date = request.GET.get('from_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    to_date = request.GET.get('to_date', datetime.now().strftime('%Y-%m-%d'))
+
+    # Get selected branch from request
+    selected_branch = request.GET.get('branch', 'all')
+
+    # Filter by branch if a specific branch is selected
+    if selected_branch == 'all':
+        branch_filter = {}
     else:
-        equipment_count = Equipment.objects.count()
-        work_order_count = WorkOrder.objects.exclude(status='Complete').count()
+        branch_filter = {'branch': selected_branch}
+
+    # Equipment status counts
+    operational_count = Equipment.objects.filter(
+        **branch_filter,
+        status='operational',
+        created_at__range=[from_date, to_date]
+    ).count()
+    non_operational_count = Equipment.objects.filter(
+        **branch_filter,
+        status='non_operational',
+        created_at__range=[from_date, to_date]
+    ).count()
+    under_maintenance_count = Equipment.objects.filter(
+        **branch_filter,
+        status='under_maintenance',
+        created_at__range=[from_date, to_date]
+    ).count()
+
+    # Maintenance by frequency counts
+    daily_maintenance_count = MaintenanceRecord.objects.filter(
+        **branch_filter,
+        maintenance_type='daily',
+        datetime__range=[from_date, to_date]
+    ).count()
+    weekly_maintenance_count = MaintenanceRecord.objects.filter(
+        **branch_filter,
+        maintenance_type='weekly',
+        datetime__range=[from_date, to_date]
+    ).count()
+    monthly_maintenance_count = MaintenanceRecord.objects.filter(
+        **branch_filter,
+        maintenance_type='monthly',
+        datetime__range=[from_date, to_date]
+    ).count()
+    biannual_maintenance_count = MaintenanceRecord.objects.filter(
+        **branch_filter,
+        maintenance_type='biannual',
+        datetime__range=[from_date, to_date]
+    ).count()
+    annual_maintenance_count = MaintenanceRecord.objects.filter(
+        **branch_filter,
+        maintenance_type='annual',
+        datetime__range=[from_date, to_date]
+    ).count()
+
+    # Work orders counts
+    pending_work_orders = WorkOrder.objects.filter(
+        **branch_filter,
+        status='Pending',
+        created_at__range=[from_date, to_date]
+    ).count()
+    completed_work_orders = WorkOrder.objects.filter(
+        **branch_filter,
+        status='Complete',
+        created_at__range=[from_date, to_date]
+    ).count()
+
+    # Maintenance by month data
+    maintenance_months = []
+    maintenance_by_month_data = []
+    for i in range(1, 13):  # January to December
+        month = datetime(datetime.now().year, i, 1).strftime('%b')
+        maintenance_months.append(month)
+        maintenance_count = MaintenanceRecord.objects.filter(
+            **branch_filter,
+            datetime__month=i,
+            datetime__year=datetime.now().year
+        ).count()
+        maintenance_by_month_data.append(maintenance_count)
+
+    # Work orders by month data
+    work_order_months = []
+    pending_work_orders_by_month = []
+    completed_work_orders_by_month = []
+    for i in range(1, 13):  # January to December
+        month = datetime(datetime.now().year, i, 1).strftime('%b')
+        work_order_months.append(month)
+        pending_count = WorkOrder.objects.filter(
+            **branch_filter,
+            created_at__month=i,
+            created_at__year=datetime.now().year,
+            status='Pending'
+        ).count()
+        completed_count = WorkOrder.objects.filter(
+            **branch_filter,
+            created_at__month=i,
+            created_at__year=datetime.now().year,
+            status='Complete'
+        ).count()
+        pending_work_orders_by_month.append(pending_count)
+        completed_work_orders_by_month.append(completed_count)
+
+    # Spare part usage data
+    spare_part_usage = SparePartUsage.objects.filter(
+        (Q(maintenance_record__branch=selected_branch) | Q(work_order__branch=selected_branch)) if selected_branch != 'all' else Q(),
+        created_at__range=[from_date, to_date]
+    ).values('spare_part__name').annotate(total_used=Sum('quantity_used'))
+
+    # Extract labels and data
+    spare_part_labels = [item['spare_part__name'] for item in spare_part_usage if item['spare_part__name']]
+    spare_part_usage_data = [item['total_used'] for item in spare_part_usage if item['spare_part__name']]
+
+    # Debugging
+    print("Spare Part Labels:", spare_part_labels)
+    print("Spare Part Usage Data:", spare_part_usage_data)
+
+    # Fallback for empty data
+    if not spare_part_labels:
+        spare_part_labels = ["No Data"]
+        spare_part_usage_data = [0]
+
+    # Get all branches for the dropdown
+    all_branches = Branch.objects.all()
 
     context = {
-        'branches': branches,
+        'from_date': from_date,
+        'to_date': to_date,
         'selected_branch': selected_branch,
-        'equipment_count': equipment_count,
-        'work_order_count': work_order_count,
-        'active_page':'dashboard'
+        'all_branches': all_branches,
+        'operational_count': operational_count,
+        'non_operational_count': non_operational_count,
+        'under_maintenance_count': under_maintenance_count,
+        'daily_maintenance_count': daily_maintenance_count,
+        'weekly_maintenance_count': weekly_maintenance_count,
+        'monthly_maintenance_count': monthly_maintenance_count,
+        'biannual_maintenance_count': biannual_maintenance_count,
+        'annual_maintenance_count': annual_maintenance_count,
+        'pending_work_orders': pending_work_orders,
+        'completed_work_orders': completed_work_orders,
+        'maintenance_months': maintenance_months,
+        'maintenance_by_month_data': maintenance_by_month_data,
+        'work_order_months': work_order_months,
+        'pending_work_orders_by_month': pending_work_orders_by_month,
+        'completed_work_orders_by_month': completed_work_orders_by_month,
+        'spare_part_labels': spare_part_labels,
+        'spare_part_usage_data': spare_part_usage_data,
+        'active_page': 'dashboard',
+        'notifications': notifications
     }
 
     return render(request, 'maintenance_oversight_dashboard.html', context)

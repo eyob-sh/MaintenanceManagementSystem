@@ -4,68 +4,319 @@
 {% block content %}
 <main id="main" class="main">
     <div class="pagetitle">
-        <h1>Maintenance Oversight Dashboard</h1>
+        <h1>Dashboard</h1>
+        <br>
+
+        <!-- Date Range Filter -->
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label for="from_date" class="form-label">From</label>
+                <input type="date" class="form-control form-control-sm" id="from_date" name="from_date" value="{{ from_date }}">
+            </div>
+            <div class="col-md-2">
+                <label for="to_date" class="form-label">To</label>
+                <input type="date" class="form-control form-control-sm" id="to_date" name="to_date" value="{{ to_date }}">
+            </div>
+            <div class="col-md-3">
+                <label for="branch" class="form-label">Branch</label>
+                <select class="form-select form-select-sm" id="branch" name="branch">
+                    <option value="all" {% if selected_branch == 'all' %}selected{% endif %}>All Branches</option>
+                    {% for branch in all_branches %}
+                        <option value="{{ branch.id }}" {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>{{ branch.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm mt-4">Apply Filter</button>
+            </div>
+
+            <div class="col-md-1">
+                <label for="format" class="form-label">Format</label>
+                <select class="form-select form-select-sm" id="format" name="format">
+                    <option value="pdf">PDF</option>
+                    <option value="docx">DOCX</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label for="report_type" class="form-label">Generate Report</label>
+                <select class="form-select form-select-sm" id="report_type" name="report_type">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="biannual">Biannual</option>
+                    <option value="annual">Annual</option>
+                </select>
+                <button type="submit" class="btn btn-secondary btn-sm mt-2" formaction="{% url 'generate_report' %}">Generate Report</button>
+            </div>
+        </form>
     </div><!-- End Page Title -->
 
     <section class="section dashboard">
         <div class="row">
-            <!-- Branch Filter -->
-            <div class="col-lg-12">
-                <div class="card">
+            <!-- Equipment Status Card -->
+            <div class="col-xxl-3 col-md-4">
+                <div class="card info-card sales-card">
                     <div class="card-body">
-                        <h5 class="card-title">Filter by Branch</h5>
-                        <form method="get">
-                            <select name="branch" class="form-select">
-                                <option value="">All Branches</option>
-                                {% for branch in branches %}
-                                    <option value="{{ branch.id }}" {% if selected_branch == branch.id %}selected{% endif %}>{{ branch.name }}</option>
-                                {% endfor %}
-                            </select>
-                            <button type="submit" class="btn btn-primary mt-2">Apply Filter</button>
-                        </form>
+                        <h5 class="card-title" style="font-size: 14px;">Equipment Status</h5>
+                        <p class="card-subtitle mb-2 text-muted" style="font-size: 12px;">{{ from_date }} to {{ to_date }}</p>
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon rounded-circle d-flex align-items-center justify-content-center" style="font-size: 14px;">
+                                <i class="bi bi-tools"></i>
+                            </div>
+                            <div class="ps-3">
+                                <h6 style="font-size: 12px;">Operational: {{ operational_count }}</h6>
+                                <h6 style="font-size: 12px;">Non-Operational: {{ non_operational_count }}</h6>
+                                <h6 style="font-size: 12px;">Under Maintenance: {{ under_maintenance_count }}</h6>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div><!-- End Branch Filter -->
+            </div><!-- End Equipment Status Card -->
 
-            <!-- Metrics -->
-            <div class="col-lg-8">
-                <div class="row">
-                    <!-- Equipment Card -->
-                    <div class="col-xxl-4 col-md-6">
-                        <div class="card info-card sales-card">
-                            <div class="card-body">
-                                <h5 class="card-title">Equipment <span>| Total</span></h5>
-                                <div class="d-flex align-items-center">
-                                    <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
-                                        <i class="bi bi-tools"></i>
-                                    </div>
-                                    <div class="ps-3">
-                                        <h6>{{ equipment_count }}</h6>
-                                    </div>
-                                </div>
+            <!-- Maintenance by Frequency Card -->
+            <div class="col-xxl-3 col-md-4">
+                <div class="card info-card revenue-card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Maintenance by Frequency</h5>
+                        <p class="card-subtitle mb-2 text-muted" style="font-size: 12px;">{{ from_date }} to {{ to_date }}</p>
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon rounded-circle d-flex align-items-center justify-content-center" style="font-size: 14px;">
+                                <i class="bi bi-calendar-check"></i>
+                            </div>
+                            <div class="ps-3">
+                                <h6 style="font-size: 12px;">Daily: {{ daily_maintenance_count }}</h6>
+                                <h6 style="font-size: 12px;">Weekly: {{ weekly_maintenance_count }}</h6>
+                                <h6 style="font-size: 12px;">Monthly: {{ monthly_maintenance_count }}</h6>
+                                <h6 style="font-size: 12px;">Biannual: {{ biannual_maintenance_count }}</h6>
+                                <h6 style="font-size: 12px;">Annual: {{ annual_maintenance_count }}</h6>
                             </div>
                         </div>
-                    </div><!-- End Equipment Card -->
-
-                    <!-- Work Orders Card -->
-                    <div class="col-xxl-4 col-md-6">
-                        <div class="card info-card revenue-card">
-                            <div class="card-body">
-                                <h5 class="card-title">Work Orders <span>| Pending</span></h5>
-                                <div class="d-flex align-items-center">
-                                    <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
-                                        <i class="bi bi-clipboard-check"></i>
-                                    </div>
-                                    <div class="ps-3">
-                                        <h6>{{ work_order_count }}</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div><!-- End Work Orders Card -->
+                    </div>
                 </div>
-            </div><!-- End Metrics -->
+            </div><!-- End Maintenance by Frequency Card -->
+
+            <!-- Work Orders Card -->
+            <div class="col-xxl-3 col-md-4">
+                <div class="card info-card customers-card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Work Orders</h5>
+                        <p class="card-subtitle mb-2 text-muted" style="font-size: 12px;">{{ from_date }} to {{ to_date }}</p>
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon rounded-circle d-flex align-items-center justify-content-center" style="font-size: 14px;">
+                                <i class="bi bi-clipboard-check"></i>
+                            </div>
+                            <div class="ps-3">
+                                <h6 style="font-size: 12px;">Pending: {{ pending_work_orders }}</h6>
+                                <h6 style="font-size: 12px;">Completed: {{ completed_work_orders }}</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- End Work Orders Card -->
         </div>
+
+        <!-- Graphs Section -->
+        <div class="row mt-4">
+            <!-- Maintenance by Month (Bar Chart) -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Maintenance by Month</h5>
+                        <canvas id="maintenanceByMonthChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div><!-- End Maintenance by Month -->
+
+            <!-- Work Orders by Month (Bar Chart) -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Work Orders by Month</h5>
+                        <canvas id="workOrdersByMonthChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div><!-- End Work Orders by Month -->
+
+            <!-- Maintenance by Frequency (Pie Chart) -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Maintenance by Frequency</h5>
+                        <canvas id="maintenanceByFrequencyChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div><!-- End Maintenance by Frequency -->
+
+            <!-- Spare Part Usage (Pie Chart) -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Spare Part Usage</h5>
+                        <canvas id="sparePartUsageChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div><!-- End Spare Part Usage -->
+        </div><!-- End Graphs Section -->
     </section>
 </main><!-- End #main -->
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Maintenance by Month Chart
+    const maintenanceByMonthCtx = document.getElementById('maintenanceByMonthChart').getContext('2d');
+    const maintenanceByMonthChart = new Chart(maintenanceByMonthCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ maintenance_months|safe }},
+            datasets: [{
+                label: 'Maintenance Records',
+                data: {{ maintenance_by_month_data|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 1)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        font: {
+                            size: 10
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Work Orders by Month Chart
+    const workOrdersByMonthCtx = document.getElementById('workOrdersByMonthChart').getContext('2d');
+    const workOrdersByMonthChart = new Chart(workOrdersByMonthCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ work_order_months|safe }},
+            datasets: [
+                {
+                    label: 'Pending Work Orders',
+                    data: {{ pending_work_orders_by_month|safe }},
+                    backgroundColor: 'rgba(255, 99, 132, 1)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Completed Work Orders',
+                    data: {{ completed_work_orders_by_month|safe }},
+                    backgroundColor: 'rgba(75, 192, 192, 1)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        font: {
+                            size: 10
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Maintenance by Frequency Chart
+    const maintenanceByFrequencyCtx = document.getElementById('maintenanceByFrequencyChart').getContext('2d');
+    const maintenanceByFrequencyChart = new Chart(maintenanceByFrequencyCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Daily', 'Weekly', 'Monthly', 'Biannual', 'Annual'],
+            datasets: [{
+                data: [
+                    {{ daily_maintenance_count }},
+                    {{ weekly_maintenance_count }},
+                    {{ monthly_maintenance_count }},
+                    {{ biannual_maintenance_count }},
+                    {{ annual_maintenance_count }}
+                ],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    labels: {
+                        font: {
+                            size: 10
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Spare Part Usage Chart
+    const sparePartUsageCtx = document.getElementById('sparePartUsageChart').getContext('2d');
+    const sparePartUsageChart = new Chart(sparePartUsageCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ spare_part_labels|safe }},
+            datasets: [{
+                data: {{ spare_part_usage_data|safe }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    labels: {
+                        font: {
+                            size: 10
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}
