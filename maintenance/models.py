@@ -298,7 +298,9 @@ class WorkOrder(models.Model):
         auto_now=True,
         help_text='The date and time when the work order was last updated.',
     )
-    updated_at = models.DateTimeField(auto_now=True)
+
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_work_order')
+
 
 
     class Meta:

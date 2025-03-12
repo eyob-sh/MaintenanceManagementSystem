@@ -90,6 +90,8 @@ def loginPage(request):
                 return redirect('maintenance_dashboard')
             elif (request.user.userprofile.role in 'MO'):
                 return redirect('maintenance_oversight_dashboard')
+            elif (request.user.userprofile.role in 'AD'):
+                return redirect('dashboard.html')
         else: 
             messages.error(request, 'Incorrect Username or Password')
         
@@ -2358,18 +2360,31 @@ def generate_report(request):
     report_type = request.GET.get('report_type', 'daily')
     export_format = request.GET.get('format')  # Default to PDF
 
-    # Fetch maintenance records based on report type and date range
-    maintenance_records = MaintenanceRecord.objects.filter(
-        branch=user_branch,
-        maintenance_type=report_type,
-        datetime__range=[from_date, to_date]
-    ).order_by('datetime')
+    if report_type == 'work_order':
+        # Fetch work orders with status 'Approved' based on date range
+        work_orders = WorkOrder.objects.filter(
+            branch=user_branch,
+            status='Approved',
+            created_at__range=[from_date, to_date]
+        ).order_by('created_at')
 
-    if export_format == 'docx':
-        return generate_editable_doc(maintenance_records, report_type, from_date, to_date)
+        if export_format == 'docx':
+            return generate_editable_doc_work_order(work_orders, report_type, from_date, to_date)
+        else:
+            return generate_pdf_work_order(work_orders, report_type, from_date, to_date)
     else:
-        return generate_pdf(maintenance_records, report_type, from_date, to_date)
+        # Fetch maintenance records based on report type and date range
+        maintenance_records = MaintenanceRecord.objects.filter(
+            branch=user_branch,
+            maintenance_type=report_type,
+            datetime__range=[from_date, to_date]
+        ).order_by('datetime')
 
+        if export_format == 'docx':
+            return generate_editable_doc(maintenance_records, report_type, from_date, to_date)
+        else:
+            return generate_pdf(maintenance_records, report_type, from_date, to_date)
+        
 def generate_pdf(maintenance_records, report_type, from_date, to_date):
     # Create a PDF document
     response = HttpResponse(content_type='application/pdf')
@@ -2559,6 +2574,163 @@ def generate_editable_doc(maintenance_records, report_type, from_date, to_date):
     return response
 #----------------------------------------------------------------------------------------------------
 
+def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
+    # Create a PDF document
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{report_type}_work_order_report.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=letter)
+    elements = []
+
+    # Add title
+    styles = getSampleStyleSheet()
+    title = Paragraph(f"Work Order Report", styles['Title'])
+    elements.append(title)
+
+    # Add branch and date range
+    elements.append(Paragraph(f"Branch: {work_orders[0].branch.name}", styles['Normal']))
+    elements.append(Paragraph(f"From  {from_date}  to  {to_date}", styles['Normal']))
+
+    space_style = ParagraphStyle(name='Space', spaceAfter=30)  # Adjust spaceAfter value as needed
+    elements.append(Paragraph("", space_style))  # Empty paragraph with spacing
+
+    # Create table data
+    data = [['Equipment', 'Location', 'Requester']]
+    for work_order in work_orders:
+        data.append([
+            work_order.equipment.name,
+            work_order.equipment.location,
+            work_order.requester.get_full_name()
+        ])
+
+    # Create table
+    table = Table(data, colWidths=[3*inch, 3*inch, 2*inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+
+    elements.append(table)
+
+    # Add Technician and Approved By sections
+    for work_order in work_orders:
+        # Add space between records
+        elements.append(Paragraph("<br/><br/>", styles['Normal']))
+
+        # Create a table with one row and two columns
+        table_data = [
+            [
+                Paragraph(f"<b>Technician:</b><br/><br/>" + "<br/><br/>".join([tech.get_full_name() for tech in work_order.assigned_technicians.all()])),  # Left column
+                Paragraph(f"<b>Approved By:</b><br/><br/>{work_order.approved_by.get_full_name() if work_order.approved_by else 'N/A'}")  # Right column
+            ]
+        ]
+
+        # Define column widths (adjust as needed)
+        col_widths = [3 * inch, 3 * inch]  # Equal width for both columns
+
+        # Create the table
+        table = Table(table_data, colWidths=col_widths)
+        table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Align text to the left
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align text to the top
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),  # Add padding at the bottom
+        ]))
+
+        # Add the table to the elements
+        elements.append(table)
+
+    # Build the PDF
+    doc.build(elements)
+    return response
+#------------------------------------------------------------------------------------------------------
+def generate_editable_doc_work_order(work_orders, report_type, from_date, to_date):
+    # Create a Word document
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    response['Content-Disposition'] = f'attachment; filename="{report_type}_work_order_report.docx"'
+
+    doc = Document()
+
+    # Add main title
+    title = doc.add_heading("Work Order Report", level=1)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title.style.font.size = Pt(18)  # Make the title smaller
+
+    # Add branch and date range
+    branch_paragraph = doc.add_paragraph(f"Branch: {work_orders[0].branch.name}", style='Intense Quote')
+    branch_paragraph.paragraph_format.space_after = Pt(0)
+    date_paragraph = doc.add_paragraph(f"From {from_date} to {to_date}", style='Intense Quote')
+    date_paragraph.paragraph_format.space_before = Pt(0)  # Remove space before this paragraph
+    date_paragraph.paragraph_format.space_after = Pt(20)  # Add space after this paragraph
+
+    # Create table
+    table = doc.add_table(rows=1, cols=3)
+    table.style = 'Table Grid'
+    table.autofit = False
+
+    # Set column widths
+    col_widths = [3, 3, 2]  # Widths in inches
+    for i, width in enumerate(col_widths):
+        col = table.columns[i]
+        col.width = Inches(width)
+
+    # Add table headers
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'Equipment'
+    hdr_cells[1].text = 'Location'
+    hdr_cells[2].text = 'Requester'
+
+    # Add work order data
+    for work_order in work_orders:
+        row_cells = table.add_row().cells
+        row_cells[0].text = work_order.equipment.name
+        row_cells[1].text = work_order.equipment.location
+        row_cells[2].text = work_order.requester.get_full_name()
+
+        # Add space between records
+        doc.add_paragraph()
+
+        # Create a table with one row and two columns
+        table = doc.add_table(rows=1, cols=2)
+        table.autofit = False
+
+        # Set column widths (adjust as needed)
+        table.columns[0].width = Inches(3)  # Width for the "Technician" column
+        table.columns[1].width = Inches(3)  # Width for the "Approved by" column
+
+        # Add "Technician" to the first cell
+        technician_cell = table.rows[0].cells[0]
+        technician_cell.text = "Technician:"
+        for paragraph in technician_cell.paragraphs:
+            for run in paragraph.runs:
+                run.bold = True  # Make "Technician" bold
+
+        # Add technician names below "Technician"
+        for tech in work_order.assigned_technicians.all():
+            technician_cell.add_paragraph(tech.get_full_name(), style='List Bullet')
+
+        # Add "Approved by" to the second cell
+        approved_by_cell = table.rows[0].cells[1]
+        approved_by_paragraph = approved_by_cell.add_paragraph()
+        approved_by_paragraph.add_run("Approved by: ").bold = True  # Make "Approved by" bold
+        approved_by_paragraph.add_run(work_order.approved_by.get_full_name() if work_order.approved_by else "N/A")
+
+    # Save the document to a BytesIO stream
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    response.write(buffer.getvalue())
+    buffer.close()
+
+    return response
+
+#--------------------------------------------------------------------------------------------------------
+
+
 
 def maintenance_oversight_dashboard(request):
     user = request.user
@@ -2719,8 +2891,6 @@ def maintenance_oversight_dashboard(request):
     }
 
     return render(request, 'maintenance_oversight_dashboard.html', context)
-
-
 def export_maintenance_report_pdf(request):
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="maintenance_report.pdf"'
@@ -2764,3 +2934,23 @@ def export_maintenance_report_pdf(request):
     # Build the PDF
     doc.build(elements)
     return response
+
+
+def dashboard(request):
+    notifications = get_notifications(request.user)
+
+
+
+    user_count = User.objects.count()
+    equipment_count = Equipment.objects.count()
+    branch_count = User.objects.values('userprofile__branch').distinct().count()
+
+    context = {
+        'user_count': user_count,
+        'equipment_count': equipment_count,
+        'branch_count': branch_count,
+        'notifications':notifications,
+        'active_page':'dashboard' }
+    
+
+    return render(request, 'dashboard.html', context)#     return render(request, 'dashboard.html', context)
