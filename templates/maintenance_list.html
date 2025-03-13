@@ -40,13 +40,14 @@
                                     <i class="bi bi-upload"></i> Import
                                 </a>
                             </div>
-
+                            {% if request.user.userprofile.role in "MD manager" %}
                             <!-- Add Maintenance Button -->
                             <div class="d-flex justify-content-end mb-3">
                                 <a href="{% url 'add_maintenance' %}" class="btn btn-success bg-success">
                                     <i class="bi bi-plus"></i> Add Maintenance
                                 </a>
                             </div>
+                            {% endif %}
                         </div>
 
                         <!-- Maintenance List Table -->

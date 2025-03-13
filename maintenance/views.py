@@ -482,6 +482,7 @@ def add_work_order(request):
         equipment_id = request.POST.get('equipment')
         location = request.POST.get('location')
         description = request.POST.get('description')
+        remark = request.POST.get('remark')
         status = 'Pending'  # Default status
         if(request.user.userprofile.role == 'MD manager'):
             status = 'Accepted'
@@ -497,6 +498,7 @@ def add_work_order(request):
                 equipment_id=equipment_id,
                 location = location,
                 description=description,
+                remark = remark,
                 status=status
             )
             messages.success(request, 'Work Order added successfully!')
@@ -528,6 +530,7 @@ def edit_work_order(request, id):
     if request.method == 'POST':
         # Get form data
         equipment_id = request.POST.get('equipment')
+        remark = request.POST.get('remark')
         assigned_technicians = request.POST.getlist('assigned_technicians[]')
         spare_parts_post = request.POST.getlist('spare_parts[]')
         spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
@@ -537,6 +540,7 @@ def edit_work_order(request, id):
             if equipment_id:
                 equipment = Equipment.objects.get(id=equipment_id)
                 work_order.equipment = equipment
+                work_order.remark = remark
                 work_order.save()
 
             # Step 2: Update assigned technicians (only for MD manager)
@@ -1362,7 +1366,7 @@ def add_maintenance(request):
         remark = request.POST.get('remark')
         procedure = request.POST.get('procedure')
         problems = request.POST.get('problems')
-        status = request.POST.get('status')
+        # status = request.POST.get('status')
 
         try:
             # Step 1: Get the selected equipment
@@ -1569,7 +1573,7 @@ def edit_maintenance(request, id):
                     )
 
                 messages.success(request, 'Maintenance record updated successfully!')
-                return redirect('maintenance_list')
+                return redirect('edit_maintenance',id = id)
             except Exception as e:
                 messages.error(request, f'An error occurred: {str(e)}')
                 return render(request, 'edit_maintenance.html', {
@@ -1713,7 +1717,7 @@ def complete_maintenance(request, maintenance_id):
         
     else:
         messages.error(request, 'You are not assigned to this task.')
-    return redirect('edit_maintenance',id = maintenance_id)
+    return redirect('maintenance_list')
 
 #-------------------------------------approve maintenance-----------------------------------------------------
 
@@ -1758,6 +1762,25 @@ def approve_maintenance(request, maintenance_id):
         messages.error(request, 'You are not authorized to approve this task.')
     return redirect('maintenance_list')
 
+#---------------------------------------------------------------reject maintenance-----------------------------------------
+
+def reject_maintenance(request, maintenance_id):
+    
+    maintenance = get_object_or_404(MaintenanceRecord, id=maintenance_id)
+    if request.user.userprofile.role == 'MD manager':
+        maintenance.status = 'Rejected'
+        maintenance.rejected_by = request.user
+        maintenance.save()
+        for technician in maintenance.assigned_technicians.all():
+            Notification.objects.create(
+                user= technician,
+                type = 'work_order',
+                message=f'The {maintenance.maintenance_type} maintenance for {maintenance.equipment.name} has been rejected by {maintenance.rejected_by}.',
+            )
+        messages.success(request, 'maintenance Rejected.')
+    else:
+        messages.error(request, 'You did not assign this work order.')
+    return redirect('maintenance_list')
 #------------------------------------------------------accept work order------------------------------------
 
 def accept_work_order(request, work_order_id):
@@ -1779,10 +1802,16 @@ def reject_work_order(request, work_order_id):
         work_order.status = 'Rejected'
         work_order.rejected_by = request.user
         work_order.save()
+        for technician in work_order.assigned_technicians.all():
+            Notification.objects.create(
+                user= technician,
+                type = 'work_order',
+                message=f'The work order for {work_order.equipment.name} has been rejected by {work_order.rejected_by}.',
+            )
         messages.success(request, 'Work order Rejected.')
     else:
         messages.error(request, 'You did not assign this work order.')
-    return redirect('edit_work_order', id=work_order.id)
+    return redirect('work_order_list')
 
 #-------------------------------------------------------complete work order--------------------
 

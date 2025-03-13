@@ -97,8 +97,8 @@
                                     <input class="form-check-input" type="checkbox" 
                                            name="completed_tasks" value="{{ task.id }}" 
                                            id="task-{{ task.id }}"
-                                           {% if task.id in completed_task_ids %}checked{% endif %}>
-                                    <label class="form-check-label" for="task-{{ task.id }}">
+                                           {% if task.id in completed_task_ids %}checked{% endif %}
+                                           {% if request.user.userprofile.role == 'MO' or request.user.userprofile.role == 'MD manager' or maintenance.status == 'Approved' %}disabled{% endif %}                                    <label class="form-check-label" for="task-{{ task.id }}">
                                         {{ task.description }}
                                     </label>
                                 </div>
@@ -118,6 +118,21 @@
                                     <!-- Spare Parts Section -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
+                                            {% if request.user.userprofile.role == 'MD manager' or maintenance.status == 'Approved' %}
+                                            <label class="form-label">Spare Parts</label>
+                                                <!-- For MD Manager or Approved Work Order: Show Read-Only List of Spare Parts -->
+                                                <ul class="list-group">
+                                                    {% for usage in spare_part_usages %}
+                                                        <li class="list-group-item">
+                                                            {{ usage.spare_part.name }} - Quantity Used: {{ usage.quantity_used }}
+                                                        </li>
+                                                    {% empty %}
+                                                        <li class="list-group-item">No spare parts used.</li>
+                                                    {% endfor %}
+                                                </ul>
+
+
+                                            {% elif request.user.userprofile.role == 'TEC' and maintenance.status != 'Approved' %}
                                             <label class="form-label">Spare Parts</label>
                                             {% for usage in spare_part_usages %}
                                             <div class="row mb-3 spare-part-row">
@@ -151,6 +166,7 @@
                                                     </button>
                                                 </div>
                                             </div>
+                                            {% endif %}
                                         </div>
                                     </div>
 
@@ -198,12 +214,14 @@
                                             {% if request.user.userprofile.role == 'TEC' %}
                                                 {% if maintenance.status == 'Not Started' %}
                                                     <a href="{% url 'accept_maintenance' maintenance.id %}" class="btn btn-warning">Accept</a>
-                                                {% elif maintenance.status == 'Accepted' %}
+                                                {% elif maintenance.status == 'Accepted' or maintenance.status == 'Rejected' %}
                                                     <a href="{% url 'complete_maintenance' maintenance.id %}" class="btn btn-success">Complete</a>
                                                 {% endif %}
                                             {% elif request.user.userprofile.role == 'MD manager' %}
                                                 {% if maintenance.status == 'Complete' %}
                                                     <a href="{% url 'approve_maintenance' maintenance.id %}" class="btn btn-primary">Approve</a>
+                                                    &nbsp;&nbsp;&nbsp;
+                                                    <a href="{% url 'reject_maintenance' maintenance.id %}" class="btn btn-danger">Reject</a>
                                                 {% endif %}
                                             {% endif %}
                                         </div>
@@ -232,45 +250,87 @@
         // Add Spare Part Button
         const addSparePartButton = document.getElementById('add-spare-part');
         const additionalSparePartsContainer = document.getElementById('additional-spare-parts');
-
-        addSparePartButton.addEventListener('click', function () {
-            const newRow = document.createElement('div');
-            newRow.classList.add('row', 'mb-3', 'spare-part-row');
-
-            newRow.innerHTML = `
-                <div class="col-md-6">
-                    <select class="form-select spare-part-select" name="spare_parts[]">
-                        <option value="">Select Spare Part</option>
-                        {% for spare_part in spare_parts %}
-                        <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}">
-                            {{ spare_part.name }} ({{ spare_part.quantity }} available)
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity">
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-danger remove-spare-part">Remove</button>
-                </div>
-            `;
-
-            additionalSparePartsContainer.appendChild(newRow);
-
-            // Add event listener to the new remove button
-            newRow.querySelector('.remove-spare-part').addEventListener('click', function () {
-                newRow.remove();
-            });
+        
+       // Function to update spare part options
+    function updateSparePartOptions() {
+        const selectedSpareParts = new Set();
+        document.querySelectorAll('.spare-part-select').forEach(select => {
+            if (select.value) {
+                selectedSpareParts.add(select.value);
+            }
         });
 
-        // Remove Spare Part Button (for existing rows)
-        document.querySelectorAll('.remove-spare-part').forEach(button => {
-            button.addEventListener('click', function () {
-                this.closest('.spare-part-row').remove();
+        document.querySelectorAll('.spare-part-select').forEach(select => {
+            const currentValue = select.value;
+            Array.from(select.options).forEach(option => {
+                if (option.value && selectedSpareParts.has(option.value) && option.value !== currentValue) {
+                    option.style.display = 'none';
+                } else {
+                    option.style.display = '';
+                }
             });
+        });
+    }
+
+    // Add event listener to the add spare part button
+    addSparePartButton.addEventListener('click', function () {
+        const newRow = document.createElement('div');
+        newRow.classList.add('row', 'mb-3', 'spare-part-row');
+
+        newRow.innerHTML = `
+            <div class="col-md-6">
+                <select class="form-select spare-part-select" name="spare_parts[]">
+                    <option value="">Select Spare Part</option>
+                    {% for spare_part in spare_parts %}
+                    <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}">
+                        {{ spare_part.name }} ({{ spare_part.quantity }} available)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger remove-spare-part">Remove</button>
+            </div>
+        `;
+
+        additionalSparePartsContainer.appendChild(newRow);
+
+        // Add event listener to the new remove button
+        newRow.querySelector('.remove-spare-part').addEventListener('click', function () {
+            newRow.remove();
+            updateSparePartOptions();
+        });
+
+        // Add event listener to the new select element
+        newRow.querySelector('.spare-part-select').addEventListener('change', function () {
+            updateSparePartOptions();
+        });
+
+        // Update the spare part options immediately after adding a new row
+        updateSparePartOptions();
+    });
+
+    // Remove Spare Part Button (for existing rows)
+    document.querySelectorAll('.remove-spare-part').forEach(button => {
+        button.addEventListener('click', function () {
+            this.closest('.spare-part-row').remove();
+            updateSparePartOptions();
         });
     });
+
+    // Add event listener to existing select elements
+    document.querySelectorAll('.spare-part-select').forEach(select => {
+        select.addEventListener('change', function () {
+            updateSparePartOptions();
+        });
+    });
+
+    // Initial update of spare part options
+    updateSparePartOptions();
+});
 </script>
 
 {% endblock %}

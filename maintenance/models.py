@@ -300,6 +300,8 @@ class WorkOrder(models.Model):
     )
 
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_work_order')
+    rejected_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='rejected_work_order')
+    remark = models.TextField(blank=True, null=True)
 
 
 
@@ -341,6 +343,8 @@ class MaintenanceRecord(models.Model):
     status = models.CharField(choices=STATUS_CHOICES, default='Not Started', max_length=15)
     datetime = models.DateTimeField(auto_now_add=True)
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_maintenance')
+    rejected_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='rejected_maintenance')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

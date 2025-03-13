@@ -125,7 +125,9 @@ path('add_maintenance_task_page/', views.add_maintenance_task_page, name = "add_
     #-----------------------------------------------------------------------------------
  path('accept_maintenance/<int:maintenance_id>/', views.accept_maintenance, name='accept_maintenance'),
     path('complete_maintenance/<int:maintenance_id>/', views.complete_maintenance, name='complete_maintenance'),
-    path('approve_maintenance/<int:maintenance_id>/', views.approve_maintenance, name='approve_maintenance'),    
+    path('approve_maintenance/<int:maintenance_id>/', views.approve_maintenance, name='approve_maintenance'),
+    path('reject_maintenance/<int:maintenance_id>/', views.reject_maintenance, name = 'reject_maintenance'),    
+    
     #-----------------------------------------------------------------------------------------------------------
     
     path('accept_work_order/<int:work_order_id>/', views.accept_work_order, name='accept_work_order'),

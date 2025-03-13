@@ -6,7 +6,7 @@ from .models import DecommissionedEquipment, MaintenanceTask ,MaintenanceRecord,
 admin.site.register(Branch)
 admin.site.register(UserProfile)
 admin.site.register(Manufacturer)
-admin.site.register(Equipment)
+# admin.site.register(Equipment)
 admin.site.register(SparePart)
 admin.site.register(DecommissionedEquipment)
 admin.site.register(MaintenanceTask)
@@ -18,3 +18,8 @@ admin.site.register(WorkOrder)
 admin.site.register(SparePartUsage)
 admin.site.register(Notification)
 admin.site.register(RestockSparePart)
+
+
+@admin.register(Equipment)
+class EquipmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'equipment_type', 'manufacturer', 'model_number', 'status', 'created_at')  # Add created_at here

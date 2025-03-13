@@ -125,7 +125,7 @@
             </div>
         </div>
     </div>
-</div>
+</div>                               {% comment %}
                                     <!-- Spare Parts Section -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
@@ -166,6 +166,7 @@
                                             </div>
                                         </div>
                                     </div>
+                                    {% endcomment %}
 
                                     <!-- Error Message Container -->
                                     <div id="errorMessages" class="alert alert-danger d-none mb-3"></div>
@@ -174,16 +175,14 @@
                                 <!-- Right Column -->
                                 <div class="col-md-4">
                                     <!-- Status -->
+
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="status" class="form-label">Status</label>
-                                            <select class="form-select" id="status" name="status" required>
-                                                <option selected disabled value="">Select Status</option>
-                                                <option value="Not Started">Not Started</option>
-                                                <option value="Complete">Complete</option>
-                                                <option value="In Progress">In Progress</option>
-                                                <option value="Failed">Failed</option>
-                                            </select>
+                                            <div class="form-control-plaintext"> <!-- Use this to display the status as read-only -->
+                                                Not Started <!-- This is the default display value -->
+                                            </div>
+                                            <input type="hidden" name="status" value="Not Started"> <!-- To actually store the value in the form -->
                                             <div class="invalid-feedback">Please select a status.</div>
                                         </div>
                                     </div>
@@ -333,50 +332,94 @@
         const addSparePartButton = document.getElementById('add-spare-part');
         const sparePartContainer = document.getElementById('additional-spare-parts');
     
-        if (addSparePartButton && sparePartContainer) {
-            addSparePartButton.addEventListener('click', function () {
-                const newRow = document.createElement('div');
-                newRow.className = 'row mb-3 spare-part-row';
+        // Function to update spare part dropdown options
+        // if (addSparePartButton && sparePartContainer) {
     
-                newRow.innerHTML = `
-                    <div class="col-md-6">
-                        <select class="form-select spare-part-select" name="spare_parts[]">
-                            <option value="">Select Spare Part</option>
-                            {% for spare_part in spare_parts %}
-                            <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}">
-                                {{ spare_part.name }} ({{ spare_part.quantity }} available)
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity">
-                    </div>
-                    <div class="col-md-2">
-                        <button type="button" class="btn btn-primary-sm mb-3 remove-spare-part" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; ">Remove</button>
-                    </div>
-                `;
-    
-                sparePartContainer.appendChild(newRow);
-    
-                // Enable remove button for all rows
-                document.querySelectorAll('.remove-spare-part').forEach(button => {
-                    button.disabled = false;
-                });
-            });
-    
-            // Remove spare part row
-            sparePartContainer.addEventListener('click', function (event) {
-                if (event.target.classList.contains('remove-spare-part')) {
-                    event.target.closest('.spare-part-row').remove();
-    
-                    // Disable remove button if only one row is left
-                    if (document.querySelectorAll('.spare-part-row').length === 1) {
-                        document.querySelector('.remove-spare-part').disabled = true;
-                    }
-                }
-            });
-        }
+//     function updateSparePartOptions() {
+//         const selectedSpareParts = new Set();
+//         document.querySelectorAll('.spare-part-select').forEach(select => {
+//             if (select.value) {
+//                 selectedSpareParts.add(select.value); // Track selected spare parts
+//             }
+//         });
+
+//         document.querySelectorAll('.spare-part-select').forEach(select => {
+//             const currentValue = select.value;
+//             Array.from(select.options).forEach(option => {
+//                 if (option.value && selectedSpareParts.has(option.value) && option.value !== currentValue) {
+//                     option.style.display = 'none'; // Hide already selected spare parts
+//                 } else {
+//                     option.style.display = ''; // Show available spare parts
+//                 }
+//             });
+//         });
+//     }
+
+//     // Add spare part row
+//     addSparePartButton.addEventListener('click', function () {
+//         const newRow = document.createElement('div');
+//         newRow.className = 'row mb-3 spare-part-row';
+
+//         newRow.innerHTML = `
+//             <div class="col-md-6">
+//                 <select class="form-select spare-part-select" name="spare_parts[]">
+//                     <option value="">Select Spare Part</option>
+//                     {% for spare_part in spare_parts %}
+//                     <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}">
+//                         {{ spare_part.name }} ({{ spare_part.quantity }} available)
+//                     </option>
+//                     {% endfor %}
+//                 </select>
+//             </div>
+//             <div class="col-md-4">
+//                 <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity">
+//             </div>
+//             <div class="col-md-2">
+//                 <button type="button" class="btn btn-primary-sm mb-3 remove-spare-part" style="background-color:lightcoral;font-size: 12px;padding:2px 10px;">Remove</button>
+//             </div>
+//         `;
+
+//         sparePartContainer.appendChild(newRow);
+
+//         // Enable remove button for all rows
+//         document.querySelectorAll('.remove-spare-part').forEach(button => {
+//             button.disabled = false;
+//         });
+
+//         // Add event listener to the new select element
+//         newRow.querySelector('.spare-part-select').addEventListener('change', function () {
+//             updateSparePartOptions();
+//         });
+
+//         // Update the spare part options immediately after adding a new row
+//         updateSparePartOptions();
+//     });
+
+//     // Remove spare part row
+//     sparePartContainer.addEventListener('click', function (event) {
+//         if (event.target.classList.contains('remove-spare-part')) {
+//             event.target.closest('.spare-part-row').remove();
+
+//             // Disable remove button if only one row is left
+//             if (document.querySelectorAll('.spare-part-row').length === 1) {
+//                 document.querySelector('.remove-spare-part').disabled = true;
+//             }
+
+//             // Update the spare part options after removing a row
+//             updateSparePartOptions();
+//         }
+//     });
+
+//     // Add event listener to existing select elements
+//     document.querySelectorAll('.spare-part-select').forEach(select => {
+//         select.addEventListener('change', function () {
+//             updateSparePartOptions();
+//         });
+//     });
+
+//     // Initial update of spare part options
+//     updateSparePartOptions();
+// }
     
         // --- Frontend Validation ---
         const form = document.getElementById('maintenanceForm');

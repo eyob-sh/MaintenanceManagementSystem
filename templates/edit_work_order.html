@@ -224,7 +224,17 @@
                                             <div class="invalid-feedback">Please select a status.</div>
                                         </div>
                                     </div>
-                                
+                                     
+                                    <!-- Remark -->
+                                    {% if request.user.userprofile.role == 'TEC' %}
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="remark" class="form-label">Remark</label>
+                                            <textarea class="form-control" id="remark" name="remark"
+                                                rows="3"></textarea>
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                     <div class="row mb-3 text-center">
                                         <div class="col-md-12">
                                             {% if request.user.userprofile.role == 'MD manager' %}
