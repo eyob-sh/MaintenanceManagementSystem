@@ -91,7 +91,7 @@ def loginPage(request):
             elif (request.user.userprofile.role in 'MO'):
                 return redirect('maintenance_oversight_dashboard')
             elif (request.user.userprofile.role in 'AD'):
-                return redirect('dashboard.html')
+                return redirect('dashboard')
         else: 
             messages.error(request, 'Incorrect Username or Password')
         
@@ -2937,9 +2937,11 @@ def export_maintenance_report_pdf(request):
 
 
 def dashboard(request):
+    # Check if the user is an admin (AD)
+    if request.user.userprofile.role != 'AD':
+        return HttpResponse("You do not have permission to access this page.")
+
     notifications = get_notifications(request.user)
-
-
 
     user_count = User.objects.count()
     equipment_count = Equipment.objects.count()
@@ -2949,8 +2951,8 @@ def dashboard(request):
         'user_count': user_count,
         'equipment_count': equipment_count,
         'branch_count': branch_count,
-        'notifications':notifications,
-        'active_page':'dashboard' }
-    
+        'notifications': notifications,
+        'active_page': 'dashboard'
+    }
 
-    return render(request, 'dashboard.html', context)#     return render(request, 'dashboard.html', context)
+    return render(request, 'dashboard.html', context)

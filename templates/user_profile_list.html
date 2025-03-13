@@ -26,13 +26,29 @@
                 <div class="card">
                     <div class="card-body">
 
-                        <div class="d-flex justify-content-end mb-3" style="margin-top: 20px;">
-                            <a href="{% url 'add_user_profile_page' %}" class="btn btn-success bg-success">
-                                <i class="bi bi-plus"></i> Add User 
-                            </a>
+                        <!-- Add User and Import/Export Buttons -->
+                        <div class="d-flex justify-content-between align-items-center mb-3" style="margin-top: 20px;">
+                            <div>
+                                <!-- Export Button -->
+                                <a href="{% url 'export_data' model_name='UserProfile' %}" class="btn btn-link text-success">
+                                    <i class="bi bi-download"></i> Export
+                                </a>
+                                <!-- Import Button -->
+                                <a href="{% url 'import_data' model_name='UserProfile' %}" class="btn btn-link text-success">
+                                    <i class="bi bi-upload"></i> Import
+                                </a>
+                            </div>
+
+                            <!-- Add User Button -->
+                            <div>
+                                <a href="{% url 'add_user_profile_page' %}" class="btn btn-success bg-success">
+                                    <i class="bi bi-plus"></i> Add User
+                                </a>
+                            </div>
                         </div>
 
-                        <table class="table datatable">
+                        <!-- User Profiles Table -->
+                        <table id="user-profiles-table" class="table table-striped table-hover" style="width:100%">
                             <thead>
                                 <tr>
                                     <th>User</th>
@@ -46,10 +62,10 @@
                                 <tr>
                                     <td>{{ user_profile.user.username }}</td>
                                     <td>{{ user_profile.branch.name }}</td>
-                                    <td>{{ user_profile.get_role_display }}</td>  <!-- Display role -->
+                                    <td>{{ user_profile.get_role_display }}</td>
                                     <td>
-                                        <a href="{% url 'edit_user_profile' user_profile.id %}" class="btn btn-warning">Edit</a>
-                                    </td> 
+                                        <a href="{% url 'edit_user_profile' user_profile.id %}"><i class="bi bi-pencil-fill"></i></a>
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
@@ -68,5 +84,68 @@
 
 </main><!-- End #main -->
 
-{% endblock %}
+<!-- Initialize DataTables with Search Bars -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dataTable = new simpleDatatables.DataTable("#user-profiles-table", {
+            perPageSelect: [10, 25, 50, ["All", -1]], // Pagination options
+            columns: [
+                { select: 0, type: "string" }, // User
+                { select: 1, type: "string" }, // Branch
+                { select: 2, type: "string" }, // Role
+                { select: 3, sortable: false } // Actions (not sortable)
+            ],
+            labels: {
+                placeholder: "",
+                perPage: "Rows per page",
+                noRows: "No user profiles found",
+                info: "Showing {start} to {end} of {rows} entries"
+            },
+            tableRender: (_data, table, type) => {
+                if (type === "print") {
+                    return table;
+                }
+                const tHead = table.childNodes[0];
+                const filterHeaders = {
+                    nodeName: "TR",
+                    childNodes: tHead.childNodes[0].childNodes.map(
+                        (_th, index) => {
+                            // Skip filter inputs for "Actions" column
+                            if (index === 3) {
+                                return { nodeName: "TH" }; // Return an empty header cell
+                            }
+                            return {
+                                nodeName: "TH",
+                                childNodes: [
+                                    {
+                                        nodeName: "INPUT",
+                                        attributes: {
+                                            class: "datatable-input",
+                                            type: "search",
+                                            "data-columns": `[${index}]`,
+                                            style: "width: 100%; max-width: 120px;" // Reduce input size
+                                        }
+                                    }
+                                ]
+                            };
+                        }
+                    )
+                };
+                tHead.childNodes.push(filterHeaders);
+                return table;
+            }
+        });
+    });
+</script>
 
+<style>
+    /* Custom CSS for search fields */
+    .datatable-input {
+        width: 100%;
+        max-width: 120px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+</style>
+
+{% endblock %}

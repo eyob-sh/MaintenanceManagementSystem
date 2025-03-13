@@ -253,6 +253,14 @@
           <span>Dashboard</span>
         </a>
       </li>
+      {% elif request.user.userprofile.role in "AD" and not request.user.is_superuser %}
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'dashboard' %}collapsed{% endif %}" href="{% url 'dashboard' %}">
+          <i class="bi bi-grid"></i>
+          <span>Dashboard</span>
+        </a>
+      </li>
       {% endif %}
       <!-- Maintenance Department Manager, Technician, Maintenance Oversight -->
       {% if request.user.userprofile.role in "MD manager TEC MO" and not request.user.is_superuser %}
