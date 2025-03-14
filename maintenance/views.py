@@ -2406,7 +2406,8 @@ def generate_report(request):
         maintenance_records = MaintenanceRecord.objects.filter(
             branch=user_branch,
             maintenance_type=report_type,
-            datetime__range=[from_date, to_date]
+            datetime__range=[from_date, to_date],
+            status = 'Approved'
         ).order_by('datetime')
 
         if export_format == 'docx':
@@ -2426,6 +2427,12 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
     styles = getSampleStyleSheet()
     title = Paragraph(f"{report_type.capitalize()} Maintenance Report", styles['Title'])
     elements.append(title)
+    
+    # Check if maintenance_records is empty
+    if not maintenance_records:
+        elements.append(Paragraph("No maintenance records found for the selected date range and report type.", styles['Normal']))
+        doc.build(elements)
+        return response
 
     # Add branch and date range
     elements.append(Paragraph(f"Branch: {maintenance_records[0].branch.name}", styles['Normal']))
@@ -2516,6 +2523,16 @@ def generate_editable_doc(maintenance_records, report_type, from_date, to_date):
     title = doc.add_heading(f"{report_type.capitalize()} Maintenance Report", level=1)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER 
     title.style.font.size = Pt(18)  # Make the title smaller
+    
+    if not maintenance_records:
+        doc.add_paragraph("No maintenance records found for the selected date range and report type.", style='Intense Quote')
+        # Save the document to a BytesIO stream
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+        response.write(buffer.getvalue())
+        buffer.close()
+        return response
 
     # Add branch and date range
     branch_paragraph = doc.add_paragraph(f"Branch: {maintenance_records[0].branch.name}", style='Intense Quote' )
@@ -2615,6 +2632,12 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
     styles = getSampleStyleSheet()
     title = Paragraph(f"Work Order Report", styles['Title'])
     elements.append(title)
+    
+    
+    if not work_orders:
+        elements.append(Paragraph("No maintenance records found for the selected date range and report type.", styles['Normal']))
+        doc.build(elements)
+        return response
 
     # Add branch and date range
     elements.append(Paragraph(f"Branch: {work_orders[0].branch.name}", styles['Normal']))
@@ -2623,55 +2646,54 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
     space_style = ParagraphStyle(name='Space', spaceAfter=30)  # Adjust spaceAfter value as needed
     elements.append(Paragraph("", space_style))  # Empty paragraph with spacing
 
-    # Create table data
-    data = [['Equipment', 'Location', 'Requester']]
+    # Iterate through each work order
     for work_order in work_orders:
-        data.append([
-            work_order.equipment.name,
-            work_order.equipment.location,
-            work_order.requester.get_full_name()
-        ])
+        # Create table data for the current work order
+        data = [
+            ['Equipment', 'Location', 'Requester'],  # Header row
+            [
+                work_order.equipment.name,
+                work_order.equipment.location,
+                work_order.requester.get_full_name()
+            ],
+            ['Remark:', work_order.remark if work_order.remark else 'N/A', '']  # Remark row spanning all columns
+        ]
 
-    # Create table
-    table = Table(data, colWidths=[3*inch, 3*inch, 2*inch])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
+        # Create table for the current work order
+        table = Table(data, colWidths=[3*inch, 3*inch, 2*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),  # Header row background
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Header row text color
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center align all cells
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header row font
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),  # Header row padding
+            ('BACKGROUND', (0, 1), (-1, -2), colors.beige),  # Data rows background
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Grid lines
+            ('SPAN', (0, 2), (-1, 2)),  # Span the Remark row across all columns
+            ('ALIGN', (0, 2), (0, 2), 'LEFT'),  # Align "Remark:" text to the left
+        ]))
 
-    elements.append(table)
+        elements.append(table)
 
-    # Add Technician and Approved By sections
-    for work_order in work_orders:
-        # Add space between records
-        elements.append(Paragraph("<br/><br/>", styles['Normal']))
-
-        # Create a table with one row and two columns
-        table_data = [
+        # Add Technician and Approved By sections
+        tech_approved_table_data = [
             [
                 Paragraph(f"<b>Technician:</b><br/><br/>" + "<br/><br/>".join([tech.get_full_name() for tech in work_order.assigned_technicians.all()])),  # Left column
                 Paragraph(f"<b>Approved By:</b><br/><br/>{work_order.approved_by.get_full_name() if work_order.approved_by else 'N/A'}")  # Right column
             ]
         ]
 
-        # Define column widths (adjust as needed)
-        col_widths = [3 * inch, 3 * inch]  # Equal width for both columns
-
-        # Create the table
-        table = Table(table_data, colWidths=col_widths)
-        table.setStyle(TableStyle([
+        tech_approved_table = Table(tech_approved_table_data, colWidths=[3*inch, 3*inch])
+        tech_approved_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Align text to the left
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align text to the top
             ('BOTTOMPADDING', (0, 0), (-1, -1), 12),  # Add padding at the bottom
         ]))
 
-        # Add the table to the elements
-        elements.append(table)
+        elements.append(tech_approved_table)
+
+        # Add space between work orders
+        elements.append(Paragraph("<br/><br/>", styles['Normal']))
 
     # Build the PDF
     doc.build(elements)
@@ -2696,43 +2718,58 @@ def generate_editable_doc_work_order(work_orders, report_type, from_date, to_dat
     date_paragraph.paragraph_format.space_before = Pt(0)  # Remove space before this paragraph
     date_paragraph.paragraph_format.space_after = Pt(20)  # Add space after this paragraph
 
-    # Create table
-    table = doc.add_table(rows=1, cols=3)
-    table.style = 'Table Grid'
-    table.autofit = False
-
-    # Set column widths
-    col_widths = [3, 3, 2]  # Widths in inches
-    for i, width in enumerate(col_widths):
-        col = table.columns[i]
-        col.width = Inches(width)
-
-    # Add table headers
-    hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = 'Equipment'
-    hdr_cells[1].text = 'Location'
-    hdr_cells[2].text = 'Requester'
-
-    # Add work order data
+    # Iterate through each work order
     for work_order in work_orders:
-        row_cells = table.add_row().cells
+        # Create table for the current work order
+        table = doc.add_table(rows=2, cols=3)  # 2 rows: data + remark
+        table.style = 'Table Grid'
+        table.autofit = False
+
+        # Set column widths
+        col_widths = [3, 3, 2]  # Widths in inches
+        for i, width in enumerate(col_widths):
+            table.columns[i].width = Inches(width)
+
+        # Add table headers
+        hdr_cells = table.rows[0].cells
+        hdr_cells[0].text = 'Equipment'
+        hdr_cells[1].text = 'Location'
+        hdr_cells[2].text = 'Requester'
+
+        # Add work order data
+        row_cells = table.rows[1].cells
         row_cells[0].text = work_order.equipment.name
         row_cells[1].text = work_order.equipment.location
         row_cells[2].text = work_order.requester.get_full_name()
 
-        # Add space between records
+        # Add Remark row
+        remark_row = table.add_row().cells
+        remark_cell = remark_row[0]
+        remark_cell.text = "Remark:"
+        remark_cell.merge(remark_row[1])  # Merge the first two columns
+        remark_cell.merge(remark_row[2])  # Merge all columns
+
+        # Add the remark text
+        remark_text = work_order.remark if work_order.remark else ''
+        remark_cell.add_paragraph(remark_text)
+
+        # Align "Remark:" text to the left
+        for paragraph in remark_cell.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+        # Add space between the table and the next sections
         doc.add_paragraph()
 
-        # Create a table with one row and two columns
-        table = doc.add_table(rows=1, cols=2)
-        table.autofit = False
+        # Create a table for Technician and Approved By
+        tech_approved_table = doc.add_table(rows=1, cols=2)
+        tech_approved_table.autofit = False
 
-        # Set column widths (adjust as needed)
-        table.columns[0].width = Inches(3)  # Width for the "Technician" column
-        table.columns[1].width = Inches(3)  # Width for the "Approved by" column
+        # Set column widths
+        tech_approved_table.columns[0].width = Inches(3)  # Width for the "Technician" column
+        tech_approved_table.columns[1].width = Inches(3)  # Width for the "Approved by" column
 
         # Add "Technician" to the first cell
-        technician_cell = table.rows[0].cells[0]
+        technician_cell = tech_approved_table.rows[0].cells[0]
         technician_cell.text = "Technician:"
         for paragraph in technician_cell.paragraphs:
             for run in paragraph.runs:
@@ -2743,10 +2780,13 @@ def generate_editable_doc_work_order(work_orders, report_type, from_date, to_dat
             technician_cell.add_paragraph(tech.get_full_name(), style='List Bullet')
 
         # Add "Approved by" to the second cell
-        approved_by_cell = table.rows[0].cells[1]
+        approved_by_cell = tech_approved_table.rows[0].cells[1]
         approved_by_paragraph = approved_by_cell.add_paragraph()
         approved_by_paragraph.add_run("Approved by: ").bold = True  # Make "Approved by" bold
         approved_by_paragraph.add_run(work_order.approved_by.get_full_name() if work_order.approved_by else "N/A")
+
+        # Add space between work orders
+        doc.add_paragraph()
 
     # Save the document to a BytesIO stream
     buffer = io.BytesIO()
@@ -2756,6 +2796,7 @@ def generate_editable_doc_work_order(work_orders, report_type, from_date, to_dat
     buffer.close()
 
     return response
+
 
 #--------------------------------------------------------------------------------------------------------
 

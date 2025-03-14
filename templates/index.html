@@ -77,7 +77,7 @@
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications">
             <li class="dropdown-header">
               You have {{ notifications|length }} new notifications
-              <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a>
+              {% comment %} <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a> {% endcomment %}
               
             </li>
             <li>
@@ -100,9 +100,9 @@
             </li>
             {% endfor %}
 
-            <li class="dropdown-footer">
+            {% comment %} <li class="dropdown-footer">
               <a href="#">Show all notifications</a> 
-            </li>
+            </li> {% endcomment %}
           </ul><!-- End Notification Dropdown Items -->
         </li><!-- End Notification Nav -->
         {% comment %} <li class="nav-item dropdown">
