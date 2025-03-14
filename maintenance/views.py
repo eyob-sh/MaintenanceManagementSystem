@@ -2381,39 +2381,50 @@ def maintenance_dashboard(request):
 
 def generate_report(request):
     user = request.user
-    user_branch = user.userprofile.branch
-
-    # Get date range and report type from request
+    branch = request.GET.get('branch')
     from_date = request.GET.get('from_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
     to_date = request.GET.get('to_date', datetime.now().strftime('%Y-%m-%d'))
     report_type = request.GET.get('report_type', 'daily')
     export_format = request.GET.get('format')  # Default to PDF
+    if(user.userprofile.role in ["MD manager", "TEC"]):
+        user_branch = user.userprofile.branch
+    elif(user.userprofile.role in ["MO"]):
+        user_branch = branch
+    
+    if(branch != "all"):
+        # Get date range and report type from request
+        
 
-    if report_type == 'work_order':
-        # Fetch work orders with status 'Approved' based on date range
-        work_orders = WorkOrder.objects.filter(
-            branch=user_branch,
-            status='Approved',
-            created_at__range=[from_date, to_date]
-        ).order_by('created_at')
+        if report_type == 'work_order':
+            # Fetch work orders with status 'Approved' based on date range
+            work_orders = WorkOrder.objects.filter(
+                branch=user_branch,
+                status='Approved',
+                created_at__range=[from_date, to_date]
+            ).order_by('created_at')
 
-        if export_format == 'docx':
-            return generate_editable_doc_work_order(work_orders, report_type, from_date, to_date)
+            if export_format == 'docx':
+                return generate_editable_doc_work_order(work_orders, report_type, from_date, to_date)
+            else:
+                return generate_pdf_work_order(work_orders, report_type, from_date, to_date)
         else:
-            return generate_pdf_work_order(work_orders, report_type, from_date, to_date)
+            # Fetch maintenance records based on report type and date range
+            maintenance_records = MaintenanceRecord.objects.filter(
+                branch=user_branch,
+                maintenance_type=report_type,
+                datetime__range=[from_date, to_date],
+                status = 'Approved'
+            ).order_by('datetime')
+
+            if export_format == 'docx':
+                return generate_editable_doc(maintenance_records, report_type, from_date, to_date)
+            else:
+                return generate_pdf(maintenance_records, report_type, from_date, to_date)
     else:
-        # Fetch maintenance records based on report type and date range
-        maintenance_records = MaintenanceRecord.objects.filter(
-            branch=user_branch,
-            maintenance_type=report_type,
-            datetime__range=[from_date, to_date],
-            status = 'Approved'
-        ).order_by('datetime')
-
-        if export_format == 'docx':
-            return generate_editable_doc(maintenance_records, report_type, from_date, to_date)
+        if report_type == 'work_order':
+            return generate_MO_work_order_report(from_date, to_date, export_format)
         else:
-            return generate_pdf(maintenance_records, report_type, from_date, to_date)
+            return generate_MO_maintenance_report(from_date, to_date, export_format,report_type)
         
 def generate_pdf(maintenance_records, report_type, from_date, to_date):
     # Create a PDF document
@@ -2480,7 +2491,7 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
 
         # Add inspected by and approved by sections
         inspected_by = [tech.get_full_name() for tech in record.assigned_technicians.all()]
-        approved_by = record.approved_by.get_full_name() if record.approved_by else "N/A"
+        approved_by = record.approved_by.get_full_name() if record.approved_by else ""
 
         # Create a table with one row and two columns
         table_data = [
@@ -2581,7 +2592,7 @@ def generate_editable_doc(maintenance_records, report_type, from_date, to_date):
         space_paragraph.paragraph_format.space_after = Pt(0.1)  # Adjust the space as needed
         # Add inspected by and approved by sections
         inspected_by = [tech.get_full_name() for tech in record.assigned_technicians.all()]
-        approved_by = record.approved_by.get_full_name() if record.approved_by else "N/A"
+        approved_by = record.approved_by.get_full_name() if record.approved_by else ""
 
         # Create a table with one row and two columns
         table = doc.add_table(rows=1, cols=2)
@@ -2633,9 +2644,8 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
     title = Paragraph(f"Work Order Report", styles['Title'])
     elements.append(title)
     
-    
     if not work_orders:
-        elements.append(Paragraph("No maintenance records found for the selected date range and report type.", styles['Normal']))
+        elements.append(Paragraph("No work order records found for the selected date range.", styles['Normal']))
         doc.build(elements)
         return response
 
@@ -2649,18 +2659,21 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
     # Iterate through each work order
     for work_order in work_orders:
         # Create table data for the current work order
+        elements.append(Paragraph(f"Work Order Date: {work_order.created_at.strftime('%Y-%m-%d')}", styles['Heading5']))
+
         data = [
-            ['Equipment', 'Location', 'Requester'],  # Header row
+            ['Equipment', 'Serial Number', 'Location', 'Requester'],  # Header row
             [
                 work_order.equipment.name,
+                work_order.equipment.serial_number,  # Add serial number
                 work_order.equipment.location,
                 work_order.requester.get_full_name()
             ],
-            ['Remark:', work_order.remark if work_order.remark else 'N/A', '']  # Remark row spanning all columns
+            ['Remark:', work_order.remark if work_order.remark else '', '', '']  # Remark row spanning all columns
         ]
 
         # Create table for the current work order
-        table = Table(data, colWidths=[3*inch, 3*inch, 2*inch])
+        table = Table(data, colWidths=[2*inch, 2*inch, 2*inch, 2*inch])  # Adjusted column widths
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),  # Header row background
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Header row text color
@@ -2679,7 +2692,7 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
         tech_approved_table_data = [
             [
                 Paragraph(f"<b>Technician:</b><br/><br/>" + "<br/><br/>".join([tech.get_full_name() for tech in work_order.assigned_technicians.all()])),  # Left column
-                Paragraph(f"<b>Approved By:</b><br/><br/>{work_order.approved_by.get_full_name() if work_order.approved_by else 'N/A'}")  # Right column
+                Paragraph(f"<b>Approved By:</b><br/><br/>{work_order.approved_by.get_full_name() if work_order.approved_by else ''}")  # Right column
             ]
         ]
 
@@ -2711,6 +2724,16 @@ def generate_editable_doc_work_order(work_orders, report_type, from_date, to_dat
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     title.style.font.size = Pt(18)  # Make the title smaller
 
+    if not work_orders:
+        doc.add_paragraph("No work order records found for the selected date range.", style='Intense Quote')
+        # Save the document to a BytesIO stream
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+        response.write(buffer.getvalue())
+        buffer.close()
+        return response
+
     # Add branch and date range
     branch_paragraph = doc.add_paragraph(f"Branch: {work_orders[0].branch.name}", style='Intense Quote')
     branch_paragraph.paragraph_format.space_after = Pt(0)
@@ -2720,34 +2743,39 @@ def generate_editable_doc_work_order(work_orders, report_type, from_date, to_dat
 
     # Iterate through each work order
     for work_order in work_orders:
+        doc.add_heading(f"Work Order Date: {work_order.created_at.strftime('%Y-%m-%d')}", level=3)
+
         # Create table for the current work order
-        table = doc.add_table(rows=2, cols=3)  # 2 rows: data + remark
+        table = doc.add_table(rows=2, cols=4)  # 2 rows: data + remark, 4 columns
         table.style = 'Table Grid'
         table.autofit = False
 
         # Set column widths
-        col_widths = [3, 3, 2]  # Widths in inches
+        col_widths = [2.5, 2.5, 2.5, 2]  # Widths in inches
         for i, width in enumerate(col_widths):
             table.columns[i].width = Inches(width)
 
         # Add table headers
         hdr_cells = table.rows[0].cells
         hdr_cells[0].text = 'Equipment'
-        hdr_cells[1].text = 'Location'
-        hdr_cells[2].text = 'Requester'
+        hdr_cells[1].text = 'Serial Number'  # New column for serial number
+        hdr_cells[2].text = 'Location'
+        hdr_cells[3].text = 'Requester'
 
         # Add work order data
         row_cells = table.rows[1].cells
         row_cells[0].text = work_order.equipment.name
-        row_cells[1].text = work_order.equipment.location
-        row_cells[2].text = work_order.requester.get_full_name()
+        row_cells[1].text = work_order.equipment.serial_number  # Add serial number
+        row_cells[2].text = work_order.equipment.location
+        row_cells[3].text = work_order.requester.get_full_name()
 
         # Add Remark row
         remark_row = table.add_row().cells
         remark_cell = remark_row[0]
         remark_cell.text = "Remark:"
         remark_cell.merge(remark_row[1])  # Merge the first two columns
-        remark_cell.merge(remark_row[2])  # Merge all columns
+        remark_cell.merge(remark_row[2])  # Merge the next two columns
+        remark_cell.merge(remark_row[3])  # Merge all columns
 
         # Add the remark text
         remark_text = work_order.remark if work_order.remark else ''
@@ -2783,7 +2811,7 @@ def generate_editable_doc_work_order(work_orders, report_type, from_date, to_dat
         approved_by_cell = tech_approved_table.rows[0].cells[1]
         approved_by_paragraph = approved_by_cell.add_paragraph()
         approved_by_paragraph.add_run("Approved by: ").bold = True  # Make "Approved by" bold
-        approved_by_paragraph.add_run(work_order.approved_by.get_full_name() if work_order.approved_by else "N/A")
+        approved_by_paragraph.add_run(work_order.approved_by.get_full_name() if work_order.approved_by else "")
 
         # Add space between work orders
         doc.add_paragraph()
@@ -2797,11 +2825,481 @@ def generate_editable_doc_work_order(work_orders, report_type, from_date, to_dat
 
     return response
 
-
 #--------------------------------------------------------------------------------------------------------
 
+def generate_MO_maintenance_report(from_date, to_date, export_format,report_type):
+    # Fetch maintenance records for all branches
+    maintenance_records = MaintenanceRecord.objects.filter(
+        maintenance_type=report_type,
+        datetime__range=[from_date, to_date],
+        status='Approved'
+    ).order_by('branch__name', 'datetime')
 
+    if export_format == 'docx':
+        return generate_editable_doc_all_branches(maintenance_records, report_type, from_date, to_date)
+    else:
+        return generate_pdf_all_branches(maintenance_records, report_type, from_date, to_date)
 
+#--------------------------------------------------------------------------------------------------------
+def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_date):
+    # Create a PDF document
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{report_type}_maintenance_report_all_branches.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=letter)
+    elements = []
+
+    # Add title
+    styles = getSampleStyleSheet()
+    title = Paragraph(f"{report_type.capitalize()} Maintenance Report (All Branches)", styles['Title'])
+    elements.append(title)
+
+    # Check if maintenance_records is empty
+    if not maintenance_records:
+        elements.append(Paragraph("No maintenance records found for the selected date range and report type.", styles['Normal']))
+        doc.build(elements)
+        return response
+
+    # Group records by branch
+    records_by_branch = {}
+    for record in maintenance_records:
+        branch_name = record.branch.name
+        if branch_name not in records_by_branch:
+            records_by_branch[branch_name] = []
+        records_by_branch[branch_name].append(record)
+
+    # Iterate through each branch and add its records to the PDF
+    for branch_name, records in records_by_branch.items():
+        # Add branch title
+        elements.append(Paragraph(f"Branch: {branch_name}", styles['Heading2']))
+        elements.append(Paragraph(f"From {from_date} to {to_date}", styles['Normal']))
+
+        # Add space between branch title and records
+        space_style = ParagraphStyle(name='Space', spaceAfter=30)
+        elements.append(Paragraph("", space_style))
+
+        # Add records for the current branch
+        for record in records:
+            # Add header for each maintenance record
+            elements.append(Paragraph(f"Maintenance Date: {record.datetime.strftime('%Y-%m-%d')}, Time: {record.datetime.strftime('%H:%M')}", styles['Heading5']))
+            elements.append(Paragraph(f"Equipment: {record.equipment.name} (Serial: {record.equipment.serial_number}), Location: {record.equipment.location}", styles['Normal']))
+
+            # Create table data
+            data = [['No.', 'Inspection', 'Yes', 'No', 'Remarks']]
+            task_completions = TaskCompletion.objects.filter(maintenance_record=record)
+            for i, task_completion in enumerate(task_completions, start=1):
+                task = task_completion.task
+                data.append([
+                    str(i),
+                    task.description,
+                    '✓' if task_completion.completed_by else '',
+                    '✓' if not task_completion.completed_by else '',
+                    ''  # Empty remarks column for editing
+                ])
+
+            # Create table
+            table = Table(data, colWidths=[0.3*inch, 4*inch, 0.3*inch, 0.3*inch, 2*inch])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+
+            elements.append(table)
+
+            # Add inspected by and approved by sections
+            inspected_by = [tech.get_full_name() for tech in record.assigned_technicians.all()]
+            approved_by = record.approved_by.get_full_name() if record.approved_by else ""
+
+            # Create a table with one row and two columns
+            table_data = [
+                [
+                    Paragraph(f"<b>Inspected by:</b><br/><br/>" + "<br/><br/>".join(inspected_by)),  # Left column
+                    Paragraph(f"<b>Approved by:</b><br/><br/>{approved_by}")  # Right column
+                ]
+            ]
+
+            # Define column widths (adjust as needed)
+            col_widths = [3 * inch, 3 * inch]  # Equal width for both columns
+
+            # Create the table
+            table = Table(table_data, colWidths=col_widths)
+            table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Align text to the left
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align text to the top
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),  # Add padding at the bottom
+            ]))
+
+            # Add the table to the elements
+            elements.append(table)
+
+            # Add space between records
+            elements.append(Paragraph("<br/><br/>", styles['Normal']))
+
+    # Build the PDF
+    doc.build(elements)
+    return response
+
+#-------------------------------------------------------------------------------------------------------
+
+def generate_editable_doc_all_branches(maintenance_records, report_type, from_date, to_date):
+    # Create a Word document
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    response['Content-Disposition'] = f'attachment; filename="{report_type}_maintenance_report_all_branches.docx"'
+
+    doc = Document()
+
+    # Add main title
+    title = doc.add_heading(f"{report_type.capitalize()} Maintenance Report (All Branches)", level=1)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title.style.font.size = Pt(18)  # Make the title smaller
+
+    if not maintenance_records:
+        doc.add_paragraph("No maintenance records found for the selected date range and report type.", style='Intense Quote')
+        # Save the document to a BytesIO stream
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+        response.write(buffer.getvalue())
+        buffer.close()
+        return response
+
+    # Group records by branch
+    records_by_branch = {}
+    for record in maintenance_records:
+        branch_name = record.branch.name
+        if branch_name not in records_by_branch:
+            records_by_branch[branch_name] = []
+        records_by_branch[branch_name].append(record)
+
+    # Iterate through each branch and add its records to the document
+    for branch_name, records in records_by_branch.items():
+        # Add branch title
+        doc.add_heading(f"Branch: {branch_name}", level=2)
+        doc.add_paragraph(f"From {from_date} to {to_date}", style='Intense Quote')
+
+        # Add records for the current branch
+        for record in records:
+            # Add header for each maintenance record
+            doc.add_heading(f"Maintenance Date: {record.datetime.strftime('%Y-%m-%d')}, Time: {record.datetime.strftime('%H:%M')}", level=3)
+            doc.add_paragraph(f"Equipment: {record.equipment.name} (Serial: {record.equipment.serial_number}), Location: {record.equipment.location}")
+
+            # Create table
+            table = doc.add_table(rows=1, cols=5)
+            table.style = 'Table Grid'
+            table.autofit = False
+
+            # Set column widths
+            col_widths = [0.2, 4, 0.2, 0.2, 2]  # Widths in inches
+            for i, width in enumerate(col_widths):
+                col = table.columns[i]
+                col.width = Inches(width)
+
+            # Add table headers
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = 'No.'
+            hdr_cells[1].text = 'Inspection'
+            hdr_cells[2].text = 'Yes'
+            hdr_cells[3].text = 'No'
+            hdr_cells[4].text = 'Remarks'
+
+            # Access tasks through TaskCompletion
+            task_completions = TaskCompletion.objects.filter(maintenance_record=record)
+            for i, task_completion in enumerate(task_completions, start=1):
+                task = task_completion.task
+                row_cells = table.add_row().cells
+                row_cells[0].text = str(i)
+                row_cells[1].text = task.description
+                row_cells[2].text = '✓' if task_completion.completed_by else ''
+                row_cells[3].text = '✓' if not task_completion.completed_by else ''
+                row_cells[4].text = ''  # Empty remarks column for editing
+
+            # Add inspected by and approved by sections
+            inspected_by = [tech.get_full_name() for tech in record.assigned_technicians.all()]
+            approved_by = record.approved_by.get_full_name() if record.approved_by else ""
+
+            # Create a table with one row and two columns
+            table = doc.add_table(rows=1, cols=2)
+            table.autofit = False
+
+            # Set column widths (adjust as needed)
+            table.columns[0].width = Inches(3)  # Width for the "Inspected by" column
+            table.columns[1].width = Inches(3)  # Width for the "Approved by" column
+
+            # Add "Inspected by" to the first cell
+            inspected_by_cell = table.rows[0].cells[0]
+            inspected_by_cell.text = "Inspected by:"
+            for paragraph in inspected_by_cell.paragraphs:
+                for run in paragraph.runs:
+                    run.bold = True  # Make "Inspected by" bold
+
+            # Add technician names below "Inspected by"
+            for tech in inspected_by:
+                inspected_by_cell.add_paragraph(tech, style='List Bullet')
+
+            # Add "Approved by" to the second cell
+            approved_by_cell = table.rows[0].cells[1]
+            approved_by_paragraph = approved_by_cell.add_paragraph()
+            approved_by_paragraph.add_run("Approved by: ").bold = True  # Make "Approved by" bold
+            approved_by_paragraph.add_run(approved_by)
+
+            # Add space between records
+            doc.add_paragraph()
+
+    # Save the document to a BytesIO stream
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    response.write(buffer.getvalue())
+    buffer.close()
+
+    return response
+#-------------------------------------------------------------------------------------------------------
+
+def generate_MO_work_order_report(from_date, to_date, export_format):
+    # Fetch work orders for all branches
+    work_orders = WorkOrder.objects.filter(
+        status='Approved',
+        created_at__range=[from_date, to_date]
+    ).order_by('branch__name', 'created_at')
+
+    if export_format == 'docx':
+        return generate_editable_doc_work_order_all_branches(work_orders, from_date, to_date)
+    else:
+        return generate_pdf_work_order_all_branches(work_orders, from_date, to_date)
+    
+#---------------------------------------------------------------------------------------------------------
+
+def generate_pdf_work_order_all_branches(work_orders, from_date, to_date):
+    # Create a PDF document
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="work_order_report_all_branches.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=letter)
+    elements = []
+
+    # Add title
+    styles = getSampleStyleSheet()
+    title = Paragraph("Work Order Report (All Branches)", styles['Title'])
+    elements.append(title)
+
+    # Check if work_orders is empty
+    if not work_orders:
+        elements.append(Paragraph("No work orders found for the selected date range.", styles['Normal']))
+        doc.build(elements)
+        return response
+
+    # Group work orders by branch
+    orders_by_branch = {}
+    for order in work_orders:
+        branch_name = order.branch.name
+        if branch_name not in orders_by_branch:
+            orders_by_branch[branch_name] = []
+        orders_by_branch[branch_name].append(order)
+
+    # Iterate through each branch and add its work orders to the PDF
+    for branch_name, orders in orders_by_branch.items():
+        # Add branch title
+        elements.append(Paragraph(f"Branch: {branch_name}", styles['Heading2']))
+        elements.append(Paragraph(f"From {from_date} to {to_date}", styles['Normal']))
+
+        # Add space between branch title and work orders
+        space_style = ParagraphStyle(name='Space', spaceAfter=30)
+        elements.append(Paragraph("", space_style))
+
+        # Add work orders for the current branch
+        for order in orders:
+            # Add header for each work order
+            elements.append(Paragraph(f"Work Order Date: {order.created_at.strftime('%Y-%m-%d')}", styles['Heading5']))
+
+            # Create table data
+            data = [
+                ['Equipment', 'Serial Number', 'Location', 'Requester'],  # Header row
+                [
+                    order.equipment.name,
+                    order.equipment.serial_number,  # Add serial number
+                    order.equipment.location,
+                    order.requester.get_full_name()
+                ],
+                ['Remark:', order.remark if order.remark else '', '', '']  # Remark row spanning all columns
+            ]
+
+            # Create table for the current work order
+            table = Table(data, colWidths=[2*inch, 2*inch, 2*inch, 2*inch])  # Adjusted column widths
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),  # Header row background
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Header row text color
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center align all cells
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header row font
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),  # Header row padding
+                ('BACKGROUND', (0, 1), (-1, -2), colors.beige),  # Data rows background
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Grid lines
+                ('SPAN', (0, 2), (-1, 2)),  # Span the Remark row across all columns
+                ('ALIGN', (0, 2), (0, 2), 'LEFT'),  # Align "Remark:" text to the left
+            ]))
+
+            elements.append(table)
+
+            # Add Technician and Approved By sections
+            technicians = [tech.get_full_name() for tech in order.assigned_technicians.all()]
+            approved_by = order.approved_by.get_full_name() if order.approved_by else ""
+
+            # Create a table with one row and two columns
+            table_data = [
+                [
+                    Paragraph(f"<b>Technician:</b><br/><br/>" + "<br/><br/>".join(technicians)),  # Left column
+                    Paragraph(f"<b>Approved By:</b><br/><br/>{approved_by}")  # Right column
+                ]
+            ]
+
+            # Define column widths (adjust as needed)
+            col_widths = [3 * inch, 3 * inch]  # Equal width for both columns
+
+            # Create the table
+            table = Table(table_data, colWidths=col_widths)
+            table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Align text to the left
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align text to the top
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),  # Add padding at the bottom
+            ]))
+
+            # Add the table to the elements
+            elements.append(table)
+
+            # Add space between work orders
+            elements.append(Paragraph("<br/><br/>", styles['Normal']))
+
+    # Build the PDF
+    doc.build(elements)
+    return response
+
+#-----------------------------------------------------------------------------------------------------
+
+def generate_editable_doc_work_order_all_branches(work_orders, from_date, to_date):
+    # Create a Word document
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    response['Content-Disposition'] = f'attachment; filename="work_order_report_all_branches.docx"'
+
+    doc = Document()
+
+    # Add main title
+    title = doc.add_heading("Work Order Report (All Branches)", level=1)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title.style.font.size = Pt(18)  # Make the title smaller
+
+    if not work_orders:
+        doc.add_paragraph("No work orders found for the selected date range.", style='Intense Quote')
+        # Save the document to a BytesIO stream
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+        response.write(buffer.getvalue())
+        buffer.close()
+        return response
+
+    # Group work orders by branch
+    orders_by_branch = {}
+    for order in work_orders:
+        branch_name = order.branch.name
+        if branch_name not in orders_by_branch:
+            orders_by_branch[branch_name] = []
+        orders_by_branch[branch_name].append(order)
+
+    # Iterate through each branch and add its work orders to the document
+    for branch_name, orders in orders_by_branch.items():
+        # Add branch title
+        doc.add_heading(f"Branch: {branch_name}", level=2)
+        doc.add_paragraph(f"From {from_date} to {to_date}", style='Intense Quote')
+
+        # Add work orders for the current branch
+        for order in orders:
+            # Add header for each work order
+            doc.add_heading(f"Work Order Date: {order.created_at.strftime('%Y-%m-%d')}", level=3)
+
+            # Create table
+            table = doc.add_table(rows=2, cols=4)  # 2 rows: data + remark, 4 columns
+            table.style = 'Table Grid'
+            table.autofit = False
+
+            # Set column widths
+            col_widths = [2, 2, 2, 2]  # Widths in inches
+            for i, width in enumerate(col_widths):
+                table.columns[i].width = Inches(width)
+
+            # Add table headers
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = 'Equipment'
+            hdr_cells[1].text = 'Serial Number'  # New column for serial number
+            hdr_cells[2].text = 'Location'
+            hdr_cells[3].text = 'Requester'
+
+            # Add work order data
+            row_cells = table.rows[1].cells
+            row_cells[0].text = order.equipment.name
+            row_cells[1].text = order.equipment.serial_number  # Add serial number
+            row_cells[2].text = order.equipment.location
+            row_cells[3].text = order.requester.get_full_name()
+
+            # Add Remark row
+            remark_row = table.add_row().cells
+            remark_cell = remark_row[0]
+            remark_cell.text = "Remark:"
+            remark_cell.merge(remark_row[1])  # Merge the first two columns
+            remark_cell.merge(remark_row[2])  # Merge the next two columns
+            remark_cell.merge(remark_row[3])  # Merge all columns
+
+            # Add the remark text
+            remark_text = order.remark if order.remark else ''
+            remark_cell.add_paragraph(remark_text)
+
+            # Align "Remark:" text to the left
+            for paragraph in remark_cell.paragraphs:
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+            # Add space between the table and the next sections
+            doc.add_paragraph()
+
+            # Create a table for Technician and Approved By
+            tech_approved_table = doc.add_table(rows=1, cols=2)
+            tech_approved_table.autofit = False
+
+            # Set column widths
+            tech_approved_table.columns[0].width = Inches(3)  # Width for the "Technician" column
+            tech_approved_table.columns[1].width = Inches(3)  # Width for the "Approved by" column
+
+            # Add "Technician" to the first cell
+            technician_cell = tech_approved_table.rows[0].cells[0]
+            technician_cell.text = "Technician:"
+            for paragraph in technician_cell.paragraphs:
+                for run in paragraph.runs:
+                    run.bold = True  # Make "Technician" bold
+
+            # Add technician names below "Technician"
+            for tech in order.assigned_technicians.all():
+                technician_cell.add_paragraph(tech.get_full_name(), style='List Bullet')
+
+            # Add "Approved by" to the second cell
+            approved_by_cell = tech_approved_table.rows[0].cells[1]
+            approved_by_paragraph = approved_by_cell.add_paragraph()
+            approved_by_paragraph.add_run("Approved by: ").bold = True  # Make "Approved by" bold
+            approved_by_paragraph.add_run(order.approved_by.get_full_name() if order.approved_by else "")
+
+            # Add space between work orders
+            doc.add_paragraph()
+
+    # Save the document to a BytesIO stream
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    response.write(buffer.getvalue())
+    buffer.close()
+
+    return response
+#--------------------------------------------------------------------------------------------------------
 def maintenance_oversight_dashboard(request):
     user = request.user
     notifications = get_notifications(request.user)
