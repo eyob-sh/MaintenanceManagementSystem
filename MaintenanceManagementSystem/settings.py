@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'import_export',
+    'channels',
     'maintenance.apps.MaintenanceConfig',
     'chemical.apps.ChemicalConfig',
 ]

@@ -573,4 +573,31 @@
 
 </body>
 
+<audio id="notification-sound" src="/static/sounds/notification.mp3"></audio>
+
+<script>
+    const notificationSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/notifications/'
+    );
+
+    notificationSocket.onmessage = function (e) {
+        const notifications = JSON.parse(e.data);
+        if (notifications.length > 0) {
+            // Play sound
+            document.getElementById('notification-sound').play();
+
+            // Display notifications (e.g., in a dropdown or alert)
+            notifications.forEach(notification => {
+                alert(`New Notification: ${notification.message}`);
+            });
+        }
+    };
+
+    notificationSocket.onclose = function (e) {
+        console.error('Notification socket closed unexpectedly');
+    };
+</script>
+
+
+
 </html>
