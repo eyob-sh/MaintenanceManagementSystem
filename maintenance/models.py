@@ -141,6 +141,7 @@ class Equipment(models.Model):
     branch = models.ForeignKey('Branch', on_delete=models.PROTECT)
     location = models.CharField(max_length=50)
     installation_date = models.DateField()
+    decommissioned = models.BooleanField(default=False)
     last_daily_maintenance_date = models.DateField(null=True, blank=True)
     next_daily_maintenance_date = models.DateField(null=True, blank=True)
     last_weekly_maintenance_date = models.DateField(null=True, blank=True)
@@ -157,7 +158,9 @@ class Equipment(models.Model):
     next_maintenance_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='operational')
     remark = models.TextField(blank=True)
-    last_notification_sent = models.DateField(null=True, blank=True)  # Add this field
+    last_monthly_notification_sent = models.DateField(null=True, blank=True)
+    last_biannual_notification_sent = models.DateField(null=True, blank=True)
+    last_annual_notification_sent = models.DateField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

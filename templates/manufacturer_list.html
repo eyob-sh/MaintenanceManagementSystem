@@ -40,13 +40,14 @@
                                     <i class="bi bi-upload"></i> Import
                                 </a>
                             </div>
-
+                            {% if request.user.userprofile.role == "MD manager" or request.user.userprofile.role == "TEC" %}
                             <!-- Add Manufacturer Button -->
                             <div class="d-flex justify-content-end mb-3">
                                 <a href="{% url 'add_manufacturer' %}" class="btn btn-success bg-success">
                                     <i class="bi bi-plus"></i> Add Manufacturer
                                 </a>
                             </div>
+                            {% endif %}
                         </div>
 
                         <!-- Manufacturer List Table -->
@@ -128,7 +129,7 @@
             perPageSelect: [10, 25, 50, ["All", -1]], // Pagination options
             columns: columns,
             labels: {
-                placeholder: "Search by Name, Email, or Address...", // Global search placeholder
+                placeholder: "Search...", // Global search placeholder
                 perPage: "Rows per page", // Pagination label
                 noRows: "No manufacturers found", // No data message
                 info: "Showing {start} to {end} of {rows} entries" // Info text

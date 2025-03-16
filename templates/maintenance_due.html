@@ -51,9 +51,8 @@
                                     <th>Branch</th> <!-- Branch Column for MO Role -->
                                     {% endif %}
                                     <th>Location</th>
-                                    <th>Monthly Due</th>
-                                    <th>Biannual Due</th>
-                                    <th>Annual Due</th>
+                                    <th>Maintenance Type</th>
+                                    <th>Due Date</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -66,13 +65,28 @@
                                     <td>{{ equipment.branch.name }}</td> <!-- Branch Column for MO Role -->
                                     {% endif %}
                                     <td>{{ equipment.location }}</td>
-                                    <td>{{ equipment.next_monthly_maintenance_date }}</td>
-                                    <td>{{ equipment.next_biannual_maintenance_date }}</td>
-                                    <td>{{ equipment.next_annual_maintenance_date }}</td>
+                                    <td>
+                                        {% if equipment.next_monthly_maintenance_date <= due_in_5_days %}
+                                            Monthly
+                                        {% elif equipment.next_biannual_maintenance_date <= due_in_5_days %}
+                                            Biannual
+                                        {% elif equipment.next_annual_maintenance_date <= due_in_5_days %}
+                                            Annual
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if equipment.next_monthly_maintenance_date <= due_in_5_days %}
+                                            {{ equipment.next_monthly_maintenance_date }}
+                                        {% elif equipment.next_biannual_maintenance_date <= due_in_5_days %}
+                                            {{ equipment.next_biannual_maintenance_date }}
+                                        {% elif equipment.next_annual_maintenance_date <= due_in_5_days %}
+                                            {{ equipment.next_annual_maintenance_date }}
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="{% if request.user.userprofile.role == 'MO' %}6{% else %}5{% endif %}" class="text-center">No equipment due for maintenance.</td>
+                                    <td colspan="{% if request.user.userprofile.role == 'MO' %}5{% else %}4{% endif %}" class="text-center">No equipment due for maintenance.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -99,14 +113,12 @@
             {% if request.user.userprofile.role == 'MO' %}
             { select: 1, type: "string" }, // Branch
             { select: 2, type: "string" }, // Location
-            { select: 3, type: "date", format: "YYYY-MM-DD" }, // Monthly Due
-            { select: 4, type: "date", format: "YYYY-MM-DD" }, // Biannual Due
-            { select: 5, type: "date", format: "YYYY-MM-DD" } // Annual Due
+            { select: 3, type: "string" }, // Maintenance Type
+            { select: 4, type: "date", format: "YYYY-MM-DD" } // Due Date
             {% else %}
             { select: 1, type: "string" }, // Location
-            { select: 2, type: "date", format: "YYYY-MM-DD" }, // Monthly Due
-            { select: 3, type: "date", format: "YYYY-MM-DD" }, // Biannual Due
-            { select: 4, type: "date", format: "YYYY-MM-DD" } // Annual Due
+            { select: 2, type: "string" }, // Maintenance Type
+            { select: 3, type: "date", format: "YYYY-MM-DD" } // Due Date
             {% endif %}
         ];
 
@@ -114,7 +126,7 @@
             perPageSelect: [10, 25, 50, ["All", -1]], // Pagination options
             columns: columns,
             labels: {
-                placeholder: "Search by Equipment Name or Location...", // Global search placeholder
+                placeholder: "Search...", // Global search placeholder
                 perPage: "Rows per page", // Pagination label
                 noRows: "No equipment due for maintenance", // No data message
                 info: "Showing {start} to {end} of {rows} entries" // Info text

@@ -103,7 +103,7 @@
                                             <div class="invalid-feedback">Branch is required.</div>
                                         </div>
                                     </div>
-
+                                    {% if request.user.userprofile.role != 'CL' %}
                                     <!-- Assigned Technicians -->
                                     <!-- Assigned Technicians Section -->
                                     <div class="row mb-3">
@@ -149,7 +149,7 @@
                                             {% endif %}
                                     
                                             <!-- For Technician: Show Read-Only List of Assigned Technicians -->
-                                            {% if request.user.userprofile.role == 'TEC' %}
+                                            {% if request.user.userprofile.role == 'TEC' or request.user.userprofile.role == 'MO' %}
                                                 <ul class="list-group">
                                                     {% for technician in work_order.assigned_technicians.all %}
                                                         <li class="list-group-item">{{ technician.username }}</li>
@@ -160,13 +160,14 @@
                                             {% endif %}
                                         </div>
                                     </div>
+                                    {% endif %}
 
                                     <!-- Spare Parts Section -->
                                     {% if request.user.userprofile.role != 'CL' %}
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label class="form-label">Spare Parts</label>
-                                            {% if request.user.userprofile.role == 'MD manager' or work_order.status == 'Approved' %}
+                                            {% if request.user.userprofile.role == 'MD manager' or work_order.status == 'Approved' or request.user.userprofile.role == 'MO' %}
                                                 <!-- For MD Manager or Approved Work Order: Show Read-Only List of Spare Parts -->
                                                 <ul class="list-group">
                                                     {% for usage in spare_part_usages %}

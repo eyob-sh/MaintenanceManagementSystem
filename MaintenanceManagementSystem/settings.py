@@ -74,6 +74,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'MaintenanceManagementSystem.wsgi.application'
 
+ASGI_APPLICATION = 'MaintenanceManagementSystem.asgi.application'
+
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases

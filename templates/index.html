@@ -392,6 +392,13 @@
 
       <!-- Client -->
       {% if request.user.userprofile.role == 'CL' %}
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'dashboard' %}collapsed{% endif %}" href="{% url 'client_dashboard' %}">
+          <i class="bi bi-grid"></i>
+          <span>Dashboard</span>
+        </a>
+      </li>
+
       <li class="nav-heading">Work Order</li>
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'work_order_list' %}collapsed{% endif %}"
@@ -542,10 +549,10 @@
 
   <!-- ======= Footer ======= -->
   <footer id="footer" class="footer">
-    <div class="copyright">
-      &copy; Copyright <strong><span>Industrial Parks Development Corporation</span></strong>. All Rights Reserved
+    <!-- <div class="copyright">
+      &copy; Copyright <strong><span></span></strong>. All Rights Reserved
 
-    </div>
+    </div> -->
     <div class="credits">
       <!-- All the links in the footer should remain intact. -->
       <!-- You can delete the links only if you purchased the pro version. -->

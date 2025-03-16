@@ -44,16 +44,17 @@
                             </tbody>
                         </table>
 
-                        <form method="post" enctype="multipart/form-data">
-                            {% csrf_token %}
-                            <input type="hidden" name="import_file" value="{{ request.FILES.import_file.name }}">
-                            <button type="submit" name="confirm_import" class="btn btn-success">
-                                <i class="bi bi-check-circle"></i> Confirm Import
-                            </button>
-                            <a href="{% url 'import_data' model_name=model_name %}" class="btn btn-danger">
-                                <i class="bi bi-x-circle"></i> Cancel
-                            </a>
-                        </form>
+                        {% if show_confirm_button %}
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <button type="submit" name="confirm_import" class="btn btn-success">
+                                    <i class="bi bi-check-circle"></i> Confirm Import
+                                </button>
+                                <a href="{% url 'import_data' model_name=model_name %}" class="btn btn-danger">
+                                    <i class="bi bi-x-circle"></i> Cancel
+                                </a>
+                            </form>
+                        {% endif %}
                     </div>
                 </div>
             </div>

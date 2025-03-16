@@ -26,6 +26,9 @@ from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from reportlab.lib.styles import ParagraphStyle
+import tempfile
+import os
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
 import io
@@ -92,6 +95,8 @@ def loginPage(request):
                 return redirect('maintenance_oversight_dashboard')
             elif (request.user.userprofile.role in 'AD'):
                 return redirect('dashboard')
+            elif(request.user.userprofile.role in 'CL'):
+                return redirect('client_dashboard')
         else: 
             messages.error(request, 'Incorrect Username or Password')
         
@@ -360,34 +365,37 @@ def add_manufacturer(request):
         branch = None  # Handle unauthenticated users
 
     if request.method == 'POST':
-        # Get form data
-        name = request.POST.get('name')
-        description = request.POST.get('description')
-        site = request.POST.get('site')  # This will be the branch ID
-        contact_email = request.POST.get('contact_email')
-        contact_phone_number = request.POST.get('contact_phone_number')
-        address = request.POST.get('address')
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            # Get form data
+            name = request.POST.get('name')
+            description = request.POST.get('description')
+            site = request.POST.get('site')  # This will be the branch ID
+            contact_email = request.POST.get('contact_email')
+            contact_phone_number = request.POST.get('contact_phone_number')
+            address = request.POST.get('address')
 
-        # Validate required fields
-        if not name or not site:
-            messages.error(request, 'Please fill out all required fields.')
-            return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications})
+            # Validate required fields
+            if not name or not site:
+                messages.error(request, 'Please fill out all required fields.')
+                return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications})
 
-        try:
-            # Create the manufacturer
-            Manufacturer.objects.create(
-                name=name,
-                description=description,
-                site_id=site,  # Use site_id to assign the branch
-                contact_email=contact_email,
-                contact_phone_number=contact_phone_number,
-                address=address
-            )
-            messages.success(request, 'Manufacturer added successfully!')
-            return redirect('manufacturer_list')
-        except Exception as e:
-            messages.error(request, f'An error occurred: {str(e)}')
-            return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications})
+            try:
+                # Create the manufacturer
+                Manufacturer.objects.create(
+                    name=name,
+                    description=description,
+                    site_id=site,  # Use site_id to assign the branch
+                    contact_email=contact_email,
+                    contact_phone_number=contact_phone_number,
+                    address=address
+                )
+                messages.success(request, 'Manufacturer added successfully!')
+                return redirect('manufacturer_list')
+            except Exception as e:
+                messages.error(request, f'An error occurred: {str(e)}')
+                return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications})
+        else:
+            messages.error(request, f'You do not have the permsission to perform this task')
 
     return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications})
 
@@ -395,38 +403,49 @@ def edit_manufacturer(request, id):
     manufacturer = get_object_or_404(Manufacturer, id=id)
     branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
+    
+    # Initialize the form variable
+    form = ManufacturerForm(instance=manufacturer)
 
     if request.method == 'POST':
-        form = ManufacturerForm(request.POST, instance=manufacturer)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Manufacturer updated successfully!')
-            return redirect('manufacturer_list')
-    else:
-        form = ManufacturerForm(instance=manufacturer)
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            form = ManufacturerForm(request.POST, instance=manufacturer)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Manufacturer updated successfully!')
+                return redirect('manufacturer_list')
+        else:
+            messages.error(request, 'You do not have the permission to perform this task')
 
-    return render(request, 'edit_manufacturer.html', {'form': form, 'manufacturer': manufacturer,  'active_page': 'manufacturer_list', 'branch':branch, 'notifications':notifications})
-
-
+    return render(request, 'edit_manufacturer.html', {
+        'form': form,
+        'manufacturer': manufacturer,
+        'active_page': 'manufacturer_list',
+        'branch': branch,
+        'notifications': notifications
+    })
 def delete_manufacturer(request, id):
-    manufacturer = get_object_or_404(Equipment, id=id)
+    manufacturer = get_object_or_404(Manufacturer, id=id)
     notifications = get_notifications(request.user)
 
     
     if request.method == 'POST':
-        try:
-            manufacturer.delete()
-            messages.success(request, 'The manufacturer was deleted successfully.')
-            return redirect(reverse('manufacturer_list'))
-        except ProtectedError as e:
-            messages.error(request, 'This equipment cannot be deleted because it is referenced by other objects.')
-            return render(request, 'confirm_delete_protected.html', {
-                'object': manufacturer,
-                'protected_objects': e.protected_objects,
-                'model_name': 'Manufacturer',  # Dynamic model name
-                'active_page':'manufacturer_list',
-                'notifications':notifications
-            })
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            try:
+                manufacturer.delete()
+                messages.success(request, 'The manufacturer was deleted successfully.')
+                return redirect(reverse('manufacturer_list'))
+            except ProtectedError as e:
+                messages.error(request, 'This equipment cannot be deleted because it is referenced by other objects.')
+                return render(request, 'confirm_delete_protected.html', {
+                    'object': manufacturer,
+                    'protected_objects': e.protected_objects,
+                    'model_name': 'Manufacturer',  # Dynamic model name
+                    'active_page':'manufacturer_list',
+                    'notifications':notifications
+                })
+        else:
+            messages.error(request, f'You do not have the permsission to perform this task')
     
     return render(request, 'confirm_delete.html', {
         'object': manufacturer,
@@ -445,8 +464,10 @@ def work_order_list(request):
     
     if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
          work_orders = WorkOrder.objects.all()  # Show all equipment for MO
-    else:
+    elif request.user.userprofile.role in ['MD manager', 'TEC']:
         work_orders = WorkOrder.objects.filter(branch = user_branch)
+    elif request.user.userprofile.role in ['CL']:
+        work_orders = WorkOrder.objects.filter(branch = user_branch, requester = request.user)
 
    
     notifications = get_notifications(request.user)
@@ -464,7 +485,7 @@ def add_work_order_page(request):
     notifications = get_notifications(request.user)
     user_branch = request.user.userprofile.branch
 
-    equipments = Equipment.objects.filter(branch=user_branch)
+    equipments = Equipment.objects.filter(branch=user_branch, decommissioned = False)
     
     return render(request, 'add_work_order.html', {
         'equipments': equipments,
@@ -528,96 +549,98 @@ def edit_work_order(request, id):
     equipments = Equipment.objects.filter(branch=user_branch)
 
     if request.method == 'POST':
-        # Get form data
-        equipment_id = request.POST.get('equipment')
-        remark = request.POST.get('remark')
-        assigned_technicians = request.POST.getlist('assigned_technicians[]')
-        spare_parts_post = request.POST.getlist('spare_parts[]')
-        spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            # Get form data
+            equipment_id = request.POST.get('equipment')
+            remark = request.POST.get('remark')
+            assigned_technicians = request.POST.getlist('assigned_technicians[]')
+            spare_parts_post = request.POST.getlist('spare_parts[]')
+            spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
 
-        try:
-            # Step 1: Update the equipment
-            if equipment_id:
-                equipment = Equipment.objects.get(id=equipment_id)
-                work_order.equipment = equipment
-                work_order.remark = remark
-                work_order.save()
+            try:
+                # Step 1: Update the equipment
+                if equipment_id:
+                    equipment = Equipment.objects.get(id=equipment_id)
+                    work_order.equipment = equipment
+                    work_order.remark = remark
+                    work_order.save()
 
-            # Step 2: Update assigned technicians (only for MD manager)
-            if request.user.userprofile.role == 'MD manager':
-                work_order.assigned_technicians.set(assigned_technicians)
+                # Step 2: Update assigned technicians (only for MD manager)
+                if request.user.userprofile.role == 'MD manager':
+                    work_order.assigned_technicians.set(assigned_technicians)
 
-            # Step 3: Add back the old quantities to the spare parts
-            spare_part_usages = SparePartUsage.objects.filter(work_order=work_order)
-            for usage in spare_part_usages:
-                spare_part = usage.spare_part
-                spare_part.quantity += usage.quantity_used
-                spare_part.save()
-
-            # Step 4: Process the new spare parts and quantities (only for Technician and if not approved)
-            if request.user.userprofile.role == 'TEC' and work_order.status != 'Approved':
-                for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
-                    # Skip if spare_part_id or quantity_used is empty
-                    if not spare_part_id.strip() or not quantity_used.strip():
-                        continue  # Skip empty fields
-
-                    # Skip if spare_part_id is not a valid integer
-                    try:
-                        spare_part_id = int(spare_part_id)
-                    except ValueError:
-                        continue  # Skip invalid spare_part_id (e.g., non-numeric values)
-
-                    # Skip if quantity_used is not a valid integer
-                    try:
-                        quantity_used = int(quantity_used)
-                    except ValueError:
-                        continue  # Skip invalid quantities (e.g., non-numeric values)
-
-                    # Get the spare part
-                    spare_part = SparePart.objects.get(id=spare_part_id)
-
-                    # Check if the new quantity exceeds the available stock
-                    if spare_part.quantity < quantity_used:
-                        messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
-                        # Rollback the old quantities
-                        for usage in spare_part_usages:
-                            spare_part = usage.spare_part
-                            spare_part.quantity -= usage.quantity_used
-                            spare_part.save()
-                        return redirect('edit_work_order', id=work_order.id)
-
-                    # Deduct the new quantity from the spare part
-                    spare_part.quantity -= quantity_used
+                # Step 3: Add back the old quantities to the spare parts
+                spare_part_usages = SparePartUsage.objects.filter(work_order=work_order)
+                for usage in spare_part_usages:
+                    spare_part = usage.spare_part
+                    spare_part.quantity += usage.quantity_used
                     spare_part.save()
-                    check_low_spare_parts(spare_part)
 
-                    # Create or update the SparePartUsage record
-                    SparePartUsage.objects.update_or_create(
-                        work_order=work_order,
-                        spare_part=spare_part,
-                        defaults={'quantity_used': quantity_used},
+                # Step 4: Process the new spare parts and quantities (only for Technician and if not approved)
+                if request.user.userprofile.role == 'TEC' and work_order.status != 'Approved':
+                    for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
+                        # Skip if spare_part_id or quantity_used is empty
+                        if not spare_part_id.strip() or not quantity_used.strip():
+                            continue  # Skip empty fields
+
+                        # Skip if spare_part_id is not a valid integer
+                        try:
+                            spare_part_id = int(spare_part_id)
+                        except ValueError:
+                            continue  # Skip invalid spare_part_id (e.g., non-numeric values)
+
+                        # Skip if quantity_used is not a valid integer
+                        try:
+                            quantity_used = int(quantity_used)
+                        except ValueError:
+                            continue  # Skip invalid quantities (e.g., non-numeric values)
+
+                        # Get the spare part
+                        spare_part = SparePart.objects.get(id=spare_part_id)
+
+                        # Check if the new quantity exceeds the available stock
+                        if spare_part.quantity < quantity_used:
+                            messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
+                            # Rollback the old quantities
+                            for usage in spare_part_usages:
+                                spare_part = usage.spare_part
+                                spare_part.quantity -= usage.quantity_used
+                                spare_part.save()
+                            return redirect('edit_work_order', id=work_order.id)
+
+                        # Deduct the new quantity from the spare part
+                        spare_part.quantity -= quantity_used
+                        spare_part.save()
+                        check_low_spare_parts(spare_part)
+
+                        # Create or update the SparePartUsage record
+                        SparePartUsage.objects.update_or_create(
+                            work_order=work_order,
+                            spare_part=spare_part,
+                            defaults={'quantity_used': quantity_used},
+                        )
+
+                    # Step 5: Delete any remaining spare part usages that were not in the form
+                    SparePartUsage.objects.filter(work_order=work_order).exclude(
+                        spare_part_id__in=[int(id) for id in spare_parts_post if id.strip()]
+                    ).delete()
+
+                # Notify assigned technicians
+                for technician_id in assigned_technicians:
+                    technician = User.objects.get(id=technician_id)
+                    Notification.objects.create(
+                        user=technician,
+                        type="work_order",
+                        message=f'You have been assigned a new work order task: {work_order}.',
                     )
 
-                # Step 5: Delete any remaining spare part usages that were not in the form
-                SparePartUsage.objects.filter(work_order=work_order).exclude(
-                    spare_part_id__in=[int(id) for id in spare_parts_post if id.strip()]
-                ).delete()
-
-            # Notify assigned technicians
-            for technician_id in assigned_technicians:
-                technician = User.objects.get(id=technician_id)
-                Notification.objects.create(
-                    user=technician,
-                    type="work_order",
-                    message=f'You have been assigned a new work order task: {work_order}.',
-                )
-
-            messages.success(request, 'Work order updated successfully!')
-            return redirect('work_order_list')
-        except Exception as e:
-            messages.error(request, f'An error occurred: {str(e)}')
-            return redirect('edit_work_order', id=work_order.id)
-
+                messages.success(request, 'Work order updated successfully!')
+                return redirect('work_order_list')
+            except Exception as e:
+                messages.error(request, f'An error occurred: {str(e)}')
+                return redirect('edit_work_order', id=work_order.id)
+        else:
+            messages.error(request, f'You do not have the permsission to perform this task')
     # For GET requests, pre-fill the form and spare parts
     context = {
         'work_order': work_order,
@@ -698,11 +721,14 @@ def edit_spare_part_usage(request, id):
 
 
     if request.method == 'POST':
-        form = SparePartUsageForm(request.POST, instance=spare_part_usage)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Spare Part Usage updated successfully!')
-            return redirect('spare_part_usage_list')
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            form = SparePartUsageForm(request.POST, instance=spare_part_usage)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Spare Part Usage updated successfully!')
+                return redirect('spare_part_usage_list')
+        else:
+            messages.error(request, f'You do not have the permsission to perform this task')
     else:
         form = SparePartUsageForm(instance=spare_part_usage)
 
@@ -714,8 +740,7 @@ def decommissioned_equipment_list(request):
     if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
         decommissioned_equipments = DecommissionedEquipment.objects.all()  # Show all equipment for MO
     else:
-        decommissioned_equipments = DecommissionedEquipment.objects.filter(branch=user_branch)
-    
+        decommissioned_equipments = DecommissionedEquipment.objects.filter(equipment__branch=user_branch)    
     
     notifications = get_notifications(request.user)
 
@@ -730,7 +755,7 @@ def decommissioned_equipment_list(request):
 
 def add_decommissioned_equipment_page(request):
     notifications = get_notifications(request.user)
-    equipments = Equipment.objects.filter(branch = request.user.userprofile.branch)
+    equipments = Equipment.objects.filter(branch = request.user.userprofile.branch, decommissioned = False)
     return render(request, 'add_decommissioned_equipment.html', {
         'equipments': equipments,'active_page': 'decommissioned_equipment_list','notifications':notifications
     })
@@ -746,11 +771,16 @@ def add_decommissioned_equipment(request):
             return redirect('add_decommissioned_equipment_page')
 
         try:
+            equipment = Equipment.objects.get(id = equipment_id)
+            
             DecommissionedEquipment.objects.create(
                 equipment_id=equipment_id,
                 decommission_reason=decommission_reason,
                 decommission_date=decommission_date
             )
+            equipment.decommissioned = True
+            
+            
             messages.success(request, 'Decommissioned Equipment added successfully!')
             return redirect('decommissioned_equipment_list')
         except Exception as e:
@@ -766,11 +796,15 @@ def edit_decommissioned_equipment(request, id):
 
 
     if request.method == 'POST':
-        form = DecommissionedEquipmentForm(request.POST, instance=decommissioned_equipment)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Decommissioned Equipment updated successfully!')
-            return redirect('decommissioned_equipment_list')
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            form = DecommissionedEquipmentForm(request.POST, instance=decommissioned_equipment)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Decommissioned Equipment updated successfully!')
+                return redirect('decommissioned_equipment_list')
+        else:
+            messages.error(request, f'You do not have the permsission to perform this task')
+        
     else:
         form = DecommissionedEquipmentForm(instance=decommissioned_equipment)
 
@@ -1024,9 +1058,9 @@ def equipment_list(request):
 
     # Filter equipment based on user role
     if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
-        equipments = Equipment.objects.all()  # Show all equipment for MO
+        equipments = Equipment.objects.filter(decommissioned = False)  # Show all equipment for MO
     else:
-        equipments = Equipment.objects.filter(branch=user_branch)  # Filter by branch for other roles
+        equipments = Equipment.objects.filter(branch=user_branch, decommissioned = False)  # Filter by branch for other roles
 
     context = {
         'active_page': 'equipment_list',
@@ -1159,14 +1193,18 @@ def edit_equipment(request, id):
     # Fetch unique equipment types from MaintenanceTask
     equipment_types = MaintenanceTask.objects.values_list('equipment_type', flat=True).distinct()
 
+    # Initialize the form variable
+    form = EquipmentForm(instance=equipment)
+
     if request.method == 'POST':
-        form = EquipmentForm(request.POST, instance=equipment)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Equipment changed successfully')
-            return redirect('equipment_list')
-    else:
-        form = EquipmentForm(instance=equipment)
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            form = EquipmentForm(request.POST, instance=equipment)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Equipment changed successfully')
+                return redirect('equipment_list')
+        else:
+            messages.error(request, 'You do not have the permission to perform this task')
 
     return render(request, 'edit_equipment.html', {
         'form': form,
@@ -1182,19 +1220,22 @@ def delete_equipment(request, id):
 
     
     if request.method == 'POST':
-        try:
-            equipment.delete()
-            messages.success(request, 'The equipment was deleted successfully.')
-            return redirect(reverse('equipment_list'))
-        except ProtectedError as e:
-            messages.error(request, 'This equipment cannot be deleted because it is referenced by other objects.')
-            return render(request, 'confirm_delete_protected.html', {
-                'object': equipment,
-                'protected_objects': e.protected_objects,
-                'model_name': 'Equipment',  # Dynamic model name
-                'active_page':'equipment_list',
-                'notifications':notifications
-            })
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            try:
+                equipment.delete()
+                messages.success(request, 'The equipment was deleted successfully.')
+                return redirect(reverse('equipment_list'))
+            except ProtectedError as e:
+                messages.error(request, 'This equipment cannot be deleted because it is referenced by other objects.')
+                return render(request, 'confirm_delete_protected.html', {
+                    'object': equipment,
+                    'protected_objects': e.protected_objects,
+                    'model_name': 'Equipment',  # Dynamic model name
+                    'active_page':'equipment_list',
+                    'notifications':notifications
+                })
+        else:
+            messages.error(request, f'You do not have the permsission to perform this task')
     
     return render(request, 'confirm_delete.html', {
         'object': equipment,
@@ -1299,21 +1340,27 @@ def add_spare_part(request):
 
 def edit_spare_part(request, id):
     notifications = get_notifications(request.user)
-
     spare_part = get_object_or_404(SparePart, id=id)  # Fetch the spare part instance
 
+    # Initialize the form variable
+    form = SparePartForm(instance=spare_part)
+
     if request.method == 'POST':
-        form = SparePartForm(request.POST, instance=spare_part)
-        if form.is_valid():
-            form.save()  # Save the changes to the database
-            messages.success(request, 'Spare part updated successfully!')
-            return redirect('spare_part_list')  # Redirect to the spare part list after saving
-    else:
-        form = SparePartForm(instance=spare_part)  # Pre-fill the form with the current data
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            form = SparePartForm(request.POST, instance=spare_part)
+            if form.is_valid():
+                form.save()  # Save the changes to the database
+                messages.success(request, 'Spare part updated successfully!')
+                return redirect('spare_part_list')  # Redirect to the spare part list after saving
+        else:
+            messages.error(request, 'You do not have the permission to perform this task')
 
-    return render(request, 'edit_spare_part.html', {'form': form, 'spare_part': spare_part,'active_page': 'spare_part_list','notifications':notifications
-})
-
+    return render(request, 'edit_spare_part.html', {
+        'form': form,
+        'spare_part': spare_part,
+        'active_page': 'spare_part_list',
+        'notifications': notifications
+    })
 
  #-----------------------------------------------maintenance-----------------------------------------------------------
     
@@ -1327,7 +1374,7 @@ def add_maintenance_page(request):
     user_branch = request.user.userprofile.branch
 
     context = {
-        'equipments': Equipment.objects.filter(branch=user_branch),
+        'equipments': Equipment.objects.filter(branch=user_branch, decommissioned = False),
         'technicians': User.objects.filter(
             userprofile__branch=user_branch,  # Filter by branch
             userprofile__role='TEC'  # Filter by role (Technician)
@@ -1346,7 +1393,7 @@ def add_maintenance(request):
     notifications = get_notifications(request.user)
 
     context = {
-        'equipments': Equipment.objects.filter(branch=user_branch),
+        'equipments': Equipment.objects.filter(branch=user_branch, decommissioned = False),
         'technicians': User.objects.filter(userprofile__branch=user_branch, userprofile__role='TEC'),
         'branch': user_branch,
         'maintenance_tasks': MaintenanceTask.objects.all(),
@@ -1608,24 +1655,27 @@ def delete_maintenance(request, id):
 
     
     if request.method == 'POST':
-        # If the user confirms deletion, attempt to delete the record
-        try:
-            maintenance_record.delete()
-            messages.success(request, 'The record was deleted successfully.')
-            return redirect(reverse('maintenance_list'))  # Redirect to the list view
-        except ProtectedError as e:
-            # If there are protected objects, render the protected page
-            messages.error(request, 'This record cannot be deleted because it is referenced by other objects.')
-            return render(request, 'confirm_delete_protected.html', {
-                'object': maintenance_record,
-                'protected_objects': e.protected_objects,
-                'model_name': 'Maintenance Record',  # Dynamic model name
-                'active_page':'maintenance_list',
-                'notifications': notifications,
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            # If the user confirms deletion, attempt to delete the record
+            try:
+                maintenance_record.delete()
+                messages.success(request, 'The record was deleted successfully.')
+                return redirect(reverse('maintenance_list'))  # Redirect to the list view
+            except ProtectedError as e:
+                # If there are protected objects, render the protected page
+                messages.error(request, 'This record cannot be deleted because it is referenced by other objects.')
+                return render(request, 'confirm_delete_protected.html', {
+                    'object': maintenance_record,
+                    'protected_objects': e.protected_objects,
+                    'model_name': 'Maintenance Record',  # Dynamic model name
+                    'active_page':'maintenance_list',
+                    'notifications': notifications,
 
 
-            })
-    
+                })
+        else:
+            messages.error(request, f'You do not have the permsission to perform this task')
+        
     # If it's a GET request, render the confirmation page
     return render(request, 'confirm_delete.html', {
         'object': maintenance_record,
@@ -1840,6 +1890,7 @@ def complete_work_order(request, work_order_id):
             # Create a notification for the MD Manager
             Notification.objects.create(
                 user=manager,
+                type = work_order,
                 message=f'The work order for {work_order.equipment.name} has been marked as complete.',
             )
         # if client:
@@ -1934,6 +1985,8 @@ def mark_notification_as_read(request, notification_id):
                 return redirect('low_spare_part')  # Adjust the URL name as necessary
             elif notification.type == 'expiration_list':
                 return redirect('expired_chemical.html')
+            elif notification.type == 'maintenance_due':
+                return redirect('maintenance_due')
             
         except Notification.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Notification not found'})
@@ -1996,23 +2049,26 @@ def restock_spare_part(request):
     notifications = get_notifications(request.user)
 
     if request.method == 'POST':
-        selected_spare_part_id = request.POST.get('spare_part')  # Get the selected spare part ID
-        spare_part = get_object_or_404(SparePart, id=selected_spare_part_id)  # Fetch the spare part instance
+        if request.user.userprofile.role in ["MD manager", "TEC"]:
+            selected_spare_part_id = request.POST.get('spare_part')  # Get the selected spare part ID
+            spare_part = get_object_or_404(SparePart, id=selected_spare_part_id)  # Fetch the spare part instance
 
-        form = RestockSparePartForm(request.POST, request.FILES)
-        if form.is_valid():
-            restock = form.save(commit=False)
-            restock.spare_part = spare_part  # Associate the restock with the spare part
-            restock.restock_date = timezone.now()  # Set the restock date to the current time
-            restock.save()
+            form = RestockSparePartForm(request.POST, request.FILES)
+            if form.is_valid():
+                restock = form.save(commit=False)
+                restock.spare_part = spare_part  # Associate the restock with the spare part
+                restock.restock_date = timezone.now()  # Set the restock date to the current time
+                restock.save()
 
-            # Update the spare part quantity and last_restock_date
-            spare_part.quantity += restock.quantity
-            spare_part.last_restock_date = restock.restock_date
-            spare_part.save()
+                # Update the spare part quantity and last_restock_date
+                spare_part.quantity += restock.quantity
+                spare_part.last_restock_date = restock.restock_date
+                spare_part.save()
 
-            messages.success(request, f'{restock.quantity} units of {spare_part.name} restocked successfully!')
-            return redirect('spare_part_list')
+                messages.success(request, f'{restock.quantity} units of {spare_part.name} restocked successfully!')
+                return redirect('spare_part_list')
+        else:
+            messages.error(request, f'You do not have the permsission to perform this task')
     else:
         form = RestockSparePartForm()
 
@@ -2071,6 +2127,7 @@ def maintenance_due(request):
 
     today = timezone.now().date()
     due_in_5_days = today + timezone.timedelta(days=5)
+    print(f"Today: {today}, Due in 5 days: {due_in_5_days}")
 
     # Fetch equipment due for maintenance within the next 5 days
     due_equipment = Equipment.objects.filter(
@@ -2080,13 +2137,7 @@ def maintenance_due(request):
     ) | Equipment.objects.filter(
         next_annual_maintenance_date__lte=due_in_5_days
     )
-
-    # Exclude equipment that has already been maintained (next maintenance date is in the future)
-    due_equipment = due_equipment.exclude(
-        next_monthly_maintenance_date__gt=today,
-        next_biannual_maintenance_date__gt=today,
-        next_annual_maintenance_date__gt=today,
-    )
+    print(f"Due equipment before exclusion: {due_equipment}")
 
     # Role-based filtering
     user_role = request.user.userprofile.role  # Assuming the user's role is stored in a `role` field on the User model
@@ -2101,11 +2152,11 @@ def maintenance_due(request):
 
     context = {
         'due_equipment': due_equipment,
-        'active_page':'maintenance_due',
-        'notifications':notifications
+        'due_in_5_days': due_in_5_days,  # Pass the due_in_5_days to the template
+        'active_page': 'maintenance_due',
+        'notifications': notifications
     }
     return render(request, 'maintenance_due.html', context)
-
 #----------------------------------------------------Import Export-------------------------------------------
 def export_data(request, model_name):
     """
@@ -2157,37 +2208,50 @@ def import_data(request, model_name):
 
     if request.method == 'POST':
         if 'confirm_import' in request.POST:
-            # Perform the actual import
-            import_file = request.FILES['import_file']
-            file_format = base_formats.XLSX()  # Only accept Excel files
-
-            # Check if the file is an Excel file
-            if not import_file.name.endswith('.xlsx'):
-                messages.error(request, "Please upload an Excel file (.xlsx).")
+            # Retrieve the temporary file path from the session
+            temp_file_path = request.session.get('temp_file_path')
+            if not temp_file_path or not os.path.exists(temp_file_path):
+                messages.error(request, "File not found. Please upload the file again.")
                 return redirect('import_data', model_name=model_name)
 
-            # Load the dataset
-            dataset = file_format.create_dataset(import_file)
-            result = resource.import_data(dataset, dry_run=False)  # Perform the actual import
+            try:
+                # Read the file content from the temporary file
+                with open(temp_file_path, 'rb') as f:
+                    file_content = f.read()
 
-            if not result.has_errors():
-                messages.success(request, 'Data imported successfully.')
-            else:
-                # Collect errors and display them
-                error_messages = []
-                for row in result.invalid_rows:
-                    error_messages.append(f"Row {row.number}: {row.error}")
-                for row in result.row_errors():
-                    for error in row[1]:
-                        error_messages.append(f"Row {row[0]}: {error.error}")
+                # Load the dataset
+                file_format = base_formats.XLSX()
+                dataset = file_format.create_dataset(file_content)
+                result = resource.import_data(dataset, dry_run=False)  # Perform the actual import
 
-                # Pass errors to the template
-                return render(request, 'import_template.html', {
-                    'model_name': model_name,
-                    'errors': error_messages,
-                })
+                if not result.has_errors():
+                    messages.success(request, 'Data imported successfully.')
+                else:
+                    # Collect errors and display them
+                    error_messages = []
+                    for row in result.invalid_rows:
+                        error_messages.append(f"Row {row.number}: {row.error}")
+                    for row in result.row_errors():
+                        for error in row[1]:
+                            error_messages.append(f"Row {row[0]}: {error.error}")
 
-            return redirect('equipment_list')  # Redirect to the equipment list page
+                    # Pass errors to the template
+                    return render(request, 'import_template.html', {
+                        'model_name': model_name,
+                        'errors': error_messages,
+                        'active_page': 'equipment_list',
+                        'notifications': notifications,
+                    })
+
+                # Clean up the temporary file
+                os.remove(temp_file_path)
+                del request.session['temp_file_path']
+
+                return redirect('equipment_list')  # Redirect to the equipment list page
+
+            except Exception as e:
+                messages.error(request, f"An error occurred during import: {str(e)}")
+                return redirect('import_data', model_name=model_name)
 
         elif 'import_file' in request.FILES:
             # Perform a dry-run to preview the data
@@ -2199,38 +2263,60 @@ def import_data(request, model_name):
                 messages.error(request, "Please upload an Excel file (.xlsx).")
                 return redirect('import_data', model_name=model_name)
 
-            # Load the dataset
-            dataset = file_format.create_dataset(import_file)
-            result = resource.import_data(dataset, dry_run=True)  # Perform a dry-run
+            try:
+                # Save the file temporarily
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
+                    for chunk in import_file.chunks():
+                        temp_file.write(chunk)
+                    temp_file_path = temp_file.name
 
-            # Prepare data for the preview
-            preview_data = []
-            for row in dataset.dict:
-                preview_data.append(row)
+                # Store the temporary file path in the session
+                request.session['temp_file_path'] = temp_file_path
 
-            # Collect errors (if any)
-            error_messages = []
-            for row in result.invalid_rows:
-                error_messages.append(f"Row {row.number}: {row.error}")
-            for row in result.row_errors():
-                for error in row[1]:
-                    error_messages.append(f"Row {row[0]}: {error.error}")
+                # Read the file content as bytes
+                with open(temp_file_path, 'rb') as f:
+                    file_content = f.read()
 
-            return render(request, 'import_preview.html', {
-                'model_name': model_name,
-                'preview_data': preview_data,
-                'errors': error_messages,
-                'active_page':'equipment_list',
-                'notifications':notifications,
-            })
+                # Load the dataset
+                dataset = file_format.create_dataset(file_content)
+                result = resource.import_data(dataset, dry_run=True)  # Perform a dry-run
+
+                # Prepare data for the preview
+                preview_data = []
+                for row in dataset.dict:
+                    preview_data.append(row)
+
+                # Collect errors (if any)
+                error_messages = []
+                for row in result.invalid_rows:
+                    error_messages.append(f"Row {row.number}: {row.error}")
+                for row in result.row_errors():
+                    for error in row[1]:
+                        error_messages.append(f"Row {row[0]}: {error.error}")
+
+                # If there are errors, do not show the confirm button
+                show_confirm_button = not error_messages
+
+                return render(request, 'import_preview.html', {
+                    'model_name': model_name,
+                    'preview_data': preview_data,
+                    'errors': error_messages,
+                    'show_confirm_button': show_confirm_button,
+                    'active_page': 'equipment_list',
+                    'notifications': notifications,
+                })
+
+            except Exception as e:
+                messages.error(request, f"An error occurred during preview: {str(e)}")
+                return redirect('import_data', model_name=model_name)
 
     return render(request, 'import_template.html', {
         'model_name': model_name,
-        'active_page':'equipment_list',
-        'notifications':notifications,
+        'active_page': 'equipment_list',
+        'notifications': notifications,
     })
-    
-    
+#------------------------------------------------------------------------------------------------------------
+
 def maintenance_dashboard(request):
     user = request.user
     notifications = get_notifications(request.user)
@@ -3524,3 +3610,104 @@ def dashboard(request):
     }
 
     return render(request, 'dashboard.html', context)
+
+
+def client_dashboard(request):
+    user = request.user
+    notifications = get_notifications(request.user)
+
+    # Get date range from request
+    from_date = request.GET.get('from_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    to_date = request.GET.get('to_date', datetime.now().strftime('%Y-%m-%d'))
+
+    # Work order counts
+    total_work_orders = WorkOrder.objects.filter(
+        requester=user,
+        created_at__range=[from_date, to_date]
+    ).count()
+
+    pending_work_orders = WorkOrder.objects.filter(
+        requester=user,
+        status='Pending',
+        created_at__range=[from_date, to_date]
+    ).count()
+
+    accepted_work_orders = WorkOrder.objects.filter(
+        requester=user,
+        status='Accepted',
+        created_at__range=[from_date, to_date]
+    ).count()
+
+    completed_work_orders = WorkOrder.objects.filter(
+        requester=user,
+        status='Complete',
+        created_at__range=[from_date, to_date]
+    ).count()
+
+    approved_work_orders = WorkOrder.objects.filter(
+        requester=user,
+        status='Approved',
+        created_at__range=[from_date, to_date]
+    ).count()
+
+    # Work orders by month data
+    work_order_months = []
+    pending_work_orders_by_month = []
+    accepted_work_orders_by_month = []
+    completed_work_orders_by_month = []
+    approved_work_orders_by_month = []
+
+    for i in range(1, 13):  # January to December
+        month = datetime(datetime.now().year, i, 1).strftime('%b')
+        work_order_months.append(month)
+
+        pending_count = WorkOrder.objects.filter(
+            requester=user,
+            created_at__month=i,
+            created_at__year=datetime.now().year,
+            status='Pending'
+        ).count()
+        pending_work_orders_by_month.append(pending_count)
+
+        accepted_count = WorkOrder.objects.filter(
+            requester=user,
+            created_at__month=i,
+            created_at__year=datetime.now().year,
+            status='Accepted'
+        ).count()
+        accepted_work_orders_by_month.append(accepted_count)
+
+        completed_count = WorkOrder.objects.filter(
+            requester=user,
+            created_at__month=i,
+            created_at__year=datetime.now().year,
+            status='Complete'
+        ).count()
+        completed_work_orders_by_month.append(completed_count)
+
+        approved_count = WorkOrder.objects.filter(
+            requester=user,
+            created_at__month=i,
+            created_at__year=datetime.now().year,
+            status='Approved'
+        ).count()
+        approved_work_orders_by_month.append(approved_count)
+
+    context = {
+        'from_date': from_date,
+        'to_date': to_date,
+        'total_work_orders': total_work_orders,
+        'pending_work_orders': pending_work_orders,
+        'accepted_work_orders': accepted_work_orders,
+        'completed_work_orders': completed_work_orders,
+        'approved_work_orders': approved_work_orders,
+        'work_order_months': work_order_months,
+        'pending_work_orders_by_month': pending_work_orders_by_month,
+        'accepted_work_orders_by_month': accepted_work_orders_by_month,
+        'completed_work_orders_by_month': completed_work_orders_by_month,
+        'approved_work_orders_by_month': approved_work_orders_by_month,
+        'active_page': 'dashboard',
+        'notifications': notifications
+    }
+
+    return render(request, 'client_dashboard.html', context)
