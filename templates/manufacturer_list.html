@@ -29,17 +29,8 @@
                 <div class="card">
                     <div class="card-body">
                         <!-- Add Manufacturer Button and Import/Export Buttons -->
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <!-- Export Button -->
-                                <a href="{% url 'export_data' model_name='Manufacturer' %}" class="btn btn-link text-success">
-                                    <i class="bi bi-download"></i> Export
-                                </a>
-                                <!-- Import Button -->
-                                <a href="{% url 'import_data' model_name='Manufacturer' %}" class="btn btn-link text-success">
-                                    <i class="bi bi-upload"></i> Import
-                                </a>
-                            </div>
+                        <!-- <div class="d-flex justify-content-between align-items-center mb-3"> -->
+                            
                             {% if request.user.userprofile.role == "MD manager" or request.user.userprofile.role == "TEC" %}
                             <!-- Add Manufacturer Button -->
                             <div class="d-flex justify-content-end mb-3">
@@ -48,7 +39,7 @@
                                 </a>
                             </div>
                             {% endif %}
-                        </div>
+                        <!-- </div> -->
 
                         <!-- Manufacturer List Table -->
                         <table id="manufacturer-table" class="table table-striped table-hover" style="width:100%">

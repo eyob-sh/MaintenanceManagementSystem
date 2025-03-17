@@ -580,31 +580,79 @@
 
 </body>
 
-<audio id="notification-sound" src="/static/sounds/notification.mp3"></audio>
 
 <script>
-    const notificationSocket = new WebSocket(
-        'ws://' + window.location.host + '/ws/notifications/'
-    );
+  document.addEventListener('DOMContentLoaded', function() {
+      const eventSource = new EventSource("{% url 'sse_notifications' %}");
+      const notificationSound = document.getElementById('notificationSound');
 
-    notificationSocket.onmessage = function (e) {
-        const notifications = JSON.parse(e.data);
-        if (notifications.length > 0) {
-            // Play sound
-            document.getElementById('notification-sound').play();
+      // Handle incoming SSE messages
+      eventSource.onmessage = function(event) {
+          const data = JSON.parse(event.data);
+          console.log("Received data:", data); // Debugging: Check if data is received
+          updateNotificationBell(data);
+          updateNotificationList(data);
+          notificationSound.play(); // Play sound when a new notification arrives
+      };
 
-            // Display notifications (e.g., in a dropdown or alert)
-            notifications.forEach(notification => {
-                alert(`New Notification: ${notification.message}`);
-            });
-        }
-    };
+      // Update the notification bell count
+      function updateNotificationBell(notifications) {
+          const badge = document.querySelector('.badge-number');
+          badge.textContent = notifications.length;
+      }
 
-    notificationSocket.onclose = function (e) {
-        console.error('Notification socket closed unexpectedly');
-    };
+      // Update the notification list
+      function updateNotificationList(notifications) {
+          const notificationList = document.querySelector('.notifications');
+          notificationList.innerHTML = '';
+
+          notifications.forEach(notification => {
+              const notificationItem = document.createElement('li');
+              notificationItem.className = 'notification-item';
+              notificationItem.innerHTML = `
+                  <a href="/mark_notification_as_read/${notification.id}/" style="text-decoration: none; color: inherit;">
+                      <i class="bi bi-exclamation-circle text-warning"></i>
+                      <div>
+                          <h4>${notification.message}</h4>
+                          <p>${notification.timestamp} ago</p>
+                      </div>
+                  </a>
+              `;
+              notificationList.appendChild(notificationItem);
+          });
+
+          // Reattach click event listeners to the new notification items
+          attachNotificationClickHandlers();
+      }
+
+      // Attach click event handlers to notification links
+      function attachNotificationClickHandlers() {
+          document.querySelectorAll('.notification-item a').forEach(link => {
+              link.addEventListener('click', function(event) {
+                  event.preventDefault(); // Prevent default link behavior temporarily
+
+                  // Mark the notification as read via AJAX
+                  fetch(link.href, {
+                      method: 'POST',
+                      headers: {
+                          'X-CSRFToken': '{{ csrf_token }}',
+                          'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({})
+                  }).then(response => {
+                      if (response.ok) {
+                          // After marking as read, allow the default link behavior (redirect)
+                          window.location.href = link.href;
+                      }
+                  });
+              });
+          });
+      }
+
+      // Attach click handlers to existing notifications on page load
+      attachNotificationClickHandlers();
+  });
 </script>
 
-
-
+<audio id="notificationSound" src="{% static 'sounds/notification.mp3' %}"></audio>
 </html>

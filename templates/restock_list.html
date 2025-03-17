@@ -29,19 +29,9 @@
                 <div class="card">
                     <div class="card-body">
                         <!-- Restock Button -->
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+                        
 
-
-                            <div>
-                                <!-- Export Button -->
-                                <a href="{% url 'export_data' model_name='Equipment' %}" class="btn btn-link text-success">
-                                    <i class="bi bi-download"></i> Export
-                                </a>
-                                <!-- Import Button -->
-                                <a href="{% url 'import_data' model_name='Equipment' %}" class="btn btn-link text-success">
-                                    <i class="bi bi-upload"></i> Import
-                                </a>
-                            </div>
+                        <div class="d-flex justify-content-end mb-3"> 
                             {% if request.user.userprofile.role == "MD manager" or request.user.userprofile.role == "TEC" %}
                             <a href="{% url 'restock_spare_part_page' %}" class="btn btn-success bg-success">
                                 <i class="bi bi-plus"></i> Restock

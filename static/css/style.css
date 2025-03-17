@@ -520,7 +520,7 @@ td {
 
 .header-nav .notifications {
   inset: 8px -15px auto auto !important;
-  max-height: 300px; /* to set a maximum height */
+  max-height: 500px; /* to set a maximum height */
   overflow-y: auto; /* to enable vertical scrolling */
 }
 

@@ -30,17 +30,8 @@
                     <div class="card-body">
 
                         <!-- Add Decommissioned Equipment Button and Import/Export Buttons -->
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <!-- Export Button -->
-                                <a href="{% url 'export_data' model_name='DecommissionedEquipment' %}" class="btn btn-link text-success">
-                                    <i class="bi bi-download"></i> Export
-                                </a>
-                                <!-- Import Button -->
-                                <a href="{% url 'import_data' model_name='DecommissionedEquipment' %}" class="btn btn-link text-success">
-                                    <i class="bi bi-upload"></i> Import
-                                </a>
-                            </div>
+                        <!-- <div class="d-flex justify-content-between align-items-center mb-3"> -->
+                            
 
                             <!-- Add Decommissioned Equipment Button (Visible only to MD manager and TEC) -->
                             {% if request.user.userprofile.role == "MD manager" or request.user.userprofile.role == "TEC" %}
@@ -50,7 +41,7 @@
                                     </a>
                                 </div>
                             {% endif %}
-                        </div>
+                        <!-- </div> -->
 
                         <!-- Decommissioned Equipment Table -->
                         <table id="decommissioned-equipment-table" class="table table-striped table-hover" style="width:100%">

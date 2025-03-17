@@ -29,6 +29,8 @@ from reportlab.lib.styles import ParagraphStyle
 import tempfile
 import os
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.http import StreamingHttpResponse
+import time
 
 
 import io
@@ -3711,3 +3713,24 @@ def client_dashboard(request):
     }
 
     return render(request, 'client_dashboard.html', context)
+
+
+def sse_notifications(request):
+    def event_stream():
+        user = request.user
+        while True:
+            if user.is_authenticated:
+                notifications = Notification.objects.filter(user=user, is_read=False).order_by('-timestamp')[:10]
+                data = [{
+                    'id': notification.id,
+                    'message': notification.message,
+                    'timestamp': notification.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                    'url': notification.url
+                } for notification in notifications]
+                yield f"data: {json.dumps(data)}\n\n"
+            time.sleep(5)  # Adjust the sleep time as needed
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    return response
