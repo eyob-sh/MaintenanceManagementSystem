@@ -533,14 +533,17 @@ def add_work_order(request):
             messages.success(request, 'Work Order added successfully!')
 
             # Send notification to the MD Manager of the same branch
-            manager = User.objects.filter(userprofile__branch=branch, userprofile__role='MD manager').first()
-            if manager:
-                Notification.objects.create(
-                    user=manager,
-                    type = "work_order",
-                    message=f'New work order: {work_order.location}.',
-                )
-                notification_created.send(sender=Notification)
+            if request.user.userprofile.role == 'CL':
+                managers = User.objects.filter(userprofile__branch=branch, userprofile__role='MD manager')
+
+                # Iterate over the managers and create a notification for each one
+                for manager in managers:
+                    Notification.objects.create(
+                        user=manager,
+                        type="work_order",
+                        message=f'New work order: {work_order.location}.',
+                    )
+                    notification_created.send(sender=Notification)
 
             return redirect('work_order_list')
         except Exception as e:
@@ -1767,8 +1770,8 @@ def complete_maintenance(request, maintenance_id):
         maintenance_branch = maintenance.branch
         
         # Find the MD Manager in the same branch
-        manager = User.objects.filter(userprofile__branch=maintenance_branch, userprofile__role='MD manager').first()
-        if manager:
+        managers = User.objects.filter(userprofile__branch=maintenance_branch, userprofile__role='MD manager')
+        for manager in managers:
             # Create a notification for the MD Manager
             Notification.objects.create(
                 user=manager,
@@ -1898,9 +1901,9 @@ def complete_work_order(request, work_order_id):
         work_order_branch = work_order.branch
         
         # Find the MD Manager in the same branch
-        manager = User.objects.filter(userprofile__branch=work_order_branch, userprofile__role='MD manager').first()
+        managers = User.objects.filter(userprofile__branch=work_order_branch, userprofile__role='MD manager')
         client = work_order.requester
-        if manager:
+        for manager in managers:
             # Create a notification for the MD Manager
             Notification.objects.create(
                 user=manager,
@@ -2018,12 +2021,12 @@ def check_low_spare_parts(spare_part):
     """
     if spare_part.quantity < 5:
         # Get the MD manager of the same branch
-        md_manager = User.objects.filter(
+        md_managers = User.objects.filter(
             userprofile__branch=spare_part.branch,
             userprofile__role='MD manager'
-        ).first()
+        )
 
-        if md_manager:
+        for md_manager in md_managers:
             # Create a notification for the MD manager
             Notification.objects.create(
                 user=md_manager,
