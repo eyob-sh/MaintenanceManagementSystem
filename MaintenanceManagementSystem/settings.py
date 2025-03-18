@@ -73,7 +73,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'MaintenanceManagementSystem.wsgi.application'
+# WSGI_APPLICATION = 'MaintenanceManagementSystem.wsgi.application'
 
 ASGI_APPLICATION = 'MaintenanceManagementSystem.asgi.application'
 

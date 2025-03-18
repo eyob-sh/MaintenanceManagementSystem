@@ -137,7 +137,9 @@ path('add_maintenance_task_page/', views.add_maintenance_task_page, name = "add_
     
     #-----------------------------------------------------------------------------------------------------------
     path('mark_notification_as_read/<int:notification_id>/', views.mark_notification_as_read, name='mark_notification_as_read'),
-    path('sse/notifications/', views.sse_notifications, name='sse_notifications'),
+    # path('sse/notifications/', views.sse_notifications, name='sse_notifications'),
+    path('notification_stream/', views.notification_stream, name='notification_stream'),
+
     
     path('maintenance_due/', views.maintenance_due, name='maintenance_due'),  
     

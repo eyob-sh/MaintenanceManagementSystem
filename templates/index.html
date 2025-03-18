@@ -68,43 +68,42 @@
         </li>
         <!-- End Search Icon-->
 
-        <li class="nav-item dropdown">
-          <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
-            <i class="bi bi-bell" style="color: black;"></i>
-            <span class="badge bg-primary badge-number">{{ notifications|length }}</span>
-          </a><!-- End Notification Icon -->
+        <!-- Notification Dropdown -->
+<li class="nav-item dropdown">
+  <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
+      <i class="bi bi-bell" style="color: black;"></i>
+      <span class="badge bg-primary badge-number" id="notification-count">{{ notifications|length }}</span>
+  </a><!-- End Notification Icon -->
 
-          <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications">
-            <li class="dropdown-header">
-              You have {{ notifications|length }} new notifications
-              {% comment %} <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a> {% endcomment %}
-              
-            </li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
+  <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications" id="notification-list">
+      <li class="dropdown-header">
+          You have <span id="notification-header-count">{{ notifications|length }}</span> new notifications
+          {% comment %} <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a> {% endcomment %}
+      </li>
+      <li>
+          <hr class="dropdown-divider">
+      </li>
 
-            {% for notification in notifications %}
-            <li class="notification-item">
-              <a href="{% url 'mark_notification_as_read' notification.id %}"
-                style="text-decoration: none; color: inherit;">
-                <i class="bi bi-exclamation-circle text-warning"></i>
-                <div>
+      {% for notification in notifications %}
+      <li class="notification-item" id="notification-{{ notification.id }}">
+          <a href="{% url 'mark_notification_as_read' notification.id %}" style="text-decoration: none; color: inherit;">
+              <i class="bi bi-exclamation-circle text-warning"></i>
+              <div>
                   <h4>{{ notification.message }}</h4>
                   <p>{{ notification.timestamp|timesince }} ago</p>
-                </div>
-              </a>
-            </li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-            {% endfor %}
+              </div>
+          </a>
+      </li>
+      <li>
+          <hr class="dropdown-divider">
+      </li>
+      {% endfor %}
 
-            {% comment %} <li class="dropdown-footer">
-              <a href="#">Show all notifications</a> 
-            </li> {% endcomment %}
-          </ul><!-- End Notification Dropdown Items -->
-        </li><!-- End Notification Nav -->
+      {% comment %} <li class="dropdown-footer">
+          <a href="#">Show all notifications</a> 
+      </li> {% endcomment %}
+  </ul><!-- End Notification Dropdown Items -->
+</li><!-- End Notification Nav -->
         {% comment %} <li class="nav-item dropdown">
 
           <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
@@ -580,79 +579,61 @@
 
 </body>
 
-
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-      const eventSource = new EventSource("{% url 'sse_notifications' %}");
-      const notificationSound = document.getElementById('notificationSound');
+  // Function to play notification sound
+function playNotificationSound() {
+    const audio = new Audio('/static/sounds/notification.mp3'); // Update the path to your sound file
+    audio.play();
+}
 
-      // Handle incoming SSE messages
-      eventSource.onmessage = function(event) {
-          const data = JSON.parse(event.data);
-          console.log("Received data:", data); // Debugging: Check if data is received
-          updateNotificationBell(data);
-          updateNotificationList(data);
-          notificationSound.play(); // Play sound when a new notification arrives
-      };
+// Function to add a new notification to the UI
+function addNotification(notification) {
+    const notificationList = document.getElementById('notification-list');
+    const notificationCount = document.getElementById('notification-count');
+    const notificationHeaderCount = document.getElementById('notification-header-count');
 
-      // Update the notification bell count
-      function updateNotificationBell(notifications) {
-          const badge = document.querySelector('.badge-number');
-          badge.textContent = notifications.length;
-      }
+    // Create the new notification item
+    const notificationItem = document.createElement('li');
+    notificationItem.className = 'notification-item';
+    notificationItem.id = `notification-${notification.id}`;
+    notificationItem.innerHTML = `
+        <a href="/mark_notification_as_read/${notification.id}/" style="text-decoration: none; color: inherit;">
+            <i class="bi bi-exclamation-circle text-warning"></i>
+            <div>
+                <h4>${notification.message}</h4>
+                <p>${notification.timestamp}</p>
+            </div>
+        </a>
+    `;
 
-      // Update the notification list
-      function updateNotificationList(notifications) {
-          const notificationList = document.querySelector('.notifications');
-          notificationList.innerHTML = '';
+    // Add the new notification to the top of the list
+    notificationList.insertBefore(notificationItem, notificationList.children[2]);
+    notificationList.insertBefore(document.createElement('li'), notificationList.children[2]).innerHTML = '<hr class="dropdown-divider">';
 
-          notifications.forEach(notification => {
-              const notificationItem = document.createElement('li');
-              notificationItem.className = 'notification-item';
-              notificationItem.innerHTML = `
-                  <a href="/mark_notification_as_read/${notification.id}/" style="text-decoration: none; color: inherit;">
-                      <i class="bi bi-exclamation-circle text-warning"></i>
-                      <div>
-                          <h4>${notification.message}</h4>
-                          <p>${notification.timestamp} ago</p>
-                      </div>
-                  </a>
-              `;
-              notificationList.appendChild(notificationItem);
-          });
+    // Update the notification count
+    const count = parseInt(notificationCount.textContent) + 1;
+    notificationCount.textContent = count;
+    notificationHeaderCount.textContent = count;
 
-          // Reattach click event listeners to the new notification items
-          attachNotificationClickHandlers();
-      }
+    // Play notification sound
+    playNotificationSound();
+}
 
-      // Attach click event handlers to notification links
-      function attachNotificationClickHandlers() {
-          document.querySelectorAll('.notification-item a').forEach(link => {
-              link.addEventListener('click', function(event) {
-                  event.preventDefault(); // Prevent default link behavior temporarily
+// Connect to the SSE endpoint
+const eventSource = new EventSource('/notification_stream/');
 
-                  // Mark the notification as read via AJAX
-                  fetch(link.href, {
-                      method: 'POST',
-                      headers: {
-                          'X-CSRFToken': '{{ csrf_token }}',
-                          'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify({})
-                  }).then(response => {
-                      if (response.ok) {
-                          // After marking as read, allow the default link behavior (redirect)
-                          window.location.href = link.href;
-                      }
-                  });
-              });
-          });
-      }
+// Listen for new notifications
+eventSource.onmessage = function(event) {
+    const notification = JSON.parse(event.data);
+    addNotification(notification);
+};
 
-      // Attach click handlers to existing notifications on page load
-      attachNotificationClickHandlers();
-  });
+// Handle errors
+eventSource.onerror = function() {
+    console.error('SSE connection error. Reconnecting...');
+    eventSource.close();
+    setTimeout(() => {
+        eventSource = new EventSource('/notification_stream/');
+    }, 5000);
+};
 </script>
-
-<audio id="notificationSound" src="{% static 'sounds/notification.mp3' %}"></audio>
-</html>

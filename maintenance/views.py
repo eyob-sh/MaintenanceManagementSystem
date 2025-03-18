@@ -13,6 +13,12 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.db.models.deletion import ProtectedError, Collector
 from django.views.decorators.csrf import csrf_exempt
+from django.http import StreamingHttpResponse
+from asgiref.sync import sync_to_async
+import asyncio
+from django.dispatch import receiver
+from .signals import notification_created
+
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -534,6 +540,7 @@ def add_work_order(request):
                     type = "work_order",
                     message=f'New work order: {work_order.location}.',
                 )
+                notification_created.send(sender=Notification)
 
             return redirect('work_order_list')
         except Exception as e:
@@ -635,6 +642,7 @@ def edit_work_order(request, id):
                         type="work_order",
                         message=f'You have been assigned a new work order task: {work_order}.',
                     )
+                    notification_created.send(sender=Notification)
 
                 messages.success(request, 'Work order updated successfully!')
                 return redirect('work_order_list')
@@ -1475,6 +1483,7 @@ def add_maintenance(request):
                     type="maintenance",
                     message=f'You have been assigned a new maintenance task: {maintenance.equipment.name}.',
                 )
+                notification_created.send(sender=Notification)
 
             messages.success(request, 'Maintenance record added successfully!')
             return redirect('maintenance_list')
@@ -1766,6 +1775,7 @@ def complete_maintenance(request, maintenance_id):
                 type = "maintenance",
                 message=f'The maintenance task for {maintenance.equipment.name} has been marked as complete.',
             )
+            notification_created.send(sender=Notification)
         
     else:
         messages.error(request, 'You are not assigned to this task.')
@@ -1829,6 +1839,7 @@ def reject_maintenance(request, maintenance_id):
                 type = 'work_order',
                 message=f'The {maintenance.maintenance_type} maintenance for {maintenance.equipment.name} has been rejected by {maintenance.rejected_by}.',
             )
+            notification_created.send(sender=Notification)
         messages.success(request, 'maintenance Rejected.')
     else:
         messages.error(request, 'You did not assign this work order.')
@@ -1860,6 +1871,7 @@ def reject_work_order(request, work_order_id):
                 type = 'work_order',
                 message=f'The work order for {work_order.equipment.name} has been rejected by {work_order.rejected_by}.',
             )
+            notification_created.send(sender=Notification)
         messages.success(request, 'Work order Rejected.')
     else:
         messages.error(request, 'You did not assign this work order.')
@@ -1895,12 +1907,8 @@ def complete_work_order(request, work_order_id):
                 type = work_order,
                 message=f'The work order for {work_order.equipment.name} has been marked as complete.',
             )
-        # if client:
-        #      Notification.objects.create(
-        #         user=client,
-        #         type = "maintenance",
-        #         message=f'The work order for {work_order.equipment.name} has been marked as complete.',
-        #     )
+            notification_created.send(sender=Notification)
+        
             
     else:
         messages.error(request, 'You are not assigned to this work order.')
@@ -1926,6 +1934,7 @@ def approve_work_order(request, work_order_id):
             type = 'work_order',
             message=f'The work order for {work_order.equipment.name} has been approved by {work_order.approved_by}.',
         )
+        notification_created.send(sender=Notification)
 
     messages.success(request, 'Work order approved.')
 # else:
@@ -2021,6 +2030,7 @@ def check_low_spare_parts(spare_part):
                 type="low_spare_part",
                 message=f'Low stock alert: {spare_part.name} is below 5 in {spare_part.branch.name}.',
             )
+            notification_created.send(sender=Notification)
 
 def low_spare_part(request):
     # Get the user's branch
@@ -3715,22 +3725,27 @@ def client_dashboard(request):
     return render(request, 'client_dashboard.html', context)
 
 
-def sse_notifications(request):
+@login_required
+def notification_stream(request):
     def event_stream():
         user = request.user
+        last_notification_id = None
+
         while True:
-            if user.is_authenticated:
-                notifications = Notification.objects.filter(user=user, is_read=False).order_by('-timestamp')[:10]
-                data = [{
-                    'id': notification.id,
-                    'message': notification.message,
-                    'timestamp': notification.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                    'url': notification.url
-                } for notification in notifications]
-                yield f"data: {json.dumps(data)}\n\n"
-            time.sleep(5)  # Adjust the sleep time as needed
+            # Fetch new notifications for the user
+            notifications = Notification.objects.filter(user=user, is_read=False).order_by('-timestamp')
+            if notifications.exists():
+                latest_notification = notifications.first()
+                if latest_notification.id != last_notification_id:
+                    last_notification_id = latest_notification.id
+                    yield f"data: {json.dumps({
+                        'id': latest_notification.id,
+                        'message': latest_notification.message,
+                        'timestamp': latest_notification.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                        'url': latest_notification.url,
+                    })}\n\n"
+            time.sleep(1)  # Wait for 1 second before checking again
 
     response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
-    response['Connection'] = 'keep-alive'
     return response
