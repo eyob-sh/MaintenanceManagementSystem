@@ -1,9 +1,10 @@
-import logging
+import portalocker
+import os
 from django.apps import AppConfig
 from apscheduler.schedulers.background import BackgroundScheduler
 from threading import Thread
 import time
-import os
+import logging
 import atexit
 
 logger = logging.getLogger(__name__)
@@ -30,16 +31,16 @@ class MaintenanceConfig(AppConfig):
         self.setup_scheduler()
 
     def setup_scheduler(self):
-        from .models import SchedulerLock
-
         logger.info("Setting up scheduler...")
         print("Setting up scheduler...")  # Debug print statement
 
-        # Create a database lock to ensure only one scheduler instance runs
-        lock, created = SchedulerLock.objects.get_or_create(id=1)
-        if not lock.locked:
-            lock.locked = True
-            lock.save()
+        # Create a file-based lock
+        self.lock_file = open('scheduler.lock', 'w')
+        try:
+            # Acquire the lock using portalocker
+            portalocker.lock(self.lock_file, portalocker.LOCK_EX | portalocker.LOCK_NB)
+            logger.info("Scheduler lock acquired.")
+            print("Scheduler lock acquired.")  # Debug print statement
 
             # Start the scheduler
             self.scheduler = BackgroundScheduler()
@@ -55,20 +56,21 @@ class MaintenanceConfig(AppConfig):
 
             # Register a shutdown hook to release the lock
             atexit.register(self.release_lock)
-        else:
+        except portalocker.exceptions.LockException:
             logger.info("Scheduler is already running.")
             print("Scheduler is already running.")  # Debug print statement
+            self.lock_file.close()
 
     def release_lock(self):
         """
         Release the lock when the application shuts down.
         """
-        from .models import SchedulerLock
-        lock = SchedulerLock.objects.get(id=1)
-        lock.locked = False
-        lock.save()
-        logger.info("Scheduler lock released.")
-        print("Scheduler lock released.")  # Debug print statement
+        if hasattr(self, 'lock_file'):
+            portalocker.unlock(self.lock_file)
+            self.lock_file.close()
+            os.remove('scheduler.lock')
+            logger.info("Scheduler lock released.")
+            print("Scheduler lock released.")  # Debug print statement
 
     def run_maintenance_check(self):
         logger.info("Scheduler is running! Checking for maintenance due...")
