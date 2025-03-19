@@ -4,6 +4,7 @@ from maintenance.models import Equipment, Notification
 from django.contrib.auth.models import User
 import logging
 from django.db.models import Q
+from maintenance.signals import notification_created
 
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,7 @@ class Command(BaseCommand):
                             message=message,
                             url=f"/equipment/{equipment.id}/",  # Optional: Link to equipment detail page
                         )
+                        notification_created.send(sender=Notification)
                         self.stdout.write(f"Notification created for {user.username}: {message}")
 
                         # Update the last_notification_sent field for this maintenance type

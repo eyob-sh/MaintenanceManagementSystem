@@ -580,10 +580,15 @@
 </body>
 
 <script>
-  // Function to play notification sound
+// Track the last notification ID
+let lastNotificationId = {{ latest_notification_id|default:0 }};
+
+// Function to play notification sound
 function playNotificationSound() {
-    const audio = new Audio('/static/sounds/notification.mp3'); // Update the path to your sound file
-    audio.play();
+    const audio = new Audio('/static/sounds/notification.mp3');
+    audio.play().catch(error => {
+        console.error('Error playing notification sound:', error);
+    });
 }
 
 // Function to add a new notification to the UI
@@ -592,35 +597,40 @@ function addNotification(notification) {
     const notificationCount = document.getElementById('notification-count');
     const notificationHeaderCount = document.getElementById('notification-header-count');
 
-    // Create the new notification item
-    const notificationItem = document.createElement('li');
-    notificationItem.className = 'notification-item';
-    notificationItem.id = `notification-${notification.id}`;
-    notificationItem.innerHTML = `
-        <a href="/mark_notification_as_read/${notification.id}/" style="text-decoration: none; color: inherit;">
-            <i class="bi bi-exclamation-circle text-warning"></i>
-            <div>
-                <h4>${notification.message}</h4>
-                <p>${notification.timestamp}</p>
-            </div>
-        </a>
-    `;
+    // Check if the notification is new
+    if (notification.id > lastNotificationId) {
+        lastNotificationId = notification.id; // Update the last notification ID
 
-    // Add the new notification to the top of the list
-    notificationList.insertBefore(notificationItem, notificationList.children[2]);
-    notificationList.insertBefore(document.createElement('li'), notificationList.children[2]).innerHTML = '<hr class="dropdown-divider">';
+        // Create the new notification item
+        const notificationItem = document.createElement('li');
+        notificationItem.className = 'notification-item';
+        notificationItem.id = `notification-${notification.id}`;
+        notificationItem.innerHTML = `
+            <a href="/mark_notification_as_read/${notification.id}/" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-exclamation-circle text-warning"></i>
+                <div>
+                    <h4>${notification.message}</h4>
+                    <p>${notification.timestamp}</p>
+                </div>
+            </a>
+        `;
 
-    // Update the notification count
-    const count = parseInt(notificationCount.textContent) + 1;
-    notificationCount.textContent = count;
-    notificationHeaderCount.textContent = count;
+        // Add the new notification to the top of the list
+        notificationList.insertBefore(notificationItem, notificationList.children[2]);
+        notificationList.insertBefore(document.createElement('li'), notificationList.children[2]).innerHTML = '<hr class="dropdown-divider">';
 
-    // Play notification sound
-    playNotificationSound();
+        // Update the notification count
+        const count = parseInt(notificationCount.textContent) + 1;
+        notificationCount.textContent = count;
+        notificationHeaderCount.textContent = count;
+
+        // Play notification sound
+        playNotificationSound();
+    }
 }
 
-// Connect to the SSE endpoint
-const eventSource = new EventSource('/notification_stream/');
+// Connect to the SSE endpoint with the last notification ID
+const eventSource = new EventSource(`/notification_stream/?last_id=${lastNotificationId}`);
 
 // Listen for new notifications
 eventSource.onmessage = function(event) {
@@ -633,7 +643,7 @@ eventSource.onerror = function() {
     console.error('SSE connection error. Reconnecting...');
     eventSource.close();
     setTimeout(() => {
-        eventSource = new EventSource('/notification_stream/');
+        eventSource = new EventSource(`/notification_stream/?last_id=${lastNotificationId}`);
     }, 5000);
 };
 </script>

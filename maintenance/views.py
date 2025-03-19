@@ -124,6 +124,7 @@ def my_profile(request):
     # Get the current user's profile
     user_profile = UserProfile.objects.get(user=request.user)
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     
     if request.method == 'POST':
@@ -149,7 +150,7 @@ def my_profile(request):
                 return redirect('my_profile', {'notifications':notifications})
         
         messages.success(request, 'Profile updated successfully!')
-        return redirect('my_profile', { 'active_page': 'profile','notifications':notifications,
+        return redirect('my_profile', { 'active_page': 'profile','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,
 })
     
     return render(request, 'my_profile.html', {
@@ -163,6 +164,7 @@ def my_profile(request):
 
 def user_profile_list(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     user_profiles = UserProfile.objects.all()
     context = {
@@ -170,12 +172,14 @@ def user_profile_list(request):
         'title': 'User Profiles',
         'item_list': user_profiles,
         'edit_url': 'edit_user_profile',
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'user_profile_list.html', context)
 
 def add_user_profile_page(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     # Fetch all branches from the database
     branches = Branch.objects.all()
@@ -189,13 +193,15 @@ def add_user_profile_page(request):
         'roles': UserProfile.ROLE_CHOICES,
         'branches': branches,  # Pass the branches queryset
          'active_page': 'user_profile_list',
-         'notifications':notifications
+         'notifications':notifications,
+         'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'add_user_profile.html', context)
 
 
 def add_user_profile(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     if request.method == 'POST':
         first_name = request.POST.get('firstName')
@@ -234,9 +240,10 @@ def add_user_profile(request):
         messages.success(request, 'User created successfully')
         return redirect('user_profile_list')  # Redirect to the user list page
 
-    return render(request, 'add_user_profile.html', { 'active_page': 'user_profile_list',})
+    return render(request, 'add_user_profile.html', { 'active_page': 'user_profile_list','latest_notification_id': latest_notification.id if latest_notification else 0,})
 def edit_user_profile(request, id):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     user_profile = get_object_or_404(UserProfile, id=id)
     
@@ -271,7 +278,8 @@ def edit_user_profile(request, id):
         'form': form,
         'user_profile': user_profile,
          'active_page': 'user_profile_list',
-         'notifications':notifications
+         'notifications':notifications,
+         'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 def check_username(request):
     username = request.GET.get('username')
@@ -280,6 +288,7 @@ def check_username(request):
 
 def branch_list(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     branches = Branch.objects.all()
     context = {
@@ -287,20 +296,23 @@ def branch_list(request):
         'title': 'Branches',
         'item_list': branches,
         'edit_url': 'edit_branch',
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'branch_list.html', context)
 
 def add_branch_page(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
-    return render(request, 'add_branch.html',{ 'active_page': 'branch_list','notifications':notifications})
+    return render(request, 'add_branch.html',{ 'active_page': 'branch_list','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
 
 
 
 
 def add_branch(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     if request.method == 'POST':
         form = BranchForm(request.POST)  # Bind the form to the POST data
@@ -312,10 +324,11 @@ def add_branch(request):
         form = BranchForm()  # Create an empty form for GET requests
 
     # Render the form in the template
-    return render(request, 'add_branch.html', {'form': form,  'active_page': 'branch_list','notifications':notifications})
+    return render(request, 'add_branch.html', {'form': form,  'active_page': 'branch_list','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
 
 def edit_branch(request, id):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     branch = get_object_or_404(Branch, id=id)
     if request.method == 'POST':
@@ -326,7 +339,7 @@ def edit_branch(request, id):
             return redirect('branch_list',{ 'active_page': 'branch_list','notifications':notifications})
     else:
         form = BranchForm(instance=branch)
-    return render(request, 'edit_branch.html', {'form': form, 'branch': branch, 'active_page': 'branch_list','notifications':notifications})
+    return render(request, 'edit_branch.html', {'form': form, 'branch': branch, 'active_page': 'branch_list','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
 
 def get_notifications(user):
     return Notification.objects.filter(user=user, is_read=False).order_by('-timestamp')[:10]
@@ -343,6 +356,7 @@ def manufacturer_list(request):
         manufacturers = Manufacturer.objects.filter(site = user_branch)
         
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     context = {
         'active_page': 'manufacturer_list',
@@ -350,21 +364,24 @@ def manufacturer_list(request):
         'item_list': manufacturers,
         'edit_url': 'edit_manufacturer',
         'delete_url': 'delete_manufacturer',
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'manufacturer_list.html', context)
 
 def add_manufacturer_page(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     
     context = {
-    'active_page': 'manufacturer_list', 'notifications':notifications}
+    'active_page': 'manufacturer_list', 'notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,}
     
     return render(request, 'add_manufacturer.html', context)
 
 def add_manufacturer(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     # Get the user's branch
     if request.user.is_authenticated:
@@ -405,12 +422,13 @@ def add_manufacturer(request):
         else:
             messages.error(request, f'You do not have the permsission to perform this task')
 
-    return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications})
+    return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
 
 def edit_manufacturer(request, id):
     manufacturer = get_object_or_404(Manufacturer, id=id)
     branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     
     # Initialize the form variable
     form = ManufacturerForm(instance=manufacturer)
@@ -430,11 +448,13 @@ def edit_manufacturer(request, id):
         'manufacturer': manufacturer,
         'active_page': 'manufacturer_list',
         'branch': branch,
-        'notifications': notifications
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 def delete_manufacturer(request, id):
     manufacturer = get_object_or_404(Manufacturer, id=id)
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     
     if request.method == 'POST':
@@ -450,7 +470,8 @@ def delete_manufacturer(request, id):
                     'protected_objects': e.protected_objects,
                     'model_name': 'Manufacturer',  # Dynamic model name
                     'active_page':'manufacturer_list',
-                    'notifications':notifications
+                    'notifications':notifications,
+                    'latest_notification_id': latest_notification.id if latest_notification else 0,
                 })
         else:
             messages.error(request, f'You do not have the permsission to perform this task')
@@ -460,7 +481,8 @@ def delete_manufacturer(request, id):
         'model_name': 'Manufacturer',  # Dynamic model name
         'active_page':'manufacturer_list',
 
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
 
     })
 
@@ -479,6 +501,7 @@ def work_order_list(request):
 
    
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     context = {
         'active_page': 'work_order_list',
@@ -486,11 +509,13 @@ def work_order_list(request):
         'item_list': work_orders,
         'edit_url': 'edit_work_order',
         'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'work_order_list.html', context)
 
 def add_work_order_page(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     user_branch = request.user.userprofile.branch
 
     equipments = Equipment.objects.filter(branch=user_branch, decommissioned = False)
@@ -500,6 +525,7 @@ def add_work_order_page(request):
         'branch': user_branch,
         'notifications': notifications,
         'active_page': 'work_order_list',
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
 
     })
 
@@ -555,6 +581,7 @@ def add_work_order(request):
 def edit_work_order(request, id):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     spare_parts = SparePart.objects.filter(branch=user_branch)
     work_order = get_object_or_404(WorkOrder, id=id)
     assigned_technician_ids = work_order.assigned_technicians.values_list('id', flat=True)
@@ -665,6 +692,7 @@ def edit_work_order(request, id):
         'equipments': equipments,
         'selected_equipment_id': work_order.equipment.id if work_order.equipment else None,
         'spare_part_usages': SparePartUsage.objects.filter(work_order=work_order),
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'edit_work_order.html', context)
 #------------------------------------------------------------------------------------
@@ -673,6 +701,7 @@ def edit_work_order(request, id):
 
 def spare_part_usage_list(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     user_branch = request.user.userprofile.branch
     
     if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
@@ -686,13 +715,15 @@ def spare_part_usage_list(request):
         'title': 'Spare Part Usages',
         'item_list': spare_part_usages,
         'edit_url': 'edit_spare_part_usage',
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
         
     }
     return render(request, 'spare_part_usage_list.html', context)
 
 def add_spare_part_usage_page(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     user_branch = request.user.userprofile.branch
 
     maintenance_records = MaintenanceRecord.objects.filter(branch = user_branch)
@@ -701,7 +732,8 @@ def add_spare_part_usage_page(request):
         'maintenance_records': maintenance_records,
         'spare_parts': spare_parts,
     'active_page': 'spare_part_usage_list',
-    'notifications': notifications
+    'notifications': notifications,
+    'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 
 def add_spare_part_usage(request):
@@ -731,6 +763,7 @@ def add_spare_part_usage(request):
 def edit_spare_part_usage(request, id):
     spare_part_usage = get_object_or_404(SparePartUsage, id=id)
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
 
     if request.method == 'POST':
@@ -745,7 +778,7 @@ def edit_spare_part_usage(request, id):
     else:
         form = SparePartUsageForm(instance=spare_part_usage)
 
-    return render(request, 'edit_spare_part_usage.html', {'form': form, 'spare_part_usage': spare_part_usage, 'active_page': 'spare_part_usage_list', 'notifications':notifications})
+    return render(request, 'edit_spare_part_usage.html', {'form': form, 'spare_part_usage': spare_part_usage, 'active_page': 'spare_part_usage_list', 'notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
 
 #------------------------------------------------------------------------------------
 def decommissioned_equipment_list(request):
@@ -756,21 +789,24 @@ def decommissioned_equipment_list(request):
         decommissioned_equipments = DecommissionedEquipment.objects.filter(equipment__branch=user_branch)    
     
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     context = {
         'active_page': 'decommissioned_equipment_list',
         'title': 'Decommissioned Equipments',
         'item_list': decommissioned_equipments,
         'edit_url': 'edit_decommissioned_equipment',
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'decommissioned_equipment_list.html', context)
 
 def add_decommissioned_equipment_page(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     equipments = Equipment.objects.filter(branch = request.user.userprofile.branch, decommissioned = False)
     return render(request, 'add_decommissioned_equipment.html', {
-        'equipments': equipments,'active_page': 'decommissioned_equipment_list','notifications':notifications
+        'equipments': equipments,'active_page': 'decommissioned_equipment_list','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 
 def add_decommissioned_equipment(request):
@@ -806,6 +842,7 @@ def add_decommissioned_equipment(request):
 def edit_decommissioned_equipment(request, id):
     decommissioned_equipment = get_object_or_404(DecommissionedEquipment, id=id)
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
 
     if request.method == 'POST':
@@ -821,13 +858,14 @@ def edit_decommissioned_equipment(request, id):
     else:
         form = DecommissionedEquipmentForm(instance=decommissioned_equipment)
 
-    return render(request, 'edit_decommissioned_equipment.html', {'form': form, 'decommissioned_equipment': decommissioned_equipment, 'active_page': 'decommissioned_equipment_list','notifications':notifications})
+    return render(request, 'edit_decommissioned_equipment.html', {'form': form, 'decommissioned_equipment': decommissioned_equipment, 'active_page': 'decommissioned_equipment_list','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
 
 
 #--------------------------------------------------------------------------------------
 def maintenance_task_list(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
 
     maintenance_tasks = MaintenanceTask.objects.all()
@@ -837,16 +875,18 @@ def maintenance_task_list(request):
         'item_list': maintenance_tasks,
         'edit_url': 'edit_maintenance_task',
         'delete_url':'delete_maintenance_task',
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'maintenance_task_list.html', context)
 
 def add_maintenance_task_page(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
 
-    return render(request, 'add_maintenance_task.html',{ 'active_page': 'maintenance_task_list', 'notifications':notifications
+    return render(request, 'add_maintenance_task.html',{ 'active_page': 'maintenance_task_list', 'notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,
 })
 
 
@@ -854,6 +894,7 @@ def add_maintenance_task_page(request):
 def add_maintenance_task(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     if request.method == 'POST':
         maintenance_task_form = MaintenanceTaskForm(request.POST)
@@ -877,12 +918,14 @@ def add_maintenance_task(request):
         'active_page': 'maintenance_task_list',
         'branch': user_branch,
         'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
         'maintenance_task_form': maintenance_task_form,
         'frequencies': ['daily', 'weekly', 'monthly', 'biannual', 'annual'],
     })
 def edit_maintenance_task(request, id):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     maintenance_task = get_object_or_404(MaintenanceTask, id=id)
 
     if request.method == 'POST':
@@ -939,11 +982,13 @@ def edit_maintenance_task(request, id):
         'task_groups': task_groups,
         'active_page': 'maintenance_task_list',
         'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 def delete_maintenance_task(request, id):
     # Fetch the MaintenanceTask instance or return a 404 error if not found
     maintenancetask = get_object_or_404(MaintenanceTask, id=id)
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     
     if request.method == 'POST':
         # Check if any Equipment objects reference this MaintenanceTask's equipment_type
@@ -958,6 +1003,7 @@ def delete_maintenance_task(request, id):
                 'protected_objects': related_equipment,  # Pass the related Equipment objects
                 'model_name': 'Maintenance Task',  # Dynamic model name
                 'notifications': notifications,
+                'latest_notification_id': latest_notification.id if latest_notification else 0,
             })
         
         # If no related Equipment objects, delete the MaintenanceTask
@@ -971,6 +1017,7 @@ def delete_maintenance_task(request, id):
         'object': maintenancetask,
         'model_name': 'Maintenance Task',  # Dynamic model name
         'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 #-----------------------------------------------------------------add task for frequency----------------------------------------
 
@@ -978,6 +1025,7 @@ def delete_maintenance_task(request, id):
 def add_tasks_for_frequency(request, frequency):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     if request.method == 'POST':
         # Get the maintenance task ID from the form (assuming it's passed as a hidden field)
@@ -1021,9 +1069,11 @@ def add_tasks_for_frequency(request, frequency):
         'active_page': 'maintenance_task_list',
         'branch': user_branch,
         'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
         'maintenance_task_form': maintenance_task_form,
         'task_form': task_form,
         'frequency': frequency,
+
     })
 
 
@@ -1062,6 +1112,7 @@ def delete_task(request, task_id):
 def equipment_list(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     # Fetch all branches for the branch filter (only for Maintenance Oversight)
     branches = Branch.objects.all()
@@ -1082,12 +1133,14 @@ def equipment_list(request):
         'edit_url': 'edit_equipment',
         'delete_url': 'delete_equipment',
         'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
         'branches': branches,
         'equipment_types': equipment_types,
     }
     return render(request, 'equipment_list.html', context)
 def add_equipment_page(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     user_branch = request.user.userprofile.branch
 
     # Fetch unique equipment types from MaintenanceTask
@@ -1100,12 +1153,14 @@ def add_equipment_page(request):
         'branch': branch,
         'equipment_types': equipment_types,  # Pass equipment types to the template
         'active_page': 'equipment_list',
-        'notifications': notifications
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 
 
 def add_equipment(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     user_branch = request.user.userprofile.branch
     manufacturers = Manufacturer.objects.filter(site=user_branch)
 
@@ -1136,7 +1191,8 @@ def add_equipment(request):
                 'branch': user_branch,
                 'equipment_types': equipment_types,  # Pass equipment types to the template
                 'active_page': 'equipment_list',
-                'notifications': notifications
+                'notifications': notifications,
+                'latest_notification_id': latest_notification.id if latest_notification else 0,
             }
             return render(request, 'equipment.html', context)
 
@@ -1176,7 +1232,8 @@ def add_equipment(request):
                 'branch': user_branch,
                 'equipment_types': equipment_types,  # Pass equipment types to the template
                 'active_page': 'equipment_list',
-                'notifications': notifications
+                'notifications': notifications,
+                'latest_notification_id': latest_notification.id if latest_notification else 0,
             }
             return render(request, 'equipment.html', context)
         except Exception as e:
@@ -1186,7 +1243,8 @@ def add_equipment(request):
                 'branch': user_branch,
                 'equipment_types': equipment_types,  # Pass equipment types to the template
                 'active_page': 'equipment_list',
-                'notifications': notifications
+                'notifications': notifications,
+                'latest_notification_id': latest_notification.id if latest_notification else 0,
             }
             return render(request, 'equipment.html', context)
 
@@ -1196,11 +1254,13 @@ def add_equipment(request):
         'branch': user_branch,
         'equipment_types': equipment_types,  # Pass equipment types to the template
         'active_page': 'equipment_list',
-        'notifications': notifications
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'equipment.html', context)
 def edit_equipment(request, id):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     equipment = get_object_or_404(Equipment, id=id)
 
     # Fetch unique equipment types from MaintenanceTask
@@ -1224,12 +1284,14 @@ def edit_equipment(request, id):
         'equipment': equipment,
         'equipment_types': equipment_types,  # Pass equipment types to the template
         'active_page': 'equipment_list',
-        'notifications': notifications
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 
 def delete_equipment(request, id):
     equipment = get_object_or_404(Equipment, id=id)
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     
     if request.method == 'POST':
@@ -1245,7 +1307,8 @@ def delete_equipment(request, id):
                     'protected_objects': e.protected_objects,
                     'model_name': 'Equipment',  # Dynamic model name
                     'active_page':'equipment_list',
-                    'notifications':notifications
+                    'notifications':notifications,
+                    'latest_notification_id': latest_notification.id if latest_notification else 0,
                 })
         else:
             messages.error(request, f'You do not have the permsission to perform this task')
@@ -1255,7 +1318,8 @@ def delete_equipment(request, id):
         'model_name': 'Equipment',  # Dynamic model name
         'active_page':'equipment_list',
 
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
 
     })
 
@@ -1263,6 +1327,7 @@ def delete_equipment(request, id):
 
 def spare_part_list(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     user_branch = request.user.userprofile.branch
     
@@ -1277,12 +1342,14 @@ def spare_part_list(request):
         'title': 'Spare Parts',
         'item_list': spare_parts,
         'edit_url': 'edit_spare_part',  # Assuming you have an edit view set up
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'spare_part_list.html', context)
 
 def add_spare_part_page(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     user_branch = request.user.userprofile.branch
 
@@ -1290,12 +1357,14 @@ def add_spare_part_page(request):
     return render (request, 'add_spare_part.html', {
                 'branch': branch,
                 'active_page': 'spare_part_list',
-                'notifications':notifications
+                'notifications':notifications,
+                'latest_notification_id': latest_notification.id if latest_notification else 0,
 
             })
 
 def add_spare_part(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     user_branch = request.user.userprofile.branch
 
@@ -1303,7 +1372,8 @@ def add_spare_part(request):
     context = {
         'branch': user_branch,
         'active_page': 'spare_part_list',
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
 
     if request.method == 'POST':
@@ -1353,6 +1423,7 @@ def add_spare_part(request):
 
 def edit_spare_part(request, id):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     spare_part = get_object_or_404(SparePart, id=id)  # Fetch the spare part instance
 
     # Initialize the form variable
@@ -1372,7 +1443,8 @@ def edit_spare_part(request, id):
         'form': form,
         'spare_part': spare_part,
         'active_page': 'spare_part_list',
-        'notifications': notifications
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 
  #-----------------------------------------------maintenance-----------------------------------------------------------
@@ -1383,6 +1455,7 @@ def edit_spare_part(request, id):
 
 def add_maintenance_page(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     user_branch = request.user.userprofile.branch
 
@@ -1397,13 +1470,15 @@ def add_maintenance_page(request):
         'work_orders': WorkOrder.objects.filter(branch=user_branch),
         'spare_parts': SparePart.objects.filter(branch=user_branch),
         'active_page': 'maintenance_list',
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'add_maintenance.html', context)
 
 def add_maintenance(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     context = {
         'equipments': Equipment.objects.filter(branch=user_branch, decommissioned = False),
@@ -1414,6 +1489,7 @@ def add_maintenance(request):
         'spare_parts': SparePart.objects.filter(branch=user_branch),
         'active_page': 'maintenance_list',
         'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
 
     if request.method == 'POST':
@@ -1497,7 +1573,7 @@ def add_maintenance(request):
     return render(request, 'add_maintenance.html', context)
 def maintenance_list(request):
     notifications = get_notifications(request.user)
-
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     user_branch = request.user.userprofile.branch
     
     # Filter equipment based on user role
@@ -1513,13 +1589,15 @@ def maintenance_list(request):
         'item_list': maintenance_records,
         'edit_url': 'edit_maintenance',  # URL name for editing maintenance records
         'delete_url':'delete_maintenance',
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'maintenance_list.html', context)
     
 
 def edit_maintenance(request, id):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     user_branch = request.user.userprofile.branch
     maintenance = get_object_or_404(MaintenanceRecord, id=id)
     spare_parts = SparePart.objects.filter(branch=user_branch)
@@ -1566,7 +1644,8 @@ def edit_maintenance(request, id):
                         'tasks': tasks,
                         'completed_task_ids': completed_task_ids,
                         'active_page': 'maintenance_list',
-                        'notifications': notifications
+                        'notifications': notifications,
+                        'latest_notification_id': latest_notification.id if latest_notification else 0,
                     })
 
                 # Step 4: Update maintenance record
@@ -1644,7 +1723,8 @@ def edit_maintenance(request, id):
                     'tasks': tasks,
                     'completed_task_ids': completed_task_ids,
                     'active_page': 'maintenance_list',
-                    'notifications': notifications
+                    'notifications': notifications,
+                    'latest_notification_id': latest_notification.id if latest_notification else 0,
                 })
         else:
             messages.error(request, 'You are not assigned to this task.')
@@ -1658,7 +1738,8 @@ def edit_maintenance(request, id):
         'tasks': tasks,
         'completed_task_ids': completed_task_ids,
         'active_page': 'maintenance_list',
-        'notifications': notifications
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 
 #------------------------------------------------------------delete maintenance------------------------------------------
@@ -1666,6 +1747,7 @@ def delete_maintenance(request, id):
     # Fetch the MaintenanceRecord instance or return a 404 error if not found
     maintenance_record = get_object_or_404(MaintenanceRecord, id=id)
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     
     if request.method == 'POST':
@@ -1684,6 +1766,7 @@ def delete_maintenance(request, id):
                     'model_name': 'Maintenance Record',  # Dynamic model name
                     'active_page':'maintenance_list',
                     'notifications': notifications,
+                    'latest_notification_id': latest_notification.id if latest_notification else 0,
 
 
                 })
@@ -1695,7 +1778,8 @@ def delete_maintenance(request, id):
         'object': maintenance_record,
         'model_name': 'Maintenance Record',  # Dynamic model name
         'active_page':'maintenance_list',
-        'notifications': notifications
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
 
     })
 #-------------------------------------------------------------------get_tasks-------------------------------------
@@ -2049,11 +2133,13 @@ def low_spare_part(request):
 
     # Get notifications for the user
     notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-timestamp')[:10]
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     context = {
         'spare_parts': spare_parts,  # Changed variable name to match template
         'active_page': 'low_spare_part',
         'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
 
     return render(request, 'low_spare_part.html', context)
@@ -2062,6 +2148,7 @@ def low_spare_part(request):
 
 def restock_spare_part(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     if request.method == 'POST':
         if request.user.userprofile.role in ["MD manager", "TEC"]:
@@ -2096,6 +2183,7 @@ def restock_spare_part(request):
         'spare_parts': spare_parts,  # Ensure you pass all spare parts to the template
         'active_page': 'spare_part_list',
         'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'restock_spare_part.html', context)
 def restock_list(request):
@@ -2112,12 +2200,14 @@ def restock_list(request):
 
     # Get notifications for the user
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     context = {
         'restock_list': restock_list,
         'active_page': 'restock_list',
         'notifications': notifications,
         'title': 'Restock List',
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
 
     return render(request, 'restock_list.html', context)
@@ -2125,6 +2215,7 @@ def restock_list(request):
 
 def restock_spare_part_page(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     user_branch = request.user.userprofile.branch
 
@@ -2132,6 +2223,7 @@ def restock_spare_part_page(request):
         'spare_parts': SparePart.objects.filter(branch=user_branch),  # Fetch spare parts for the branch
         'active_page': 'spare_part_list',
         'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
 
     return render(request, 'restock_spare_part.html', context)
@@ -2139,6 +2231,7 @@ def restock_spare_part_page(request):
 
 def maintenance_due(request):
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     today = timezone.now().date()
     due_in_5_days = today + timezone.timedelta(days=5)
@@ -2169,7 +2262,8 @@ def maintenance_due(request):
         'due_equipment': due_equipment,
         'due_in_5_days': due_in_5_days,  # Pass the due_in_5_days to the template
         'active_page': 'maintenance_due',
-        'notifications': notifications
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'maintenance_due.html', context)
 #----------------------------------------------------Import Export-------------------------------------------
@@ -2335,6 +2429,7 @@ def import_data(request, model_name):
 def maintenance_dashboard(request):
     user = request.user
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     user_role = user.userprofile.role
     user_branch = user.userprofile.branch
@@ -2473,7 +2568,8 @@ def maintenance_dashboard(request):
         'spare_part_labels': spare_part_labels,
         'spare_part_usage_data': spare_part_usage_data,
         'active_page':'dashboard',
-        'notifications':notifications
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
 
     return render(request, 'maintenance_dashboard.html', context)
@@ -3404,6 +3500,7 @@ def generate_editable_doc_work_order_all_branches(work_orders, from_date, to_dat
 def maintenance_oversight_dashboard(request):
     user = request.user
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     user_role = user.userprofile.role
 
@@ -3556,7 +3653,8 @@ def maintenance_oversight_dashboard(request):
         'spare_part_labels': spare_part_labels,
         'spare_part_usage_data': spare_part_usage_data,
         'active_page': 'dashboard',
-        'notifications': notifications
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
 
     return render(request, 'maintenance_oversight_dashboard.html', context)
@@ -3611,6 +3709,7 @@ def dashboard(request):
         return HttpResponse("You do not have permission to access this page.")
 
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     user_count = User.objects.count()
     equipment_count = Equipment.objects.count()
@@ -3621,7 +3720,8 @@ def dashboard(request):
         'equipment_count': equipment_count,
         'branch_count': branch_count,
         'notifications': notifications,
-        'active_page': 'dashboard'
+        'active_page': 'dashboard',
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
 
     return render(request, 'dashboard.html', context)
@@ -3630,6 +3730,7 @@ def dashboard(request):
 def client_dashboard(request):
     user = request.user
     notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
     # Get date range from request
     from_date = request.GET.get('from_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
@@ -3722,7 +3823,8 @@ def client_dashboard(request):
         'completed_work_orders_by_month': completed_work_orders_by_month,
         'approved_work_orders_by_month': approved_work_orders_by_month,
         'active_page': 'dashboard',
-        'notifications': notifications
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
 
     return render(request, 'client_dashboard.html', context)
@@ -3732,21 +3834,26 @@ def client_dashboard(request):
 def notification_stream(request):
     def event_stream():
         user = request.user
-        last_notification_id = None
+        last_notification_id = int(request.GET.get('last_id', 0))  # Get the last notification ID from the client
 
         while True:
-            # Fetch new notifications for the user
-            notifications = Notification.objects.filter(user=user, is_read=False).order_by('-timestamp')
+            # Fetch new notifications for the user with IDs greater than last_notification_id
+            notifications = Notification.objects.filter(
+                user=user,
+                id__gt=last_notification_id,  # Only fetch new notifications
+                is_read=False
+            ).order_by('-timestamp')
+
             if notifications.exists():
                 latest_notification = notifications.first()
-                if latest_notification.id != last_notification_id:
-                    last_notification_id = latest_notification.id
-                    yield f"data: {json.dumps({
-                        'id': latest_notification.id,
-                        'message': latest_notification.message,
-                        'timestamp': latest_notification.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                        'url': latest_notification.url,
-                    })}\n\n"
+                last_notification_id = latest_notification.id  # Update the last notification ID
+                yield f"data: {json.dumps({
+                    'id': latest_notification.id,
+                    'message': latest_notification.message,
+                    'timestamp': latest_notification.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                    'url': latest_notification.url,
+                })}\n\n"
+
             time.sleep(1)  # Wait for 1 second before checking again
 
     response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
