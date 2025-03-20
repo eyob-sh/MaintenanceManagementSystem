@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.http import Http404
-from datetime import datetime
+
 from django.db.models import Count, Q, Sum
 from datetime import datetime, timedelta 
 from django.utils import timezone
@@ -1575,13 +1575,13 @@ def maintenance_list(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     user_branch = request.user.userprofile.branch
-    
+    get_approved_maintenance_records(user_branch)
     # Filter equipment based on user role
     if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
         maintenance_records = MaintenanceRecord.objects.all()  # Show all equipment for MO
     else:
         maintenance_records = MaintenanceRecord.objects.filter(branch = user_branch ) # Filter by branch for other roles
-
+   
      # Fetch all maintenance records
     context = {
         'active_page': 'maintenance_list',
@@ -1594,6 +1594,33 @@ def maintenance_list(request):
     }
     return render(request, 'maintenance_list.html', context)
     
+#-----------------------------------------------------------------
+
+def get_approved_maintenance_records(branch):
+    """
+    Returns all MaintenanceRecord objects with status='Approved'.
+    """
+    # Filter records with status='Approved' (case-sensitive)
+    approved_records = MaintenanceRecord.objects.filter(status__exact='Approved', maintenance_type = 'weekly', branch = branch )
+    work_orders = WorkOrder.objects.filter(
+                branch=branch,
+                status='Approved',
+                # created_at__range=[from_date, to_date]
+            ).order_by('created_at')
+    # Print the number of approved records
+    print(f"Number of approved maintenance records: {approved_records.count()}")
+    
+    # Print details of each approved record
+    for record in approved_records:
+        print(f"ID: {record.id}, Equipment: {record.equipment.name}, Date: {record.datetime}, Status: {record.status}")
+    
+    for work in work_orders:
+        print(f"ID: {work.id}, Equipment: {work.equipment.name}, Date: {work.created_at}, Status: {work.status}")
+
+#-------------------------------------------------------------------
+
+
+
 
 def edit_maintenance(request, id):
     notifications = get_notifications(request.user)
@@ -2581,6 +2608,8 @@ def generate_report(request):
     branch = request.GET.get('branch')
     from_date = request.GET.get('from_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
     to_date = request.GET.get('to_date', datetime.now().strftime('%Y-%m-%d'))
+    # Convert the string dates to timezone-aware datetime objects
+    
     report_type = request.GET.get('report_type', 'daily')
     export_format = request.GET.get('format')  # Default to PDF
     if(user.userprofile.role in ["MD manager", "TEC"]):
@@ -2607,12 +2636,13 @@ def generate_report(request):
         else:
             # Fetch maintenance records based on report type and date range
             maintenance_records = MaintenanceRecord.objects.filter(
-                branch=user_branch,
+                status = 'Approved',
                 maintenance_type=report_type,
-                datetime__range=[from_date, to_date],
-                status = 'Approved'
+                branch=user_branch,
+                datetime__date__range=[from_date, to_date],
+                
             ).order_by('datetime')
-
+# approved_records = MaintenanceRecord.objects.filter(status__exact='Approved', maintenance_type = 'weekly', branch = branch )
             if export_format == 'docx':
                 return generate_editable_doc(maintenance_records, report_type, from_date, to_date)
             else:
@@ -2622,7 +2652,10 @@ def generate_report(request):
             return generate_MO_work_order_report(from_date, to_date, export_format)
         else:
             return generate_MO_maintenance_report(from_date, to_date, export_format,report_type)
-        
+#-------------------------------------------------------------------------------------------
+
+
+
 def generate_pdf(maintenance_records, report_type, from_date, to_date):
     # Create a PDF document
     response = HttpResponse(content_type='application/pdf')
@@ -2649,7 +2682,6 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
     space_style = ParagraphStyle(name='Space', spaceAfter=30)  # Adjust spaceAfter value as needed
     elements.append(Paragraph("", space_style))  # Empty paragraph with spacing
 
-
     for record in maintenance_records:
         # Add header for each maintenance record
         elements.append(Paragraph(f"Maintenance Date: {record.datetime.strftime('%Y-%m-%d')}, Time: {record.datetime.strftime('%H:%M')}", styles['Heading5']))
@@ -2657,21 +2689,29 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
         space_style = ParagraphStyle(name='Space', spaceAfter=8)  # Adjust spaceAfter value as needed
         elements.append(Paragraph("", space_style))  # Empty paragraph with spacing
 
+        # Fetch all tasks associated with the maintenance task and maintenance type
+        tasks = Task.objects.filter(
+            task_group__maintenance_task=record.maintenance_task,
+            task_group__frequency=record.maintenance_type
+        )
+
         # Create table data
         data = [['No.', 'Inspection', 'Yes', 'No', 'Remarks']]
-        task_completions = TaskCompletion.objects.filter(maintenance_record=record)
-        for i, task_completion in enumerate(task_completions, start=1):
-            task = task_completion.task
+        for i, task in enumerate(tasks, start=1):
+            # Check if the task was completed
+            task_completion = TaskCompletion.objects.filter(maintenance_record=record, task=task).first()
+            yes_mark = '✓' if task_completion else ''
+            no_mark = '✓' if not task_completion else ''
             data.append([
                 str(i),
-                task.description,
-                '✓' if task_completion.completed_by else '',
-                '✓' if not task_completion.completed_by else '',
+                Paragraph(task.description, styles['Normal']),  # Wrap long text in a paragraph
+                yes_mark,
+                no_mark,
                 ''  # Empty remarks column for editing
             ])
 
-        # Create table
-        table = Table(data, colWidths=[0.3*inch, 4*inch, 0.3*inch, 0.3*inch, 2*inch])
+        # Create table with adjusted column widths
+        table = Table(data, colWidths=[0.5*inch, 4.5*inch, 0.5*inch, 0.5*inch, 2*inch])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -2680,6 +2720,8 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align content to the top
+            ('WORDWRAP', (1, 0), (1, -1), True),  # Enable word wrap for the "Inspection" column
         ]))
 
         elements.append(table)
@@ -2711,13 +2753,12 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
 
         # Add the table to the elements
         elements.append(table)
-                # Add space between records
+        # Add space between records
         elements.append(Paragraph("<br/><br/>", styles['Normal']))
 
     # Build the PDF
     doc.build(elements)
     return response
-
 #-----------------------------------------------------------------------------------------
 
 def generate_editable_doc(maintenance_records, report_type, from_date, to_date):
@@ -2743,12 +2784,11 @@ def generate_editable_doc(maintenance_records, report_type, from_date, to_date):
         return response
 
     # Add branch and date range
-    branch_paragraph = doc.add_paragraph(f"Branch: {maintenance_records[0].branch.name}", style='Intense Quote' )
+    branch_paragraph = doc.add_paragraph(f"Branch: {maintenance_records[0].branch.name}", style='Intense Quote')
     branch_paragraph.paragraph_format.space_after = Pt(0)
     date_paragraph = doc.add_paragraph(f"From {from_date} to {to_date}", style='Intense Quote')
     date_paragraph.paragraph_format.space_before = Pt(0)  # Remove space before this paragraph
-    date_paragraph.paragraph_format.space_after = Pt(20)  # add space before this paragraph
-
+    date_paragraph.paragraph_format.space_after = Pt(20)  # Add space after this paragraph
 
     for record in maintenance_records:
         # Add header for each maintenance record
@@ -2774,19 +2814,29 @@ def generate_editable_doc(maintenance_records, report_type, from_date, to_date):
         hdr_cells[3].text = 'No'
         hdr_cells[4].text = 'Remarks'
 
-        # Access tasks through TaskCompletion
-        task_completions = TaskCompletion.objects.filter(maintenance_record=record)
-        for i, task_completion in enumerate(task_completions, start=1):
-            task = task_completion.task
+        # Fetch all tasks associated with the maintenance task and maintenance type
+        tasks = Task.objects.filter(
+            task_group__maintenance_task=record.maintenance_task,
+            task_group__frequency=record.maintenance_type
+        )
+
+        # Add tasks to the table
+        for i, task in enumerate(tasks, start=1):
+            # Check if the task was completed
+            task_completion = TaskCompletion.objects.filter(maintenance_record=record, task=task).first()
+            yes_mark = '✓' if task_completion else ''
+            no_mark = '✓' if not task_completion else ''
+            
             row_cells = table.add_row().cells
             row_cells[0].text = str(i)
             row_cells[1].text = task.description
-            row_cells[2].text = '✓' if task_completion.completed_by else ''
-            row_cells[3].text = '✓' if not task_completion.completed_by else ''
+            row_cells[2].text = yes_mark
+            row_cells[3].text = no_mark
             row_cells[4].text = ''  # Empty remarks column for editing
 
         space_paragraph = doc.add_paragraph()
         space_paragraph.paragraph_format.space_after = Pt(0.1)  # Adjust the space as needed
+
         # Add inspected by and approved by sections
         inspected_by = [tech.get_full_name() for tech in record.assigned_technicians.all()]
         approved_by = record.approved_by.get_full_name() if record.approved_by else ""
@@ -2818,6 +2868,7 @@ def generate_editable_doc(maintenance_records, report_type, from_date, to_date):
 
         # Add space between records
         doc.add_paragraph()
+
     # Save the document to a BytesIO stream
     buffer = io.BytesIO()
     doc.save(buffer)
@@ -3028,8 +3079,8 @@ def generate_MO_maintenance_report(from_date, to_date, export_format,report_type
     # Fetch maintenance records for all branches
     maintenance_records = MaintenanceRecord.objects.filter(
         maintenance_type=report_type,
-        datetime__range=[from_date, to_date],
-        status='Approved'
+        status='Approved',
+        datetime__date__range=[from_date, to_date],
     ).order_by('branch__name', 'datetime')
 
     if export_format == 'docx':
@@ -3050,6 +3101,9 @@ def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_da
     styles = getSampleStyleSheet()
     title = Paragraph(f"{report_type.capitalize()} Maintenance Report (All Branches)", styles['Title'])
     elements.append(title)
+    elements.append(Paragraph(f"From {from_date} to {to_date}", styles['Normal']))
+    space_style = ParagraphStyle(name='Space', spaceAfter=25)
+    elements.append(Paragraph("", space_style))
 
     # Check if maintenance_records is empty
     if not maintenance_records:
@@ -3069,10 +3123,9 @@ def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_da
     for branch_name, records in records_by_branch.items():
         # Add branch title
         elements.append(Paragraph(f"Branch: {branch_name}", styles['Heading2']))
-        elements.append(Paragraph(f"From {from_date} to {to_date}", styles['Normal']))
 
         # Add space between branch title and records
-        space_style = ParagraphStyle(name='Space', spaceAfter=30)
+        space_style = ParagraphStyle(name='Space', spaceAfter=15)
         elements.append(Paragraph("", space_style))
 
         # Add records for the current branch
@@ -3081,20 +3134,28 @@ def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_da
             elements.append(Paragraph(f"Maintenance Date: {record.datetime.strftime('%Y-%m-%d')}, Time: {record.datetime.strftime('%H:%M')}", styles['Heading5']))
             elements.append(Paragraph(f"Equipment: {record.equipment.name} (Serial: {record.equipment.serial_number}), Location: {record.equipment.location}", styles['Normal']))
 
+            # Fetch all tasks associated with the maintenance task and maintenance type
+            tasks = Task.objects.filter(
+                task_group__maintenance_task=record.maintenance_task,
+                task_group__frequency=record.maintenance_type
+            )
+
             # Create table data
             data = [['No.', 'Inspection', 'Yes', 'No', 'Remarks']]
-            task_completions = TaskCompletion.objects.filter(maintenance_record=record)
-            for i, task_completion in enumerate(task_completions, start=1):
-                task = task_completion.task
+            for i, task in enumerate(tasks, start=1):
+                # Check if the task was completed
+                task_completion = TaskCompletion.objects.filter(maintenance_record=record, task=task).first()
+                yes_mark = '✓' if task_completion else ''
+                no_mark = '✓' if not task_completion else ''
                 data.append([
                     str(i),
-                    task.description,
-                    '✓' if task_completion.completed_by else '',
-                    '✓' if not task_completion.completed_by else '',
+                    Paragraph(task.description, styles['Normal']),  # Wrap long text in a paragraph
+                    yes_mark,
+                    no_mark,
                     ''  # Empty remarks column for editing
                 ])
 
-            # Create table
+            # Create table with adjusted column widths
             table = Table(data, colWidths=[0.3*inch, 4*inch, 0.3*inch, 0.3*inch, 2*inch])
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -3104,6 +3165,8 @@ def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_da
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
                 ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align content to the top
+                ('WORDWRAP', (1, 0), (1, -1), True),  # Enable word wrap for the "Inspection" column
             ]))
 
             elements.append(table)
@@ -3140,7 +3203,6 @@ def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_da
     # Build the PDF
     doc.build(elements)
     return response
-
 #-------------------------------------------------------------------------------------------------------
 
 def generate_editable_doc_all_branches(maintenance_records, report_type, from_date, to_date):
@@ -3154,6 +3216,8 @@ def generate_editable_doc_all_branches(maintenance_records, report_type, from_da
     title = doc.add_heading(f"{report_type.capitalize()} Maintenance Report (All Branches)", level=1)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     title.style.font.size = Pt(18)  # Make the title smaller
+    doc.add_paragraph(f"From {from_date} to {to_date}", style='Intense Quote')
+    doc.add_paragraph()
 
     if not maintenance_records:
         doc.add_paragraph("No maintenance records found for the selected date range and report type.", style='Intense Quote')
@@ -3177,7 +3241,6 @@ def generate_editable_doc_all_branches(maintenance_records, report_type, from_da
     for branch_name, records in records_by_branch.items():
         # Add branch title
         doc.add_heading(f"Branch: {branch_name}", level=2)
-        doc.add_paragraph(f"From {from_date} to {to_date}", style='Intense Quote')
 
         # Add records for the current branch
         for record in records:
@@ -3204,15 +3267,24 @@ def generate_editable_doc_all_branches(maintenance_records, report_type, from_da
             hdr_cells[3].text = 'No'
             hdr_cells[4].text = 'Remarks'
 
-            # Access tasks through TaskCompletion
-            task_completions = TaskCompletion.objects.filter(maintenance_record=record)
-            for i, task_completion in enumerate(task_completions, start=1):
-                task = task_completion.task
+            # Fetch all tasks associated with the maintenance task and maintenance type
+            tasks = Task.objects.filter(
+                task_group__maintenance_task=record.maintenance_task,
+                task_group__frequency=record.maintenance_type
+            )
+
+            # Add tasks to the table
+            for i, task in enumerate(tasks, start=1):
+                # Check if the task was completed
+                task_completion = TaskCompletion.objects.filter(maintenance_record=record, task=task).first()
+                yes_mark = '✓' if task_completion else ''
+                no_mark = '✓' if not task_completion else ''
+
                 row_cells = table.add_row().cells
                 row_cells[0].text = str(i)
                 row_cells[1].text = task.description
-                row_cells[2].text = '✓' if task_completion.completed_by else ''
-                row_cells[3].text = '✓' if not task_completion.completed_by else ''
+                row_cells[2].text = yes_mark
+                row_cells[3].text = no_mark
                 row_cells[4].text = ''  # Empty remarks column for editing
 
             # Add inspected by and approved by sections

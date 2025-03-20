@@ -31,13 +31,14 @@
                         <!-- Add Maintenance Task Button and Import/Export Buttons -->
                         <!-- <div class="d-flex justify-content-between align-items-center mb-3">
                              -->
-
+                             {% if request.user.userprofile.role == 'MO' %}
                             <!-- Add Maintenance Task Button -->
                             <div class="d-flex justify-content-end mb-3">
                                 <a href="{% url 'add_maintenance_task' %}" class="btn btn-success bg-success">
                                     <i class="bi bi-plus"></i> Add Maintenance Task
                                 </a>
                             </div>
+                            {% endif %}
                         <!-- </div> -->
 
                         <!-- Maintenance Task List Table -->
