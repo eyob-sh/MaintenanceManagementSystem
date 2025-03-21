@@ -35,7 +35,7 @@
                             {% if request.user.userprofile.role == "MD manager" or request.user.userprofile.role == "CL" %}
                             <!-- Add Work Order Button -->
                             <div class="d-flex justify-content-end mb-3">
-                                <a href="{% url 'add_work_order' %}" class="btn btn-success bg-success">
+                                <a href="{% url 'add_work_order' %}" class="btn btn-success bg-success custom-btn">
                                     <i class="bi bi-plus"></i> Add Work Order
                                 </a>
                             </div>
@@ -65,7 +65,7 @@
                                 <tr>
                                     {% if request.user.userprofile.role != 'CL' %}
                                     <td>
-                                        {{ work_order.equipment.name }}
+                                        {{ work_order.equipment }}
                                     </td>
                                     {% endif %}
                                     <td>{{ work_order.description }}</td>

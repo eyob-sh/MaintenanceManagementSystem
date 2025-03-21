@@ -601,12 +601,29 @@ def edit_work_order(request, id):
                 if equipment_id:
                     equipment = Equipment.objects.get(id=equipment_id)
                     work_order.equipment = equipment
-                    work_order.remark = remark
-                    work_order.save()
+                work_order.remark = remark
+                work_order.save()
 
                 # Step 2: Update assigned technicians (only for MD manager)
                 if request.user.userprofile.role == 'MD manager':
-                    work_order.assigned_technicians.set(assigned_technicians)
+                    # Convert assigned_technicians to a set of integers
+                    new_technician_ids = set(map(int, assigned_technicians))
+                    current_technician_ids = set(assigned_technician_ids)
+
+                    # Check if there are changes in assigned technicians
+                    if new_technician_ids != current_technician_ids:
+                        work_order.assigned_technicians.set(assigned_technicians)
+
+                        # Notify only newly assigned technicians
+                        newly_assigned_technicians = new_technician_ids - current_technician_ids
+                        for technician_id in newly_assigned_technicians:
+                            technician = User.objects.get(id=technician_id)
+                            Notification.objects.create(
+                                user=technician,
+                                type="work_order",
+                                message=f'You have been assigned a new work order task: {work_order}.',
+                            )
+                            notification_created.send(sender=Notification)
 
                 # Step 3: Add back the old quantities to the spare parts
                 spare_part_usages = SparePartUsage.objects.filter(work_order=work_order)
@@ -664,15 +681,7 @@ def edit_work_order(request, id):
                         spare_part_id__in=[int(id) for id in spare_parts_post if id.strip()]
                     ).delete()
 
-                # Notify assigned technicians
-                for technician_id in assigned_technicians:
-                    technician = User.objects.get(id=technician_id)
-                    Notification.objects.create(
-                        user=technician,
-                        type="work_order",
-                        message=f'You have been assigned a new work order task: {work_order}.',
-                    )
-                    notification_created.send(sender=Notification)
+                
 
                 messages.success(request, 'Work order updated successfully!')
                 return redirect('work_order_list')
@@ -1575,7 +1584,6 @@ def maintenance_list(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     user_branch = request.user.userprofile.branch
-    get_approved_maintenance_records(user_branch)
     # Filter equipment based on user role
     if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
         maintenance_records = MaintenanceRecord.objects.all()  # Show all equipment for MO
@@ -1596,28 +1604,8 @@ def maintenance_list(request):
     
 #-----------------------------------------------------------------
 
-def get_approved_maintenance_records(branch):
-    """
-    Returns all MaintenanceRecord objects with status='Approved'.
-    """
-    # Filter records with status='Approved' (case-sensitive)
-    approved_records = MaintenanceRecord.objects.filter(status__exact='Approved', maintenance_type = 'weekly', branch = branch )
-    work_orders = WorkOrder.objects.filter(
-                branch=branch,
-                status='Approved',
-                # created_at__range=[from_date, to_date]
-            ).order_by('created_at')
-    # Print the number of approved records
-    print(f"Number of approved maintenance records: {approved_records.count()}")
-    
-    # Print details of each approved record
-    for record in approved_records:
-        print(f"ID: {record.id}, Equipment: {record.equipment.name}, Date: {record.datetime}, Status: {record.status}")
-    
-    for work in work_orders:
-        print(f"ID: {work.id}, Equipment: {work.equipment.name}, Date: {work.created_at}, Status: {work.status}")
 
-#-------------------------------------------------------------------
+
 
 
 
@@ -2018,7 +2006,7 @@ def complete_work_order(request, work_order_id):
             # Create a notification for the MD Manager
             Notification.objects.create(
                 user=manager,
-                type = work_order,
+                type = 'work_order',
                 message=f'The work order for {work_order.equipment.name} has been marked as complete.',
             )
             notification_created.send(sender=Notification)
@@ -2626,7 +2614,7 @@ def generate_report(request):
             work_orders = WorkOrder.objects.filter(
                 branch=user_branch,
                 status='Approved',
-                created_at__range=[from_date, to_date]
+                created_at__date__range=[from_date, to_date]
             ).order_by('created_at')
 
             if export_format == 'docx':
@@ -2663,6 +2651,7 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
 
     doc = SimpleDocTemplate(response, pagesize=letter)
     elements = []
+    doc.title = f"{report_type} Maintenance Report {maintenance_records[0].branch.name}"
 
     # Add title
     styles = getSampleStyleSheet()
@@ -2886,6 +2875,7 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
 
     doc = SimpleDocTemplate(response, pagesize=letter)
     elements = []
+    doc.title = f"Work Order Report {work_orders[0].branch.name}"
 
     # Add title
     styles = getSampleStyleSheet()
@@ -2917,7 +2907,7 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
                 work_order.equipment.location,
                 work_order.requester.get_full_name()
             ],
-            ['Remark:', work_order.remark if work_order.remark else '', '', '']  # Remark row spanning all columns
+            [f"Remark: {work_order.remark if work_order.remark else ''}"]  # Remark row spanning all columns
         ]
 
         # Create table for the current work order
@@ -3020,14 +3010,12 @@ def generate_editable_doc_work_order(work_orders, report_type, from_date, to_dat
         # Add Remark row
         remark_row = table.add_row().cells
         remark_cell = remark_row[0]
-        remark_cell.text = "Remark:"
+        remark_cell.text = f"Remark: {work_order.remark if work_order.remark else ''}"  # Add remark text on the same line
         remark_cell.merge(remark_row[1])  # Merge the first two columns
         remark_cell.merge(remark_row[2])  # Merge the next two columns
         remark_cell.merge(remark_row[3])  # Merge all columns
 
-        # Add the remark text
-        remark_text = work_order.remark if work_order.remark else ''
-        remark_cell.add_paragraph(remark_text)
+        
 
         # Align "Remark:" text to the left
         for paragraph in remark_cell.paragraphs:
@@ -3096,6 +3084,7 @@ def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_da
 
     doc = SimpleDocTemplate(response, pagesize=letter)
     elements = []
+    doc.title = f"{report_type} Maintenance Report All Branches"
 
     # Add title
     styles = getSampleStyleSheet()
@@ -3333,7 +3322,7 @@ def generate_MO_work_order_report(from_date, to_date, export_format):
     # Fetch work orders for all branches
     work_orders = WorkOrder.objects.filter(
         status='Approved',
-        created_at__range=[from_date, to_date]
+        created_at__date__range=[from_date, to_date]
     ).order_by('branch__name', 'created_at')
 
     if export_format == 'docx':
@@ -3350,11 +3339,15 @@ def generate_pdf_work_order_all_branches(work_orders, from_date, to_date):
 
     doc = SimpleDocTemplate(response, pagesize=letter)
     elements = []
+    doc.title = f"Work Order Report All Branches"
 
     # Add title
     styles = getSampleStyleSheet()
     title = Paragraph("Work Order Report (All Branches)", styles['Title'])
     elements.append(title)
+    elements.append(Paragraph(f"From {from_date} to {to_date}", styles['Normal']))
+    space_style = ParagraphStyle(name='Space', spaceAfter=25)
+    elements.append(Paragraph("", space_style))
 
     # Check if work_orders is empty
     if not work_orders:
@@ -3374,7 +3367,7 @@ def generate_pdf_work_order_all_branches(work_orders, from_date, to_date):
     for branch_name, orders in orders_by_branch.items():
         # Add branch title
         elements.append(Paragraph(f"Branch: {branch_name}", styles['Heading2']))
-        elements.append(Paragraph(f"From {from_date} to {to_date}", styles['Normal']))
+        
 
         # Add space between branch title and work orders
         space_style = ParagraphStyle(name='Space', spaceAfter=30)
@@ -3394,7 +3387,7 @@ def generate_pdf_work_order_all_branches(work_orders, from_date, to_date):
                     order.equipment.location,
                     order.requester.get_full_name()
                 ],
-                ['Remark:', order.remark if order.remark else '', '', '']  # Remark row spanning all columns
+                [f"Remark: {order.remark if order.remark else ''}"]  # Remark row spanning all columns
             ]
 
             # Create table for the current work order
@@ -3459,6 +3452,8 @@ def generate_editable_doc_work_order_all_branches(work_orders, from_date, to_dat
     title = doc.add_heading("Work Order Report (All Branches)", level=1)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     title.style.font.size = Pt(18)  # Make the title smaller
+    doc.add_paragraph(f"From {from_date} to {to_date}", style='Intense Quote')
+    doc.add_paragraph()
 
     if not work_orders:
         doc.add_paragraph("No work orders found for the selected date range.", style='Intense Quote')
@@ -3482,7 +3477,6 @@ def generate_editable_doc_work_order_all_branches(work_orders, from_date, to_dat
     for branch_name, orders in orders_by_branch.items():
         # Add branch title
         doc.add_heading(f"Branch: {branch_name}", level=2)
-        doc.add_paragraph(f"From {from_date} to {to_date}", style='Intense Quote')
 
         # Add work orders for the current branch
         for order in orders:
@@ -3516,14 +3510,13 @@ def generate_editable_doc_work_order_all_branches(work_orders, from_date, to_dat
             # Add Remark row
             remark_row = table.add_row().cells
             remark_cell = remark_row[0]
-            remark_cell.text = "Remark:"
+            remark_cell.text = f"Remark: {order.remark if order.remark else ''}"  # Add remark text on the same line
+
             remark_cell.merge(remark_row[1])  # Merge the first two columns
             remark_cell.merge(remark_row[2])  # Merge the next two columns
             remark_cell.merge(remark_row[3])  # Merge all columns
 
-            # Add the remark text
-            remark_text = order.remark if order.remark else ''
-            remark_cell.add_paragraph(remark_text)
+            
 
             # Align "Remark:" text to the left
             for paragraph in remark_cell.paragraphs:

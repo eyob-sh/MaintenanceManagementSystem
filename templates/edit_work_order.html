@@ -124,14 +124,14 @@
                                                         </select>
                                                     </div>
                                                     <div class="col-md-2">
-                                                        <button type="button" class="btn btn-danger remove-technician" disabled>Remove</button>
+                                                        <button type="button" class="btn btn-primary-sm mb-3 remove-technician"  style="background-color:lightcoral;font-size: 12px;padding:2px 10px; " disabled>Remove</button>
                                                     </div>
                                                 </div>
                                                 <div id="additional-technicians"></div>
                                                 <div class="row mb-3">
                                                     <div class="col-md-12">
-                                                        <button type="button" class="btn btn-success" id="add-technician">
-                                                            <i class="bi bi-plus"></i> Add Technician
+                                                        <button type="button" class="btn btn-primary-sm mb-3" style="background-color:lightgreen;font-size: 12px;padding:5px 10px;" id="add-technician">
+                                                            <i class="bi bi-plus-circle"></i> Add Technician
                                                         </button>
                                                     </div>
                                                 </div>
@@ -206,8 +206,8 @@
                                                 <div id="additional-spare-parts"></div>
                                                 <div class="row mb-3">
                                                     <div class="col-md-12">
-                                                        <button type="button" class="btn btn-success" id="add-spare-part">
-                                                            <i class="bi bi-plus"></i> Add Spare Part
+                                                        <button type="button" class="btn btn-primary-sm mb-3" style="background-color:lightgreen;font-size: 12px;padding:5px 10px; " id="add-spare-part">
+                                                            <i class="bi bi-plus-circle"></i> Add Spare Part
                                                         </button>
                                                     </div>
                                                 </div>
@@ -240,14 +240,24 @@
                                     </div>
 
                                     <!-- Remark -->
-                                    {% if request.user.userprofile.role == 'TEC' %}
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <label for="remark" class="form-label">Remark</label>
-                                            <textarea class="form-control" id="remark" name="remark"
-                                                rows="3"></textarea>
+                                    {% if request.user.userprofile.role == 'MD manager' or work_order.status == 'Approved' or request.user.userprofile.role == 'MO' %}
+                                        <!-- Read-only Remark Field -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-12">
+                                                <label for="remark" class="form-label">Remark</label>
+                                                <textarea class="form-control" id="remark" name="remark" rows="3" readonly>{{ work_order.remark|default:"" }}</textarea>
+                                            </div>
                                         </div>
-                                    </div>
+                                    {% elif request.user.userprofile.role == 'TEC' and work_order.status != 'Approved' %}
+                                        <!-- Updatable Remark Field -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-12">
+                                                <label for="remark" class="form-label">Remark</label>
+                                                <textarea class="form-control" id="remark" name="remark" rows="3">
+                                                    {{ work_order.remark|default:"" }}
+                                                </textarea>
+                                            </div>
+                                        </div>
                                     {% endif %}
                                     <div class="row mb-3 text-center">
                                         <div class="col-md-12">
@@ -317,7 +327,7 @@
                         <input type="number" class="form-control spare-part-quantity" name="spare_part_quantities[]" min="1" placeholder="Quantity">
                     </div>
                     <div class="col-md-2">
-                        <button type="button" class="btn btn-danger remove-spare-part">Remove</button>
+                        <button type="button" class="btn btn-primary-sm mb-3 remove-spare-part" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; ">Remove</button>
                     </div>
                 `;
 
@@ -348,7 +358,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <button type="button" class="btn btn-danger remove-technician">Remove</button>
+                        <button type="button" class="btn btn-primary-sm mb-3 remove-technician" style="background-color:lightcoral;font-size: 12px;padding:2px 10px; ">Remove</button>
                     </div>
                 `;
 

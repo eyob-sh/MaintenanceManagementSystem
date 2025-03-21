@@ -69,6 +69,23 @@ h6 {
   color: rgb(35, 34, 34);
 }
 
+/* target add buttons on all lists */
+
+.custom-btn {
+    padding: 0.25rem 0.5rem; /* Smaller padding for a smaller button */
+    font-size: 0.875rem; /* Smaller font size */
+    margin-top: 0.5rem; /* Add a little margin above the button */
+    background-color: #28a745 !important; /* Green color */
+    border-color: #28a745 !important; /* Green border color */
+    color: white !important; /* White text color */
+}
+
+/* Hover effect for the button */
+.custom-btn:hover {
+    background-color: #218838 !important; /* Darker green on hover */
+    border-color: #218838 !important; /* Darker green border on hover */
+}
+
 /*--------------------------------------------------------------
 # Back to top button
 --------------------------------------------------------------*/
@@ -101,6 +118,7 @@ h6 {
   visibility: visible;
   opacity: 1;
 }
+
 
 /*--------------------------------------------------------------
 # Override some default Bootstrap stylings
@@ -522,6 +540,7 @@ td {
   inset: 8px -15px auto auto !important;
   max-height: 500px; /* to set a maximum height */
   overflow-y: auto; /* to enable vertical scrolling */
+  width: 400px;
 }
 
 .header-nav .notifications .notification-item {
