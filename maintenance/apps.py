@@ -47,7 +47,7 @@ class MaintenanceConfig(AppConfig):
             self.scheduler.add_job(
                 self.run_maintenance_check,  # Use a method instead of call_command
                 'interval',
-                seconds=5,  # Run every 5 seconds for testing
+                hours=24,  # Run every 24 hours
                 id='check_maintenance_due',
             )
             self.scheduler.start()
