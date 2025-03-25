@@ -168,6 +168,7 @@ class Equipment(models.Model):
 
     class Meta:
         ordering = ['-created_at']  # Use '-' for descending order
+        unique_together = [['equipment_type', 'serial_number']]  # Ensures uniqueness of the pair
 
     def calculate_next_maintenance_date(self,maintenance_type):
         """
