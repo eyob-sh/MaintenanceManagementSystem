@@ -18,7 +18,7 @@ from asgiref.sync import sync_to_async
 import asyncio
 from django.dispatch import receiver
 from .signals import notification_created
-
+from django.db import models
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -3768,29 +3768,65 @@ def export_maintenance_report_pdf(request):
     return response
 
 
+
+
 def dashboard(request):
     # Check if the user is an admin (AD)
     if request.user.userprofile.role != 'AD':
         return HttpResponse("You do not have permission to access this page.")
 
-    notifications = get_notifications(request.user)
-    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
-
-    user_count = User.objects.count()
+    # Basic counts
+    total_users = User.objects.count()
+    active_users = User.objects.filter(is_active=True).count()
+    inactive_users = total_users - active_users
     equipment_count = Equipment.objects.count()
-    branch_count = User.objects.values('userprofile__branch').distinct().count()
+    
+    # Equipment status
+    operational_count = Equipment.objects.filter(status='Operational').count()
+    non_operational_count = Equipment.objects.filter(status='Non-Operational').count()
+    under_maintenance_count = Equipment.objects.filter(status='Under Maintenance').count()
+    
+    # User role distribution
+    role_distribution = UserProfile.objects.values('role').annotate(count=models.Count('id'))
+    roles = [item['role'] for item in role_distribution]
+    role_counts = [item['count'] for item in role_distribution]
+    
+    # Users by branch with role breakdown
+    branches = Branch.objects.all()
+    branch_data = []
+    
+    for branch in branches:
+        users_in_branch = UserProfile.objects.filter(branch=branch)
+        branch_info = {
+            'name': branch.name,
+            'total': users_in_branch.count(),
+            'active': users_in_branch.filter(user__is_active=True).count(),
+            'inactive': users_in_branch.filter(user__is_active=False).count(),
+            'roles': {}
+        }
+        
+        # Get role distribution for this branch
+        role_dist = users_in_branch.values('role').annotate(count=models.Count('id'))
+        for role in role_dist:
+            branch_info['roles'][role['role']] = role['count']
+        
+        branch_data.append(branch_info)
 
     context = {
-        'user_count': user_count,
+        'total_users': total_users,
+        'active_users': active_users,
+        'inactive_users': inactive_users,
         'equipment_count': equipment_count,
-        'branch_count': branch_count,
-        'notifications': notifications,
+        'operational_count': operational_count,
+        'non_operational_count': non_operational_count,
+        'under_maintenance_count': under_maintenance_count,
+        'roles': roles,
+        'role_counts': role_counts,
+        'branch_data': branch_data,
         'active_page': 'dashboard',
-        'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
 
     return render(request, 'dashboard.html', context)
-
 
 def client_dashboard(request):
     user = request.user
