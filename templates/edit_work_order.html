@@ -238,7 +238,53 @@
                                             <div class="invalid-feedback">Please select a status.</div>
                                         </div>
                                     </div>
+                                     
+                                    <!-- Price -->
+                                    {% if request.user.userprofile.role == 'MD manager' or request.user.userprofile.role == 'MO' %}
+                                        <!-- Show price field for MD manager or MO -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-12">
+                                                <label for="id_price" class="form-label">Price</label>
+                                                <input type="text" class="form-control" id="id_price"
+                                                    value="{{ work_order.price }}" readonly>
+                                                <div class="invalid-feedback">Please enter a valid price.</div>
+                                            </div>
+                                        </div>
+                                    {% elif request.user.userprofile.role == 'TEC' and work_order.status == 'Price_Confirmed' %}
+                                        <!-- Show price field for TEC when status is Price_Confirmed -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-12">
+                                                <label for="id_price" class="form-label">Price</label>
+                                                <input type="text" class="form-control" id="id_price"
+                                                    value="{{ work_order.price }}" readonly>
+                                                <div class="invalid-feedback">Please enter a valid price.</div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
 
+                                    {% if request.user.userprofile.role == 'CL' and work_order.status != 'Pending' %}
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_price" class="form-label">Price</label>
+                                            <input type="text" class="form-control" id="id_price"
+                                                value="{{ work_order.price }}" readonly>
+                                            <div class="invalid-feedback">Please enter a valid price.</div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if request.user.userprofile.role == 'TEC' and work_order.status == 'Accepted' or request.user.userprofile.role == 'TEC' and work_order.status == 'Price_Estimated'  %}
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="id_price" class="form-label">Price</label>
+                                            <input type="number" class="form-control" id="id_price" name="price"
+                                                value="{{ work_order.price }}" step="0.01" min="0">
+                                            <div class="invalid-feedback">Please enter a valid price.</div>
+                                        </div>
+                                    </div>
+                                     {% endif %}
                                     <!-- Remark -->
                                     {% if request.user.userprofile.role == 'MD manager' or work_order.status == 'Approved' or request.user.userprofile.role == 'MO' %}
                                         <!-- Read-only Remark Field -->
@@ -272,18 +318,37 @@
                                                 class="btn btn-danger">Reject</a>
                                             {% endif %}
                                             {% elif request.user.userprofile.role == 'TEC' %}
-                                            {% if work_order.status == 'Accepted' or work_order.status == 'Rejected' %}
+                                            {% if work_order.status == 'Price_Confirmed' or work_order.status == 'Rejected' %}
                                             <a href="{% url 'complete_work_order' work_order.id %}"
                                                 class="btn btn-success">Complete</a>
+                                            
+                                            {% endif %}
+                                            {% elif request.user.userprofile.role == 'CL' %}
+                                            {% if work_order.status == 'Price_Estimated' %}
+                                            <a href="{% url 'confirm_price' work_order.id %}"
+                                            class="btn btn-success">Confirm Price</a>
                                             {% endif %}
                                             {% endif %}
                                         </div>
                                     </div>
 
                                     <!-- Submit Button -->
+
+
                                     <div class="row mb-3">
                                         <div class="col-md-12 text-center">
-                                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                                            <button type="submit" class="btn btn-primary">
+                                                {% if request.user.userprofile.role == 'TEC' %}
+                                                    {% if work_order.status == 'Accepted' or work_order.status == 'Price_Estimated' %}
+                                                        Estimate Price
+                                                    {% else %}
+                                                        Save Changes
+                                                    {% endif %}
+                                                {% else %}
+                                                    Save Changes
+                                                {% endif %}
+                                            </button>
+
                                         </div>
                                     </div>
                                 </div>

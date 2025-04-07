@@ -37,6 +37,8 @@ import os
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.http import StreamingHttpResponse
 import time
+from decimal import Decimal, InvalidOperation
+
 
 
 import io
@@ -604,8 +606,32 @@ def edit_work_order(request, id):
                 work_order.remark = remark
                 work_order.save()
 
-                # Step 2: Update assigned technicians (only for MD manager)
+                #include price estimation 
+
                 if request.user.userprofile.role == 'MD manager':
+                    # Convert assigned_technicians to a set of integers
+                    new_technician_ids = set(map(int, assigned_technicians))
+                    current_technician_ids = set(assigned_technician_ids)
+
+                    # Check if there are changes in assigned technicians
+                    if new_technician_ids != current_technician_ids:
+                        work_order.assigned_technicians.set(assigned_technicians)
+
+                        # Notify only newly assigned technicians
+                        newly_assigned_technicians = new_technician_ids - current_technician_ids
+                        for technician_id in newly_assigned_technicians:
+                            technician = User.objects.get(id=technician_id)
+                            Notification.objects.create(
+                                user=technician,
+                                type="work_order",
+                                message=f'You have been assigned a price estimation task for the work order : {work_order}.',
+                            )
+                            notification_created.send(sender=Notification)
+
+
+
+                # Step 2: Update assigned technicians (only for MD manager)
+                if request.user.userprofile.role == 'MD manager' and work_order.status == 'Price_Confirmed':
                     # Convert assigned_technicians to a set of integers
                     new_technician_ids = set(map(int, assigned_technicians))
                     current_technician_ids = set(assigned_technician_ids)
@@ -680,7 +706,9 @@ def edit_work_order(request, id):
                     SparePartUsage.objects.filter(work_order=work_order).exclude(
                         spare_part_id__in=[int(id) for id in spare_parts_post if id.strip()]
                     ).delete()
-
+                if request.user.userprofile.role == 'TEC':
+                    if work_order.status == 'Accepted' or work_order.status == 'Price_Estimated':
+                        estimate_price(request, work_order.id)
                 
 
                 messages.success(request, 'Work order updated successfully!')
@@ -1980,6 +2008,68 @@ def reject_work_order(request, work_order_id):
     return redirect('work_order_list')
 
 #-------------------------------------------------------complete work order--------------------
+
+def confirm_price(request, work_order_id):
+    work_order = get_object_or_404(WorkOrder, id=work_order_id)
+    work_order_branch = work_order.branch
+    price = work_order.price
+    work_order.status = 'Price_Confirmed'
+    work_order.save()
+    messages.success(request, 'Work order price confirmed.')
+
+    managers = User.objects.filter(userprofile__branch=work_order_branch, userprofile__role='MD manager')
+    client = work_order.requester
+    for manager in managers:
+        # Create a notification for the MD Manager
+        Notification.objects.create(
+            user=manager,
+            type = 'work_order',
+            message=f'The Price for work order {work_order} of {work_order.equipment.name} has been confirmed by {client} as {price} .',
+        )
+        notification_created.send(sender=Notification)
+    return redirect('work_order_list')
+
+def estimate_price(request, work_order_id):
+    work_order = get_object_or_404(WorkOrder, id=work_order_id)
+    
+    if request.user in work_order.assigned_technicians.all():
+        try:
+            price = Decimal(request.POST.get('price'))
+            work_order.status = 'Price_Estimated'
+            work_order.price = price
+            work_order.save()
+            
+            messages.success(request, 'Work order price sent for confirmation.')
+            
+            # Notification logic
+            work_order_branch = work_order.branch
+            managers = User.objects.filter(
+                userprofile__branch=work_order_branch, 
+                userprofile__role='MD manager'
+            )
+            client = work_order.requester
+            
+            for manager in managers:
+                Notification.objects.create(
+                    user=manager,
+                    type='work_order',
+                    message=f'The Price for work order {work_order} of {work_order.equipment.name} has been estimated as {price}.',
+                )
+                notification_created.send(sender=Notification)
+
+            Notification.objects.create(
+                user=client, 
+                type='work_order',
+                message=f'The Price for work order {work_order} of {work_order.equipment.name} has been estimated as {price} please confirm if you agree.',
+            )
+            notification_created.send(sender=Notification)
+            
+        except (InvalidOperation, ValueError):
+            messages.error(request, 'Please enter a valid price.')
+    else:
+        messages.error(request, 'You are not assigned to this work order.')
+
+    return redirect('work_order_list')
 
 
 

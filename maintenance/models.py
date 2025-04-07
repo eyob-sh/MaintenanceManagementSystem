@@ -302,6 +302,13 @@ class WorkOrder(models.Model):
         auto_now=True,
         help_text='The date and time when the work order was last updated.',
     )
+    price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        verbose_name="Price"
+    )
 
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_work_order')
     rejected_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='rejected_work_order')

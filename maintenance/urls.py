@@ -134,7 +134,9 @@ path('add_maintenance_task_page/', views.add_maintenance_task_page, name = "add_
     path('complete_work_order/<int:work_order_id>/', views.complete_work_order, name='complete_work_order'),
     path('approve_work_order/<int:work_order_id>/', views.approve_work_order, name='approve_work_order'),
     path('reject_work_order/<int:work_order_id>/', views.reject_work_order, name = 'reject_work_order'),    
-    
+    path('estimate_price/<int:work_order_id>/', views.estimate_price, name='estimate_price'),
+    path('confirm_price/<int:work_order_id>/', views.confirm_price, name='confirm_price'),
+
     #-----------------------------------------------------------------------------------------------------------
     path('mark_notification_as_read/<int:notification_id>/', views.mark_notification_as_read, name='mark_notification_as_read'),
     # path('sse/notifications/', views.sse_notifications, name='sse_notifications'),
