@@ -111,13 +111,14 @@
                                             <label class="form-label">Assigned Technicians</label>
                                             <!-- Always include the button in the DOM but conditionally hide/show it -->
                                             <div id="add-technician-container" style="display: {% if request.user.userprofile.role == 'MD manager' and work_order.status != 'Approved' %}block{% else %}none{% endif %};">
+                                                {% for technician_id in assigned_technician_ids %}
                                                 <div class="row mb-3 technician-row">
                                                     <div class="col-md-10">
                                                         <select class="form-select technician-select" name="assigned_technicians[]" required>
                                                             <option value="">Select Technician</option>
                                                             {% for technician in technicians %}
                                                                 <option value="{{ technician.id }}" 
-                                                                    {% if technician.id in assigned_technician_ids %}selected{% endif %}>
+                                                                    {% if technician.id == technician_id %}selected{% endif %}>
                                                                     {{ technician.username }}
                                                                 </option>
                                                             {% endfor %}
@@ -127,6 +128,7 @@
                                                         <button type="button" class="btn btn-primary-sm mb-3 remove-technician"  style="background-color:lightcoral;font-size: 12px;padding:2px 10px; " disabled>Remove</button>
                                                     </div>
                                                 </div>
+                                                {% endfor %}
                                                 <div id="additional-technicians"></div>
                                                 <div class="row mb-3">
                                                     <div class="col-md-12">
@@ -250,7 +252,7 @@
                                                 <div class="invalid-feedback">Please enter a valid price.</div>
                                             </div>
                                         </div>
-                                    {% elif request.user.userprofile.role == 'TEC' and work_order.status == 'Price_Confirmed' %}
+                                    {% elif request.user.userprofile.role == 'TEC' and work_order.status == 'Price_Confirmed' or request.user.userprofile.role == 'TEC' and work_order.status == 'Approved' %}
                                         <!-- Show price field for TEC when status is Price_Confirmed -->
                                         <div class="row mb-3">
                                             <div class="col-md-12">
