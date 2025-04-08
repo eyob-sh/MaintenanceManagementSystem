@@ -7,7 +7,8 @@ from django.http import HttpResponse, JsonResponse
 from django.http import Http404
 
 from django.db.models import Count, Q, Sum
-from datetime import datetime, timedelta 
+from datetime import datetime, timedelta
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from django.http import JsonResponse
 from django.urls import reverse
@@ -2538,7 +2539,8 @@ def maintenance_dashboard(request):
 
     user_role = user.userprofile.role
     user_branch = user.userprofile.branch
-
+    equipment_list = Equipment.objects.filter(branch=user_branch).order_by('name')
+    
     # Get date range from request
     from_date = request.GET.get('from_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
     to_date = request.GET.get('to_date', datetime.now().strftime('%Y-%m-%d'))
@@ -2672,6 +2674,7 @@ def maintenance_dashboard(request):
         'completed_work_orders_by_month': completed_work_orders_by_month,
         'spare_part_labels': spare_part_labels,
         'spare_part_usage_data': spare_part_usage_data,
+        'equipment_list' : equipment_list,
         'active_page':'dashboard',
         'notifications':notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
@@ -2679,6 +2682,133 @@ def maintenance_dashboard(request):
 
     return render(request, 'maintenance_dashboard.html', context)
 
+#----------------------------------------------------------------------------------------
+
+# In your views.py
+def equipment_maintenance_types_api(request):
+    try:
+        equipment_id = request.GET.get('equipment_id')
+        from_date = request.GET.get('from_date')
+        to_date = request.GET.get('to_date')
+        
+        if not equipment_id:
+            return JsonResponse({'error': 'Equipment ID required'}, status=400)
+            
+        # Get all maintenance records for this equipment
+        records = MaintenanceRecord.objects.filter(
+            equipment_id=equipment_id,
+            datetime__range=[from_date, to_date], 
+            status = 'Approved'
+        )
+        
+        # Group by month and maintenance type
+        monthly_data = records.annotate(
+            month=TruncMonth('datetime')
+        ).values('month', 'maintenance_type').annotate(
+            count=Count('id')
+        ).order_by('month')
+        
+        # CHANGES START HERE - Properly sort months chronologically
+        # First get all unique months as date objects
+        month_dates = sorted(list(set(item['month'] for item in monthly_data)))
+        # Then format them as strings
+        months = [date.strftime('%b %Y') for date in month_dates]
+        
+        types = ['daily', 'weekly', 'monthly', 'biannual', 'annual']
+        
+        # Prepare dataset for each maintenance type
+        datasets = []
+        for maint_type in types:
+            type_data = []
+            for month_date in month_dates:
+                month_str = month_date.strftime('%b %Y')
+                count = next((item['count'] for item in monthly_data 
+                            if item['month'] == month_date 
+                            and item['maintenance_type'] == maint_type), 0)
+                type_data.append(count)
+            
+            datasets.append({
+                'label': maint_type.capitalize(),
+                'data': type_data,
+                'backgroundColor': get_color_for_type(maint_type)
+            })
+        
+        return JsonResponse({
+            'labels': months,  # Now properly ordered
+            'datasets': datasets
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+
+#---------------------------------------------------------------------
+
+def equipment_maintenance_types_api_MO(request):
+    try:
+        equipment_id = request.GET.get('equipment_id')
+        from_date = request.GET.get('from_date')
+        to_date = request.GET.get('to_date')
+        
+        if not equipment_id:
+            return JsonResponse({'error': 'Equipment ID required'}, status=400)
+            
+        # Get all maintenance records for this equipment
+        records = MaintenanceRecord.objects.filter(
+            equipment_id=equipment_id,
+            datetime__range=[from_date, to_date], 
+            status = 'Approved'
+        )
+        
+        # Group by month and maintenance type
+        monthly_data = records.annotate(
+            month=TruncMonth('datetime')
+        ).values('month', 'maintenance_type').annotate(
+            count=Count('id')
+        ).order_by('month')
+        
+        # CHANGES START HERE - Properly sort months chronologically
+        # First get all unique months as date objects
+        month_dates = sorted(list(set(item['month'] for item in monthly_data)))
+        # Then format them as strings
+        months = [date.strftime('%b %Y') for date in month_dates]
+        
+        types = ['daily', 'weekly', 'monthly', 'biannual', 'annual']
+        
+        # Prepare dataset for each maintenance type
+        datasets = []
+        for maint_type in types:
+            type_data = []
+            for month_date in month_dates:
+                month_str = month_date.strftime('%b %Y')
+                count = next((item['count'] for item in monthly_data 
+                            if item['month'] == month_date 
+                            and item['maintenance_type'] == maint_type), 0)
+                type_data.append(count)
+            
+            datasets.append({
+                'label': maint_type.capitalize(),
+                'data': type_data,
+                'backgroundColor': get_color_for_type(maint_type)
+            })
+        
+        return JsonResponse({
+            'labels': months,  # Now properly ordered
+            'datasets': datasets
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+def get_color_for_type(maint_type):
+    colors = {
+        'daily': 'rgba(255, 99, 132, 0.7)',
+        'weekly': 'rgba(54, 162, 235, 0.7)',
+        'monthly': 'rgba(75, 192, 192, 0.7)',
+        'biannual': 'rgba(153, 102, 255, 0.7)',
+        'annual': 'rgba(255, 159, 64, 0.7)'
+    }
+    return colors.get(maint_type, 'rgba(201, 203, 207, 0.7)')
 #-----------------------------------------------------------------------------------------
 
 def generate_report(request):
@@ -3672,6 +3802,7 @@ def maintenance_oversight_dashboard(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
+
     user_role = user.userprofile.role
 
     # Get date range from request
@@ -3680,6 +3811,10 @@ def maintenance_oversight_dashboard(request):
 
     # Get selected branch from request
     selected_branch = request.GET.get('branch', 'all')
+    if selected_branch != 'all':
+        equipment_list = Equipment.objects.filter(branch=selected_branch).order_by('name')
+    else: equipment_list = Equipment.objects.all()
+
 
     # Filter by branch if a specific branch is selected
     if selected_branch == 'all':
@@ -3822,6 +3957,7 @@ def maintenance_oversight_dashboard(request):
         'completed_work_orders_by_month': completed_work_orders_by_month,
         'spare_part_labels': spare_part_labels,
         'spare_part_usage_data': spare_part_usage_data,
+        'equipment_list':equipment_list,
         'active_page': 'dashboard',
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,

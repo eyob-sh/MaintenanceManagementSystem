@@ -132,6 +132,32 @@
                 </div>
             </div><!-- End Work Orders by Month -->
 
+            <!-- Maintenance by Month Graph -->
+            <div class="row mt-4">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title" style="font-size: 14px;">Equipment Maintenance by Type and Month</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <select class="form-select form-select-sm" id="equipmentSelect">
+                                        <option value="">Select Equipment</option>
+                                        {% for equipment in equipment_list %}
+                                        <option value="{{ equipment.id }}">{{ equipment.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Horizontal scrolling container -->
+                            <div style="overflow-x: auto; overflow-y: hidden; width: 100%;">
+                                <div style="min-width: 800px; height: 400px; padding-bottom: 20px;">
+                                    <canvas id="equipmentMaintenanceByTypeChart" style="display: block; height: 380px; width: 100%;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- Maintenance by Frequency (Pie Chart) -->
             <div class="col-lg-6">
                 <div class="card">
@@ -158,165 +184,222 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
     // Maintenance by Month Chart
-    const maintenanceByMonthCtx = document.getElementById('maintenanceByMonthChart').getContext('2d');
-    const maintenanceByMonthChart = new Chart(maintenanceByMonthCtx, {
-        type: 'bar',
-        data: {
-            labels: {{ maintenance_months|safe }},
-            datasets: [{
-                label: 'Maintenance Records',
-                data: {{ maintenance_by_month_data|safe }},
-                backgroundColor: 'rgba(54, 162, 235, 1)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
+    const maintenanceByMonthCtx = document.getElementById('maintenanceByMonthChart');
+    if (maintenanceByMonthCtx) {
+        new Chart(maintenanceByMonthCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: {{ maintenance_months|safe }},
+                datasets: [{
+                    label: 'Maintenance Records',
+                    data: {{ maintenance_by_month_data|safe }},
+                    backgroundColor: 'rgba(54, 162, 235, 1)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
             },
-            plugins: {
-                legend: {
-                    labels: {
-                        font: {
-                            size: 10
-                        }
+            options: {
+                scales: {
+                    y: { beginAtZero: true }
+                },
+                plugins: {
+                    legend: {
+                        labels: { font: { size: 10 } }
                     }
                 }
             }
-        }
-    });
+        });
+    }
 
     // Work Orders by Month Chart
-    const workOrdersByMonthCtx = document.getElementById('workOrdersByMonthChart').getContext('2d');
-    const workOrdersByMonthChart = new Chart(workOrdersByMonthCtx, {
+    const workOrdersByMonthCtx = document.getElementById('workOrdersByMonthChart');
+    if (workOrdersByMonthCtx) {
+        new Chart(workOrdersByMonthCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: {{ work_order_months|safe }},
+                datasets: [
+                    {
+                        label: 'Pending Work Orders',
+                        data: {{ pending_work_orders_by_month|safe }},
+                        backgroundColor: 'rgba(255, 99, 132, 1)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Completed Work Orders',
+                        data: {{ completed_work_orders_by_month|safe }},
+                        backgroundColor: 'rgba(75, 192, 192, 1)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                scales: { y: { beginAtZero: true } },
+                plugins: {
+                    legend: {
+                        labels: { font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Equipment Maintenance by Type Chart
+    // Equipment Maintenance by Type Chart (NEW)
+// Equipment Maintenance by Type and Month Chart - GROUPED BARS VERSION
+const equipmentMaintenanceCtx = document.getElementById('equipmentMaintenanceByTypeChart');
+if (equipmentMaintenanceCtx) {
+    const equipmentMaintenanceChart = new Chart(equipmentMaintenanceCtx.getContext('2d'), {
         type: 'bar',
         data: {
-            labels: {{ work_order_months|safe }},
-            datasets: [
-                {
-                    label: 'Pending Work Orders',
-                    data: {{ pending_work_orders_by_month|safe }},
-                    backgroundColor: 'rgba(255, 99, 132, 1)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Completed Work Orders',
-                    data: {{ completed_work_orders_by_month|safe }},
-                    backgroundColor: 'rgba(75, 192, 192, 1)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }
-            ]
+            labels: [], // Will be populated from API
+            datasets: [] // Will be populated from API
         },
         options: {
+            responsive: true,
             scales: {
+                x: {
+                    stacked: false, // Changed from true to false
+                    title: {
+                        display: true,
+                        text: 'Month'
+                    },
+                    grid: {
+                        display: false
+                    }
+                },
                 y: {
-                    beginAtZero: true
+                    stacked: false, // Changed from true to false
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Maintenances'
+                    },
+                    ticks: {
+                        precision: 0 // Only show whole numbers
+                    }
                 }
             },
             plugins: {
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                },
                 legend: {
+                    position: 'bottom',
                     labels: {
                         font: {
-                            size: 10
-                        }
+                            size: 12
+                        },
+                        boxWidth: 12
                     }
+                }
+            },
+            // This makes the bars group together by month
+            datasets: {
+                bar: {
+                    barPercentage: 0.8, // Controls bar width within category
+                    categoryPercentage: 0.8 // Controls space between categories
                 }
             }
         }
     });
 
+    
+
+
+    // Equipment dropdown event
+    document.getElementById('equipmentSelect')?.addEventListener('change', function() {
+        const equipmentId = this.value;
+        const fromDate = document.getElementById('from_date').value;
+        const toDate = document.getElementById('to_date').value;
+
+        if (!equipmentId) {
+            equipmentMaintenanceChart.data.labels = [];
+            equipmentMaintenanceChart.data.datasets = [];
+            equipmentMaintenanceChart.update();
+            return;
+        }
+
+        fetch(`/api/equipment-maintenance-types/?equipment_id=${equipmentId}&from_date=${fromDate}&to_date=${toDate}`)
+            .then(response => response.json())
+            .then(data => {
+                equipmentMaintenanceChart.data.labels = data.labels;
+                equipmentMaintenanceChart.data.datasets = data.datasets;
+                equipmentMaintenanceChart.update();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Display error message to user if needed
+            });
+    });
+}
     // Maintenance by Frequency Chart
-    const maintenanceByFrequencyCtx = document.getElementById('maintenanceByFrequencyChart').getContext('2d');
-    const maintenanceByFrequencyChart = new Chart(maintenanceByFrequencyCtx, {
-        type: 'pie',
-        data: {
-            labels: ['Daily', 'Weekly', 'Monthly', 'Biannual', 'Annual'],
-            datasets: [{
-                data: [
-                    {{ daily_maintenance_count }},
-                    {{ weekly_maintenance_count }},
-                    {{ monthly_maintenance_count }},
-                    {{ biannual_maintenance_count }},
-                    {{ annual_maintenance_count }}
-                ],
-                backgroundColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(255, 159, 64, 1)'
-                ],
-                borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(255, 159, 64, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            plugins: {
-                legend: {
-                    labels: {
-                        font: {
-                            size: 10
-                        }
+    const maintenanceByFrequencyCtx = document.getElementById('maintenanceByFrequencyChart');
+    if (maintenanceByFrequencyCtx) {
+        new Chart(maintenanceByFrequencyCtx.getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: ['Daily', 'Weekly', 'Monthly', 'Biannual', 'Annual'],
+                datasets: [{
+                    data: [
+                        {{ daily_maintenance_count }},
+                        {{ weekly_maintenance_count }},
+                        {{ monthly_maintenance_count }},
+                        {{ biannual_maintenance_count }},
+                        {{ annual_maintenance_count }}
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        labels: { font: { size: 10 } }
                     }
                 }
             }
-        }
-    });
+        });
+    }
 
     // Spare Part Usage Chart
-    
-const sparePartLabels = {{ spare_part_labels|safe }};
-const sparePartData = {{ spare_part_usage_data|safe }};
-
-console.log("Spare Part Labels:", sparePartLabels);
-console.log("Spare Part Usage Data:", sparePartData);
-
-const sparePartUsageCtx = document.getElementById('sparePartUsageChart').getContext('2d');
-const sparePartUsageChart = new Chart(sparePartUsageCtx, {
-    type: 'pie',
-    data: {
-        labels: sparePartLabels,
-        datasets: [{
-            data: sparePartData,
-            backgroundColor: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)'
-            ],
-            borderColor: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)'
-            ],
-            borderWidth: 1
-        }]
-    },
-    options: {
-        plugins: {
-            legend: {
-                labels: {
-                    font: {
-                        size: 10
+    const sparePartUsageCtx = document.getElementById('sparePartUsageChart');
+    if (sparePartUsageCtx) {
+        new Chart(sparePartUsageCtx.getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: {{ spare_part_labels|safe }},
+                datasets: [{
+                    data: {{ spare_part_usage_data|safe }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        labels: { font: { size: 10 } }
                     }
                 }
             }
-        }
+        });
     }
 });
 </script>

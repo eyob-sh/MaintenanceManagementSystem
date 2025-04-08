@@ -119,6 +119,8 @@ path('add_maintenance_task_page/', views.add_maintenance_task_page, name = "add_
     path('client_dashboard' , views.client_dashboard,name ="client_dashboard" ),
     path('export-maintenance-pdf/', views.export_maintenance_report_pdf, name='export_maintenance_pdf'),
     path('generate_report', views.generate_report,name= 'generate_report'),
+    path('api/equipment-maintenance-types/', views.equipment_maintenance_types_api, name='equipment-maintenance-types'),
+    path('api/equipment-maintenance-types-MO/', views.equipment_maintenance_types_api_MO, name='equipment-maintenance-types-MO'),
 
 
     
