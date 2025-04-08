@@ -301,9 +301,7 @@
                                         <div class="row mb-3">
                                             <div class="col-md-12">
                                                 <label for="remark" class="form-label">Remark</label>
-                                                <textarea class="form-control" id="remark" name="remark" rows="3">
-                                                    {{ work_order.remark|default:"" }}
-                                                </textarea>
+                                                <textarea class="form-control" id="remark" name="remark" rows="3">{{ work_order.remark|default:"" }}</textarea>
                                             </div>
                                         </div>
                                     {% endif %}

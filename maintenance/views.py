@@ -23,7 +23,7 @@ from django.db import models
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, KeepTogether, PageBreak
 from reportlab.lib.units import inch
 from docx.shared import Pt
 from docx.oxml.ns import qn
@@ -2761,7 +2761,9 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
     space_style = ParagraphStyle(name='Space', spaceAfter=30)  # Adjust spaceAfter value as needed
     elements.append(Paragraph("", space_style))  # Empty paragraph with spacing
 
-    for record in maintenance_records:
+    for i, record in enumerate(maintenance_records):
+        if i > 0:
+            elements.append(PageBreak())
         # Add header for each maintenance record
         elements.append(Paragraph(f"Maintenance Date: {record.datetime.strftime('%Y-%m-%d')}, Time: {record.datetime.strftime('%H:%M')}", styles['Heading5']))
         elements.append(Paragraph(f"Equipment: {record.equipment.name} (Serial: {record.equipment.serial_number}), Location: {record.equipment.location}", styles['Normal']))
@@ -2988,7 +2990,7 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
     for work_order in work_orders:
         # Create table data for the current work order
         elements.append(Paragraph(f"Work Order Date: {work_order.created_at.strftime('%Y-%m-%d')}", styles['Heading5']))
-
+        remark_text = work_order.remark if work_order.remark else ""  # Replace empty with "None"
         data = [
             ['Equipment', 'Serial Number', 'Location', 'Requester'],  # Header row
             [
@@ -2997,7 +2999,7 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
                 work_order.equipment.location,
                 work_order.requester.get_full_name()
             ],
-            [f"Remark: {work_order.remark if work_order.remark else ''}"]  # Remark row spanning all columns
+            [f"Remark: {remark_text}"]  # Use the modified remark text
         ]
 
         # Create table for the current work order
@@ -3011,7 +3013,12 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
             ('BACKGROUND', (0, 1), (-1, -2), colors.beige),  # Data rows background
             ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Grid lines
             ('SPAN', (0, 2), (-1, 2)),  # Span the Remark row across all columns
-            ('ALIGN', (0, 2), (0, 2), 'LEFT'),  # Align "Remark:" text to the left
+    ('ALIGN', (0, 2), (0, 2), 'LEFT'),
+    ('VALIGN', (0, 2), (0, 2), 'TOP'),  # Align to top to prevent vertical expansion
+    ('LEFTPADDING', (0, 2), (0, 2), 5),  # Add some left padding
+    ('RIGHTPADDING', (0, 2), (0, 2), 5),  # Add some right padding
+    ('TOPPADDING', (0, 2), (0, 2), 5),  # Control top padding
+    ('BOTTOMPADDING', (0, 2), (0, 2), 5),  # Control bottom padding
         ]))
 
         elements.append(table)
@@ -3035,6 +3042,7 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
 
         # Add space between work orders
         elements.append(Paragraph("<br/><br/>", styles['Normal']))
+        # elements.append(KeepTogether(elements))
 
     # Build the PDF
     doc.build(elements)
@@ -3096,16 +3104,21 @@ def generate_editable_doc_work_order(work_orders, report_type, from_date, to_dat
         row_cells[1].text = work_order.equipment.serial_number  # Add serial number
         row_cells[2].text = work_order.equipment.location
         row_cells[3].text = work_order.requester.get_full_name()
-
+        remark_text = work_order.remark if work_order.remark else ""  # Replace empty with "None"
         # Add Remark row
         remark_row = table.add_row().cells
         remark_cell = remark_row[0]
-        remark_cell.text = f"Remark: {work_order.remark if work_order.remark else ''}"  # Add remark text on the same line
-        remark_cell.merge(remark_row[1])  # Merge the first two columns
-        remark_cell.merge(remark_row[2])  # Merge the next two columns
-        remark_cell.merge(remark_row[3])  # Merge all columns
-
+        remark_cell.text = f"Remark: {remark_text}"
+        remark_cell.merge(remark_row[1])
+        remark_cell.merge(remark_row[2])
+        remark_cell.merge(remark_row[3])
         
+        # Format the remark cell to prevent excessive space
+        for paragraph in remark_cell.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.space_after = Pt(0)
+            paragraph.paragraph_format.line_spacing = 1.0  # Single spacing
 
         # Align "Remark:" text to the left
         for paragraph in remark_cell.paragraphs:
@@ -3208,7 +3221,9 @@ def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_da
         elements.append(Paragraph("", space_style))
 
         # Add records for the current branch
-        for record in records:
+        for i, record in enumerate(records):
+            if i > 0:
+                elements.append(PageBreak())
             # Add header for each maintenance record
             elements.append(Paragraph(f"Maintenance Date: {record.datetime.strftime('%Y-%m-%d')}, Time: {record.datetime.strftime('%H:%M')}", styles['Heading5']))
             elements.append(Paragraph(f"Equipment: {record.equipment.name} (Serial: {record.equipment.serial_number}), Location: {record.equipment.location}", styles['Normal']))
