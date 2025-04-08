@@ -6,6 +6,8 @@ from django.db.models import UniqueConstraint
 from django.apps import apps
 from django.db.models import JSONField
 from datetime import timedelta 
+from auditlog.registry import auditlog
+from auditlog.models import AuditlogHistoryField
 
 
 
@@ -429,3 +431,21 @@ class SchedulerLock(models.Model):
 
     def __str__(self):
         return f"Scheduler Lock (ID: {self.id}, Locked: {self.locked})"
+
+
+auditlog.register(Branch)
+auditlog.register(UserProfile)
+auditlog.register(MaintenanceTask)
+auditlog.register(TaskGroup)
+auditlog.register(Task)
+auditlog.register(Manufacturer)
+auditlog.register(Equipment)
+auditlog.register(SparePart)
+auditlog.register(RestockSparePart)
+auditlog.register(WorkOrder)
+auditlog.register(MaintenanceRecord)
+auditlog.register(TaskCompletion)
+auditlog.register(SparePartUsage)
+auditlog.register(DecommissionedEquipment)
+auditlog.register(Notification)
+auditlog.register(SchedulerLock)
