@@ -215,7 +215,204 @@
         </div>
     </section>
 
+
+    <!-- Maintenance History Section -->
+<section class="section">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Maintenance History</h5>
+                    
+                    <!-- Maintenance Records Tab -->
+                    <div class="tab-content pt-2">
+                        <div class="tab-pane fade show active" id="maintenance-records" role="tabpanel">
+                            {% if maintenance_history %}
+                            <div class="table-responsive scrollable-table">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Date</th>
+                                            <th scope="col">Type</th>
+                                            <th scope="col">Task</th>
+                                            <th scope="col">Technicians</th>
+                                            <th scope="col">Status</th>
+                                            <th scope="col">Problems/Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in maintenance_history %}
+                                        <tr>
+                                            <td>{{ record.datetime|date:"Y-m-d" }}</td>
+                                            <td>{{ record.get_maintenance_type_display }}</td>
+                                            <td>{{ record.maintenance_task }}</td>
+                                            <td>
+                                                {% for tech in record.assigned_technicians.all %}
+                                                    {{ tech.get_full_name }}{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if record.status == 'Complete' %}success{% elif record.status == 'In Progress' %}warning{% elif record.status == 'Failed' %}danger{% else %}secondary{% endif %}">
+                                                    {{ record.status }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if record.problems %}
+                                                    <strong>Problems:</strong> {{ record.problems|truncatechars:50 }}<br>
+                                                {% endif %}
+                                                {% if record.remark %}
+                                                    <strong>Remarks:</strong> {{ record.remark|truncatechars:50 }}
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">No maintenance records found with remarks or problems.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Work Order History Section -->
+<section class="section">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Work Order History</h5>
+                    
+                    <div class="tab-content pt-2">
+                        <div class="tab-pane fade show active" id="work-orders" role="tabpanel">
+                            {% if workorder_history %}
+                            <div class="table-responsive scrollable-table">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Date</th>
+                                            <th scope="col">Requester</th>
+                                            <th scope="col">Description</th>
+                                            <th scope="col">Technicians</th>
+                                            <th scope="col">Status</th>
+                                            <th scope="col">Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for workorder in workorder_history %}
+                                        <tr>
+                                            <td>{{ workorder.created_at|date:"Y-m-d" }}</td>
+                                            <td>{{ workorder.requester.get_full_name }}</td>
+                                            <td>{{ workorder.description|truncatechars:50 }}</td>
+                                            <td>
+                                                {% for tech in workorder.assigned_technicians.all %}
+                                                    {{ tech.get_full_name }}{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if workorder.status == 'Complete' %}success{% elif workorder.status == 'Approved' %}primary{% elif workorder.status == 'Pending' %}warning{% else %}secondary{% endif %}">
+                                                    {{ workorder.status }}
+                                                </span>
+                                            </td>
+                                            <td>{{ workorder.remark|truncatechars:50|default:"-" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">No work orders found for this equipment.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 </main><!-- End #main -->
+
+<style>
+   
+   .scrollable-table-container {
+        max-height: 500px;
+        overflow-y: auto;
+        position: relative; /* Needed for proper scrolling */
+    }
+
+    /* Keep the table layout intact */
+    .scrollable-table {
+        width: 100%;
+        table-layout: fixed; /* Ensures consistent column widths */
+    }
+
+    /* For fixed header version (optional) */
+    .scrollable-table thead {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa; /* Match your table header color */
+        z-index: 10;
+    }
+
+    /* Set specific column widths if needed */
+    .scrollable-table th:nth-child(1),
+    .scrollable-table td:nth-child(1) {
+        width: 15%;
+    }
+    .scrollable-table th:nth-child(2),
+    .scrollable-table td:nth-child(2) {
+        width: 15%;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .table {
+        width: 100%;
+        margin-bottom: 1rem;
+        color: #212529;
+    }
+    .table th, .table td {
+        padding: 0.75rem;
+        vertical-align: top;
+        border-top: 1px solid #dee2e6;
+    }
+    .table thead th {
+        vertical-align: bottom;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .badge {
+        display: inline-block;
+        padding: 0.25em 0.4em;
+        font-size: 75%;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.25rem;
+    }
+    .bg-success {
+        background-color: #28a745!important;
+    }
+    .bg-warning {
+        background-color: #ffc107!important;
+    }
+    .bg-danger {
+        background-color: #dc3545!important;
+    }
+    .bg-secondary {
+        background-color: #6c757d!important;
+    }
+    .bg-primary {
+        background-color: #007bff!important;
+    }
+</style>
 
 <!-- Add JavaScript for Front-End Validation -->
 <script>

@@ -1303,7 +1303,15 @@ def edit_equipment(request, id):
 
     # Fetch unique equipment types from MaintenanceTask
     equipment_types = MaintenanceTask.objects.values_list('equipment_type', flat=True).distinct()
-
+    maintenance_history= MaintenanceRecord.objects.filter(
+        equipment=equipment
+    ).exclude(
+        Q(remark__exact='') & Q(problems__exact='')
+    ).order_by('-created_at')
+    
+    workorder_history= WorkOrder.objects.filter(
+        equipment=equipment
+    ).order_by('-created_at')
     # Initialize the form variable
     form = EquipmentForm(instance=equipment)
 
@@ -1321,6 +1329,8 @@ def edit_equipment(request, id):
         'form': form,
         'equipment': equipment,
         'equipment_types': equipment_types,  # Pass equipment types to the template
+        'maintenance_history':maintenance_history,
+        'workorder_history':workorder_history,
         'active_page': 'equipment_list',
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
