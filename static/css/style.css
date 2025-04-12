@@ -723,6 +723,8 @@ td {
   color: green;
   font-weight: 600;
   margin: 10px 0 5px 15px;
+  margin-bottom: 15px;
+
 }
 
 .sidebar-nav .nav-link {
@@ -737,6 +739,7 @@ td {
   background: lightgreen;
   padding: 10px 15px;
   border-radius: 4px;
+  margin-bottom: 15px;
 }
 
 .sidebar-nav .nav-link i {

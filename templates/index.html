@@ -231,6 +231,7 @@
         </a>
       </li><!-- End Profile Page Nav -->
       {% endif %}
+      
 
 
       <li class="nav-heading">Reports and Analytics</li>
@@ -262,6 +263,7 @@
       </li>
       {% endif %}
       <!-- Maintenance Department Manager, Technician, Maintenance Oversight -->
+       
       {% if request.user.userprofile.role in "MD manager TEC MO" and not request.user.is_superuser %}
       <li class="nav-heading">Asset Management</li>
       <li class="nav-item">
@@ -278,6 +280,15 @@
           <span>Decommissioned Equipments</span>
         </a>
       </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'manufacturer_list' %}collapsed{% endif %}"
+          href="{% url 'manufacturer_list' %}">
+          <i class="bi bi-building"></i>
+          <span>Manufacturer</span>
+        </a>
+      </li>
+      <li class="nav-heading">Maintenance</li>
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'maintenance_list' %}collapsed{% endif %}"
           href="{% url 'maintenance_list' %}">
@@ -299,13 +310,7 @@
           <span>Maintenance Tasks</span>
         </a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link {% if active_page != 'manufacturer_list' %}collapsed{% endif %}"
-          href="{% url 'manufacturer_list' %}">
-          <i class="bi bi-building"></i>
-          <span>Manufacturer</span>
-        </a>
-      </li>
+      <li class="nav-heading">Inventory</li>
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'spare_part_list' %}collapsed{% endif %}"
           href="{% url 'spare_part_list' %}">
@@ -326,7 +331,7 @@
           <span>Restock Spare Part</span>
         </a>
       </li>
-
+      <li class="nav-heading">Alerts & Monitoring</li>
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'maintenance_due' %}collapsed{% endif %}"
           href="{% url 'maintenance_due' %}">
@@ -344,70 +349,8 @@
       </li>
       {% endif %}
 
-      <!-- Chemical Oversight -->
-      {% if request.user.userprofile.role == 'CO' %}
-      <li class="nav-heading">Chemical Management</li>
-      <li class="nav-item">
-        <a class="nav-link {% if active_page != 'chemical_list' %}collapsed{% endif %}"
-          href="{% url 'chemical_list' %}">
-          <i class="bi bi-droplet"></i>
-          <span>Chemicals</span>
-        </a>
-      </li>
-
-
-      <li class="nav-item">
-        <a class="nav-link {% if active_page != 'chemical_usage' %}collapsed{% endif %}"
-          href="{% url 'chemical_usage' %}">
-          <i class="bi bi-droplet"></i>
-          <span>Chemical Usage</span>
-        </a>
-      </li>
-
-      <li class="nav-item">
-        <a class="nav-link {% if active_page != 'chemical_usage_list' %}collapsed{% endif %}"
-          href="{% url 'chemical_usage_list' %}">
-          <i class="bi bi-journal-text"></i>
-          <span>Log</span>
-        </a>
-      </li>
-
-      <li class="nav-item">
-        <a class="nav-link {% if active_page != 'chemical_restock_list' %}collapsed{% endif %}"
-          href="{% url 'chemical_restock_list' %}">
-          <i class="bi bi-box-arrow-in-right"></i>
-          <span>Restock Chemical</span>
-        </a>
-      </li>
-
-      <li class="nav-item">
-        <a class="nav-link {% if active_page != 'expiring_chemical' %}collapsed{% endif %}"
-          href="{% url 'expiring_chemical' %}">
-          <i class="bi bi-exclamation-triangle"></i>
-          <span>Expiring Chemicals</span>
-        </a>
-      </li>
-      {% endif %}
-
-      <!-- Client -->
-      {% if request.user.userprofile.role == 'CL' %}
-      <li class="nav-item">
-        <a class="nav-link {% if active_page != 'dashboard' %}collapsed{% endif %}" href="{% url 'client_dashboard' %}">
-          <i class="bi bi-grid"></i>
-          <span>Dashboard</span>
-        </a>
-      </li>
-
-      <li class="nav-heading">Work Order</li>
-      <li class="nav-item">
-        <a class="nav-link {% if active_page != 'work_order_list' %}collapsed{% endif %}"
-          href="{% url 'work_order_list' %}">
-          <i class="bi bi-file-earmark-text"></i>
-          <span>Work Order</span>
-        </a>
-      </li>
-      {% endif %}
-
+      
+      
       <!-- Admin -->
       {% if request.user.userprofile.role == 'AD' %}
       <li class="nav-heading">Admin</li>
