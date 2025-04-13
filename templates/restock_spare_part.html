@@ -18,12 +18,19 @@
     <!-- End Messages Block -->
 
     <div class="pagetitle">
-        <h1>Restock Spare Part</h1>
+        <h1><b>Restock Spare Part</b></h1>
+        <nav>
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item">Restock Spare Part</li>
+              <li class="breadcrumb-item active">Restock</li>
+            </ol>
+        </nav>
     </div><!-- End Page Title -->
+    
 
     <section class="section">
-        <div class="row">
-            <div class="col-lg-12">
+        <div class="row justify-content-center">  <!-- Added justify-content-center here -->
+            <div class="col-lg-9">  <!-- Changed from col-lg-12 to col-lg-8 for smaller width -->
 
                 <div class="card">
                     <div class="card-body">
@@ -31,7 +38,7 @@
                         <h5 class="card-title"></h5>
 
                         <!-- Restock Form -->
-                        <form method="post"  action="{% url 'restock_spare_part' %}" enctype="multipart/form-data">
+                        <form method="post" action="{% url 'restock_spare_part' %}" enctype="multipart/form-data">
                             {% csrf_token %}
 
                             <!-- Spare Part Dropdown -->

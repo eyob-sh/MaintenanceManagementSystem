@@ -18,8 +18,15 @@
     <!-- End Messages Block -->
 
     <div class="pagetitle">
-        <h1>Edit Equipment: {{ equipment.name }}</h1>
+        <h1><b>Edit Equipment : {{ equipment.name }}</b></h1>
+        <nav>
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item">Equipments</a></li>
+              <li class="breadcrumb-item active">Edit</li>
+            </ol>
+          </nav>
     </div><!-- End Page Title -->
+    
 
     <section class="section">
         <div class="row">
@@ -146,57 +153,7 @@
                             </div>
 
                             
-                            <!-- last_maintenance_date -->
-                            <div class="row mb-3">
-                                <div class="col-md-5" readonly>
-                                    <label for="id_last_daily_maintenance_date" class="form-label">last_daily_maintenance_date</label>
-                                    {{ form.last_daily_maintenance_date }}
-                                </div>
-                            </div>
-
-                            <div class="row mb-3">
-                                <div class="col-md-5">
-                                    <label for="id_last_weekly_maintenance_date" class="form-label">last_weekly_maintenance_date</label>
-                                    {{ form.last_weekly_maintenance_date }}
-                                </div>
-                                <div class="col-md-5">
-                                    <label for="id_next_weekly_maintenance_date" class="form-label">next_weekly_maintenance_date</label>
-                                    {{ form.next_weekly_maintenance_date }}
-                                </div>
-                            </div>
                             
-                            <div class="row mb-3">
-                                <div class="col-md-5">
-                                    <label for="id_last_monthly_maintenance_date" class="form-label">last_monthly_maintenance_date</label>
-                                    {{ form.last_monthly_maintenance_date }}
-                                </div>
-                                <div class="col-md-5">
-                                    <label for="id_next_monthly_maintenance_date" class="form-label">next_monthly_maintenance_date</label>
-                                    {{ form.next_monthly_maintenance_date }}
-                                </div>
-                            </div>
-                            
-                            <div class="row mb-3">
-                                <div class="col-md-5">
-                                    <label for="id_last_biannual_maintenance_date" class="form-label">last_biannual_maintenance_date</label>
-                                    {{ form.last_biannual_maintenance_date }}
-                                </div>
-                                <div class="col-md-5">
-                                    <label for="id_next_biannual_maintenance_date" class="form-label">next_biannual_maintenance_date</label>
-                                    {{ form.next_biannual_maintenance_date }}
-                                </div>
-                            </div>
-                            
-                            <div class="row mb-3">
-                                <div class="col-md-5">
-                                    <label for="id_last_annual_maintenance_date" class="form-label">last_annual_maintenance_date</label>
-                                    {{ form.last_annual_maintenance_date }}
-                                </div>
-                                <div class="col-md-5">
-                                    <label for="id_next_annual_maintenance_date" class="form-label">next_annual_maintenance_date</label>
-                                    {{ form.next_annual_maintenance_date }}
-                                </div>
-                            </div>
 
                         </div>
                     </div>
@@ -214,6 +171,70 @@
             </div>
         </div>
     </section>
+    <br>
+    <section class="section">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"></h5>
+                        <!-- last_maintenance_date -->
+                        <div class="row mb-3">
+                            <div class="col-md-5 mx-auto text-center" readonly>
+                                <label for="id_last_daily_maintenance_date" class="form-label">last_daily_maintenance_date</label>
+                                {{ form.last_daily_maintenance_date }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3 justify-content-between">
+                            <div class="col-md-5">
+                                <label for="id_last_weekly_maintenance_date" class="form-label">last_weekly_maintenance_date</label>
+                                {{ form.last_weekly_maintenance_date }}
+                            </div>
+                            <div class="col-md-5">
+                                <label for="id_next_weekly_maintenance_date" class="form-label">next_weekly_maintenance_date</label>
+                                {{ form.next_weekly_maintenance_date }}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3 justify-content-between">
+                            <div class="col-md-5">
+                                <label for="id_last_monthly_maintenance_date" class="form-label">last_monthly_maintenance_date</label>
+                                {{ form.last_monthly_maintenance_date }}
+                            </div>
+                            <div class="col-md-5">
+                                <label for="id_next_monthly_maintenance_date" class="form-label">next_monthly_maintenance_date</label>
+                                {{ form.next_monthly_maintenance_date }}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3 justify-content-between">
+                            <div class="col-md-5">
+                                <label for="id_last_biannual_maintenance_date" class="form-label">last_biannual_maintenance_date</label>
+                                {{ form.last_biannual_maintenance_date }}
+                            </div>
+                            <div class="col-md-5">
+                                <label for="id_next_biannual_maintenance_date" class="form-label">next_biannual_maintenance_date</label>
+                                {{ form.next_biannual_maintenance_date }}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3 justify-content-between">
+                            <div class="col-md-5">
+                                <label for="id_last_annual_maintenance_date" class="form-label">last_annual_maintenance_date</label>
+                                {{ form.last_annual_maintenance_date }}
+                            </div>
+                            <div class="col-md-5">
+                                <label for="id_next_annual_maintenance_date" class="form-label">next_annual_maintenance_date</label>
+                                {{ form.next_annual_maintenance_date }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+        
 
 
     <!-- Maintenance History Section -->
@@ -264,6 +285,7 @@
                                                     <strong>Remarks:</strong> {{ record.remark|truncatechars:50 }}
                                                 {% endif %}
                                             </td>
+                                            <td><a href="{% url 'edit_maintenance' record.id %}"><i class="bi bi-eye"></i></a></td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -320,6 +342,7 @@
                                                 </span>
                                             </td>
                                             <td>{{ workorder.remark|truncatechars:50|default:"-" }}</td>
+                                            <td><a href="{% url 'edit_work_order' workorder.id %}"><i class="bi bi-eye"></i></a></td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>

@@ -6,12 +6,18 @@
 <main id="main" class="main">
 
     <div class="pagetitle">
-        <h1>Add Manufacturer</h1>
+        <h1><b>Add Manufacturer</b></h1>
+        <nav>
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="#">Manufacturers</a></li>
+              <li class="breadcrumb-item active">Add</li>
+            </ol>
+          </nav>
     </div><!-- End Page Title -->
 
     <section class="section">
         <div class="row">
-            <div class="col-lg-8 mx-auto">
+            <div class="col-lg-10 mx-auto">  <!-- Changed from col-lg-8 to col-lg-10 for wider card -->
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title"></h5>
@@ -20,63 +26,67 @@
                         <form method="POST" action="{% url 'add_manufacturer' %}">
                             {% csrf_token %}
 
-                            <!-- Manufacturer Name -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="manufacturerName" class="form-label">Manufacturer Name</label>
-                                    <input type="text" class="form-control" id="manufacturerName" name="name" required>
+                            <div class="row">  <!-- Main row for two columns -->
+                                <!-- Left Column -->
+                                <div class="col-md-6">
+                                    <!-- Manufacturer Name -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="manufacturerName" class="form-label">Manufacturer Name</label>
+                                            <input type="text" class="form-control" id="manufacturerName" name="name" required>
+                                        </div>
+                                    </div>
+
+                                    <!-- Description -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="description" class="form-label">Description</label>
+                                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                                        </div>
+                                    </div>
+
+                                    <!-- Branch -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="site" class="form-label">Site</label>
+                                            <input type="text" class="form-control" id="site" name="site" value="{{ branch.name }}" readonly>
+                                            <input type="hidden" name="site" value="{{ branch.id }}">
+                                            <div class="invalid-feedback">Please select a branch.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column -->
+                                <div class="col-md-6">
+                                    <!-- Contact Email -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="contactEmail" class="form-label">Contact Email</label>
+                                            <input type="email" class="form-control" id="contactEmail" name="contact_email">
+                                        </div>
+                                    </div>
+
+                                    <!-- Contact Phone Number -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="contactPhoneNumber" class="form-label">Contact Phone Number</label>
+                                            <input type="text" class="form-control" id="contactPhoneNumber" name="contact_phone_number">
+                                        </div>
+                                    </div>
+
+                                    <!-- Address -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label for="address" class="form-label">Address</label>
+                                            <textarea class="form-control" id="address" name="address" rows="3"></textarea>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Description -->
+                            <!-- Submit Button (full width below both columns) -->
                             <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="description" class="form-label">Description</label>
-                                    <textarea class="form-control" id="description" name="description"
-                                        rows="3"></textarea>
-                                </div>
-                            </div>
-
-                            <!-- Branch -->
-<div class="row mb-3">
-    <div class="col-md-12">
-        <label for="site" class="form-label">Site</label>
-        <input type="text" class="form-control" id="site" name="site" value="{{ branch.name }}" readonly>
-        <input type="hidden" name="site" value="{{ branch.id }}"> <!-- Hidden field for branch ID -->
-        <div class="invalid-feedback">Please select a branch.</div>
-    </div>
-</div>
-
-
-                            <!-- Contact Email -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="contactEmail" class="form-label">Contact Email</label>
-                                    <input type="email" class="form-control" id="contactEmail" name="contact_email">
-                                </div>
-                            </div>
-
-                            <!-- Contact Phone Number -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="contactPhoneNumber" class="form-label">Contact Phone Number</label>
-                                    <input type="text" class="form-control" id="contactPhoneNumber"
-                                        name="contact_phone_number">
-                                </div>
-                            </div>
-
-                            <!-- Address -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="address" class="form-label">Address</label>
-                                    <textarea class="form-control" id="address" name="address" rows="3"></textarea>
-                                </div>
-                            </div>
-
-                            <!-- Submit Button -->
-                            <div class="row mb-3">
-                                <label class="col-sm-2 col-form-label"></label>
-                                <div class="col-sm-10">
+                                <div class="col-md-12 text-center">  <!-- Centered the button -->
                                     <button type="submit" class="btn btn-primary">Submit</button>
                                 </div>
                             </div>

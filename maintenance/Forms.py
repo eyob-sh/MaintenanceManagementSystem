@@ -122,6 +122,10 @@ class ManufacturerForm(forms.ModelForm):
             'contact_phone_number',
             'address',
         ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3}),
+            'address': forms.Textarea(attrs={'rows': 3}),
+        }
 
     def __init__(self, *args, **kwargs):
         super(ManufacturerForm, self).__init__(*args, **kwargs)
@@ -134,7 +138,7 @@ class ManufacturerForm(forms.ModelForm):
         if self.instance and self.instance.pk:  # Check if the form is for an existing instance
             self.fields['site'].disabled = True  # Disable the field
             self.fields['site'].widget.attrs['readonly'] = True  # Make it read-only
-            
+        
 class DecommissionedEquipmentForm(forms.ModelForm):
     class Meta:
         model = DecommissionedEquipment

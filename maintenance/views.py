@@ -2297,7 +2297,7 @@ def restock_spare_part(request):
     context = {
         'form': form,
         'spare_parts': spare_parts,  # Ensure you pass all spare parts to the template
-        'active_page': 'spare_part_list',
+        'active_page': 'restock_list',
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
@@ -2337,7 +2337,7 @@ def restock_spare_part_page(request):
 
     context = {
         'spare_parts': SparePart.objects.filter(branch=user_branch),  # Fetch spare parts for the branch
-        'active_page': 'spare_part_list',
+        'active_page': 'restock_list',
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     }

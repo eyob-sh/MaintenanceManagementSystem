@@ -63,7 +63,7 @@ h6 {
 
 .pagetitle h1 {
   font: sans-serif;
-  font-size: 20px;
+  font-size: 25px;
   margin-bottom: 0;
   font-weight: 600;
   color: rgb(35, 34, 34);
@@ -296,12 +296,19 @@ h6 {
   font-size: 0.9em;    /* Set font size to a smaller value */
 }
 
+input.form-control, 
+textarea.form-control, 
+select.form-select {
+    font-family: sans-serif !important;
+}
+
 /*  added to style the heading on tables */
 th {
   font-size: 12px; /* Adjust the font size as needed */
 }
 td {
   font-size: 12px; /* Adjust the font size as needed */
+  font-family: sans-serif;
 }
 
 /* Accordion */

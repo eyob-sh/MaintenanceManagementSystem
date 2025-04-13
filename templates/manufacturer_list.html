@@ -18,9 +18,15 @@
     <!-- End Messages Block -->
 
     <div class="pagetitle">
-        <h1>{{ title }}</h1>
+        <h1><b>{{ title }}</b></h1>
+        <nav>
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item">Manufacturers</a></li>
+              <li class="breadcrumb-item active">List</li>
+            </ol>
+          </nav>
     </div><!-- End Page Title -->
-    <br>
+    
 
     <section class="section">
         <div class="row">
@@ -50,9 +56,10 @@
                                     <th>Address</th>
                                     {% if request.user.userprofile.role == 'MO' %}
                                     <th>Site</th> <!-- Site Column for MO Role -->
+                                    {% endif %}
                                     <th></th> <!-- Edit Action Column -->
                                     <th></th> <!-- Delete Action Column -->
-                                    {% endif %}
+                                    
                                 </tr>
                             </thead>
                             <tbody>
@@ -71,6 +78,7 @@
                                     <td>{{ manufacturer.address }}</td>
                                     {% if request.user.userprofile.role == 'MO' %}
                                     <td>{{ manufacturer.site }}</td> <!-- Site Column for MO Role -->
+                                    {% endif %}
                                     <td>
                                         <a href="{% url edit_url manufacturer.id %}"><i class="bi bi-pencil-fill"></i></a>
                                     </td>
@@ -79,7 +87,7 @@
                                             <i class="bi bi-trash"></i> 
                                         </a>
                                     </td>
-                                    {% endif %}
+                                    
                                 </tr>
                                 {% empty %}
                                 <tr>
