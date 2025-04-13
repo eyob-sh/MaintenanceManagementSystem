@@ -117,22 +117,9 @@
         <div class="invalid-feedback">Please select a maintenance type.</div>
     </div>
 </div>
+<br>
 
-<!-- Tasks Section -->
-<div id="tasks-section" class="d-none">
-    <div class="row mb-3">
-        <div class="col-md-12">
-            <label class="form-label">Tasks</label>
-            <div class="card">
-                <div class="card-body">
-                    <div id="tasks-list" class="list-group">
-                        <!-- Tasks will be dynamically added here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>                               {% comment %}
+                           {% comment %}
                                     <!-- Spare Parts Section -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
@@ -223,6 +210,38 @@
                                 </div>
                             </div>
 
+                            <!-- Tasks Section -->
+<div id="tasks-section" class="d-none mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <label class="form-label">Tasks</label>
+            <div class="card">
+                <div class="card-body p-3">
+                    <div id="tasks-list" class="list-group gap-2">
+                        <!-- Tasks will be dynamically added here -->
+                    </div>
+                    <template id="task-item-template">
+                        <div class="list-group-item mb-2 p-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-5">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="completed_tasks" value="" id="">
+                                        <label class="form-check-label fw-medium"></label>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <textarea class="form-control task-remark" name="task_remarks" 
+                                              placeholder="Task remarks..." rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>    
+
                             <!-- Submit Button -->
                             <div class="row mb-3">
                                 <div class="col-md-12 text-center">
@@ -261,28 +280,37 @@
             fetch(`/get-tasks/?equipment_id=${equipmentId}&maintenance_type=${maintenanceType}`)
                 .then(response => response.json())
                 .then(data => {
-                    tasksList.innerHTML = ''; // Clear existing tasks
+    tasksList.innerHTML = ''; // Clear existing tasks
+    const template = document.getElementById('task-item-template');
 
-                    if (data.tasks.length > 0) {
-                        data.tasks.forEach(task => {
-                            const taskItem = document.createElement('div');
-                            taskItem.className = 'list-group-item';
-                            taskItem.innerHTML = `
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="tasks[]" value="${task.id}" id="task-${task.id}">
-                                    <label class="form-check-label" for="task-${task.id}">
-                                        ${task.description}
-                                    </label>
-                                </div>
-                            `;
-                            tasksList.appendChild(taskItem);
-                        });
+    if (data.tasks.length > 0) {
+        data.tasks.forEach(task => {
+            const clone = template.content.cloneNode(true);
+            const checkbox = clone.querySelector('.form-check-input');
+            const label = clone.querySelector('.form-check-label');
+            const remarkField = clone.querySelector('.task-remark');
+            
+            // Set task values
+            checkbox.value = task.id;
+            checkbox.id = `task-${task.id}`;
+            label.htmlFor = `task-${task.id}`;
+            label.textContent = task.description;
+            remarkField.name = `task_remarks_${task.id}`;
+            
+            // If editing existing maintenance, populate remarks
+            if (data.existing_remarks && data.existing_remarks[task.id]) {
+                remarkField.value = data.existing_remarks[task.id];
+                checkbox.checked = true;
+            }
+            
+            tasksList.appendChild(clone);
+        });
 
-                        tasksSection.classList.remove('d-none'); // Show the tasks section
-                    } else {
-                        tasksSection.classList.add('d-none'); // Hide the tasks section if no tasks are found
-                    }
-                })
+        tasksSection.classList.remove('d-none');
+    } else {
+        tasksSection.classList.add('d-none');
+    }
+})
                 .catch(error => {
                     console.error('Error fetching tasks:', error);
                 });

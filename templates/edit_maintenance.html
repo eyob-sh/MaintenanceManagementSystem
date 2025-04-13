@@ -89,38 +89,7 @@
 
                                     
                                     <!-- Tasks Section -->
-<div id="tasks-section">
-    <div class="row mb-3">
-        <div class="col-md-12">
-            <label class="form-label">Tasks</label>
-            <div class="card">
-                <div class="card-body">
-                    <div id="tasks-list" class="list-group">
-                        {% if tasks %}
-                            {% for task in tasks %}
-                            <div class="list-group-item">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" 
-                                           name="completed_tasks" value="{{ task.id }}" 
-                                           id="task-{{ task.id }}"
-                                           {% if task.id in completed_task_ids %}checked{% endif %}
-                                           {% if request.user.userprofile.role == 'MO' or request.user.userprofile.role == 'MD manager' or maintenance.status == 'Approved' %}disabled{% endif %}                                    <label class="form-check-label" for="task-{{ task.id }}">
-                                        {{ task.description }}
-                                    </label>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="list-group-item">
-                                No tasks found for this maintenance type.
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
                                     <!-- Spare Parts Section -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
@@ -235,6 +204,54 @@
                                 </div>
                             </div>
 
+                           <!-- Widened Edit Maintenance Tasks Section -->
+<!-- Tasks Section -->
+<div id="tasks-section" class="mt-4">
+    <div class="row">
+        <div class="col-12">
+            <label class="form-label">Tasks</label>
+            <div class="card">
+                <div class="card-body p-3">
+                    <div id="tasks-list" class="list-group">
+                        {% for task_data in tasks_with_status %}
+                        <div class="list-group-item p-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-1">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="completed_tasks" value="{{ task_data.task.id }}" 
+                                               id="task-{{ task_data.task.id }}"
+                                               {% if task_data.is_completed %}checked{% endif %}
+                                               {% if request.user.userprofile.role == 'MO' or request.user.userprofile.role == 'MD manager' or maintenance.status == 'Approved' %}disabled{% endif %}>
+                                    </div>
+                                </div>
+                                <div class="col-md-11">
+                                    <div class="d-flex flex-column">
+                                        <label class="form-check-label" for="task-{{ task_data.task.id }}">
+                                            {{ task_data.task.description }}
+                                        </label>
+                                        <div class="mt-2">
+                                            <textarea class="form-control task-remark" 
+                                                      name="task_remarks_{{ task_data.task.id }}" 
+                                                      placeholder="Task remarks..." 
+                                                      rows="2"
+                                                      {% if request.user.userprofile.role == 'MO' or request.user.userprofile.role == 'MD manager' or maintenance.status == 'Approved' %}disabled{% endif %}>{{ task_data.remark }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="list-group-item p-3">
+                            No tasks found for this maintenance type.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
                             <!-- Submit Button -->
                             <div class="row mb-3">
                                 <div class="col-md-12 text-center">

@@ -373,8 +373,10 @@ class MaintenanceRecord(models.Model):
 class TaskCompletion(models.Model):
     maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE)
     task = models.ForeignKey('Task', on_delete=models.CASCADE)
-    completed_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    completed_by = models.ForeignKey(User, on_delete=models.CASCADE,null=True, blank=True)
+    remark = models.TextField(blank=True, null=True)  # Add this field for task remarks
     completed_at = models.DateTimeField(auto_now_add=True)
+    is_completed = models.BooleanField(default=False)  # New field
 class SparePartUsage(models.Model):
     maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE, null=True)
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, null=True)

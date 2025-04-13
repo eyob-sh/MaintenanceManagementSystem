@@ -1650,45 +1650,57 @@ def maintenance_list(request):
 
 
 def edit_maintenance(request, id):
+    # Get notifications and user info
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
     user_branch = request.user.userprofile.branch
+    
+    # Get maintenance record and related data
     maintenance = get_object_or_404(MaintenanceRecord, id=id)
     spare_parts = SparePart.objects.filter(branch=user_branch)
     spare_part_usages = SparePartUsage.objects.filter(maintenance_record=maintenance)
-
-    # Fetch tasks associated with the maintenance task and maintenance type
+    
+    # Get tasks for this maintenance
     tasks = Task.objects.filter(
         task_group__maintenance_task=maintenance.maintenance_task,
         task_group__frequency=maintenance.maintenance_type
     )
-    completed_task_ids = maintenance.completed_tasks.values_list('id', flat=True)
     
+    # Build remarks and completion status dictionary
+    tasks_with_status = []
+    for task in tasks:
+        completion = TaskCompletion.objects.filter(
+            maintenance_record=maintenance,
+            task=task
+        ).first()
+        tasks_with_status.append({
+            'task': task,
+            'remark': completion.remark if completion else "",
+            'is_completed': completion.is_completed if completion else False
+        })
+
     if request.method == 'POST':
         if request.user in maintenance.assigned_technicians.all():
-            # Get form data
+            # Collect all form data
             equipment_id = request.POST.get('equipment')
             assigned_technicians = request.POST.getlist('assigned_technicians')
             branch_id = request.POST.get('branch')
-            maintenance_type = request.POST.get('maintenance_type')  # e.g., daily, weekly
+            maintenance_type = request.POST.get('maintenance_type')
             spare_parts_post = request.POST.getlist('spare_parts[]')
             spare_part_quantities = request.POST.getlist('spare_part_quantities[]')
             remark = request.POST.get('remark')
             procedure = request.POST.get('procedure')
             problems = request.POST.get('problems')
             status = request.POST.get('status')
-            completed_tasks = request.POST.getlist('completed_tasks')  # Get completed tasks
+            completed_tasks = request.POST.getlist('completed_tasks')
 
             try:
-                # Step 1: Get the selected equipment
+                # Step 1: Validate and get equipment
                 equipment = Equipment.objects.get(id=equipment_id)
-
-                # Step 2: Get the equipment_type from the selected equipment
                 equipment_type = equipment.equipment_type
 
-                # Step 3: Fetch the maintenance_task associated with the equipment_type
+                # Step 2: Get maintenance task for equipment type
                 maintenance_task = MaintenanceTask.objects.filter(equipment_type=equipment_type).first()
-
                 if not maintenance_task:
                     messages.error(request, f'No maintenance task found for equipment type: {equipment_type}.')
                     return render(request, 'edit_maintenance.html', {
@@ -1696,78 +1708,99 @@ def edit_maintenance(request, id):
                         'spare_parts': spare_parts,
                         'spare_part_usages': spare_part_usages,
                         'tasks': tasks,
-                        'completed_task_ids': completed_task_ids,
+                        'tasks_with_status': tasks_with_status,
                         'active_page': 'maintenance_list',
                         'notifications': notifications,
                         'latest_notification_id': latest_notification.id if latest_notification else 0,
                     })
 
-                # Step 4: Update maintenance record
+                # Step 3: Update maintenance record fields
                 maintenance.equipment_id = equipment_id
-                maintenance.maintenance_task = maintenance_task  # Use the fetched maintenance_task
-                maintenance.maintenance_type = maintenance_type  # Update maintenance_type
+                maintenance.maintenance_task = maintenance_task
+                maintenance.maintenance_type = maintenance_type
                 maintenance.remark = remark
                 maintenance.procedure = procedure
                 maintenance.problems = problems
                 maintenance.save()
 
-                # Step 5: Add back the old quantities to the spare parts
+                # Step 4: Handle spare parts - return old quantities first
                 for usage in spare_part_usages:
                     spare_part = usage.spare_part
                     spare_part.quantity += usage.quantity_used
                     spare_part.save()
 
-                # Step 6: Process the new spare parts and quantities
+                # Step 5: Process new spare part quantities
                 for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
                     if not spare_part_id or not quantity_used:
-                        continue  # Skip empty fields
+                        continue
 
                     spare_part_id = int(spare_part_id)
                     quantity_used = int(quantity_used)
-
-                    # Get the spare part
                     spare_part = SparePart.objects.get(id=spare_part_id)
 
-                    # Check if the new quantity exceeds the available stock
+                    # Validate quantity
                     if spare_part.quantity < quantity_used:
                         messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
-                        # Rollback the old quantities
+                        # Rollback old quantities
                         for usage in spare_part_usages:
                             spare_part = usage.spare_part
                             spare_part.quantity -= usage.quantity_used
                             spare_part.save()
-                            
                         return redirect(f'{request.path}?equipment={equipment_id}&maintenance_task={maintenance_task.id}&error=1')
 
-                    # Deduct the new quantity from the spare part
+                    # Update spare part quantity
                     spare_part.quantity -= quantity_used
                     spare_part.save()
                     check_low_spare_parts(spare_part)
 
-                    # Create or update the SparePartUsage record
+                    # Create/update usage record
                     SparePartUsage.objects.update_or_create(
                         maintenance_record=maintenance,
                         spare_part=spare_part,
                         defaults={'quantity_used': quantity_used},
                     )
 
-                # Step 7: Delete any remaining spare part usages that were not in the form
+                # Step 6: Clean up unused spare parts
                 SparePartUsage.objects.filter(maintenance_record=maintenance).exclude(
                     spare_part_id__in=[int(id) for id in spare_parts_post]
                 ).delete()
 
-                # Step 8: Update completed tasks
-                maintenance.completed_tasks.clear()  # Clear existing completed tasks
-                for task_id in completed_tasks:
-                    task = Task.objects.get(id=task_id)
-                    TaskCompletion.objects.create(
+                # Step 7: Handle task completions and remarks
+                for task in tasks:
+                    task_id = str(task.id)
+                    is_completed = task_id in completed_tasks
+                    task_remark = request.POST.get(f'task_remarks_{task_id}', '').strip()
+
+                    # Get or create task completion record
+                    completion, created = TaskCompletion.objects.get_or_create(
                         maintenance_record=maintenance,
                         task=task,
-                        completed_by=request.user
+                        defaults={
+                            'remark': task_remark,
+                            'is_completed': is_completed,
+                            'completed_by': request.user if is_completed else None,
+                            'completed_at': timezone.now() if is_completed else None
+                        }
                     )
 
+                    # Update existing record if needed
+                    if not created:
+                        update_fields = []
+                        if completion.remark != task_remark:
+                            completion.remark = task_remark
+                            update_fields.append('remark')
+                        if completion.is_completed != is_completed:
+                            completion.is_completed = is_completed
+                            completion.completed_by = request.user if is_completed else None
+                            completion.completed_at = timezone.now() if is_completed else None
+                            update_fields.extend(['is_completed', 'completed_by', 'completed_at'])
+                        
+                        if update_fields:
+                            completion.save(update_fields=update_fields)
+
                 messages.success(request, 'Maintenance record updated successfully!')
-                return redirect('edit_maintenance',id = id)
+                return redirect('edit_maintenance', id=id)
+
             except Exception as e:
                 messages.error(request, f'An error occurred: {str(e)}')
                 return render(request, 'edit_maintenance.html', {
@@ -1775,14 +1808,15 @@ def edit_maintenance(request, id):
                     'spare_parts': spare_parts,
                     'spare_part_usages': spare_part_usages,
                     'tasks': tasks,
-                    'completed_task_ids': completed_task_ids,
+                    'tasks_with_status': tasks_with_status,
                     'active_page': 'maintenance_list',
                     'notifications': notifications,
                     'latest_notification_id': latest_notification.id if latest_notification else 0,
                 })
         else:
             messages.error(request, 'You are not assigned to this task.')
-    # For GET requests, pre-fill the form and spare parts
+
+    # GET request handling
     form = MaintenanceRecordForm(instance=maintenance)
     return render(request, 'edit_maintenance.html', {
         'form': form,
@@ -1790,12 +1824,11 @@ def edit_maintenance(request, id):
         'spare_parts': spare_parts,
         'spare_part_usages': spare_part_usages,
         'tasks': tasks,
-        'completed_task_ids': completed_task_ids,
+        'tasks_with_status': tasks_with_status,
         'active_page': 'maintenance_list',
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
-
 #------------------------------------------------------------delete maintenance------------------------------------------
 def delete_maintenance(request, id):
     # Fetch the MaintenanceRecord instance or return a 404 error if not found
@@ -2921,14 +2954,14 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
         for i, task in enumerate(tasks, start=1):
             # Check if the task was completed
             task_completion = TaskCompletion.objects.filter(maintenance_record=record, task=task).first()
-            yes_mark = '✓' if task_completion else ''
-            no_mark = '✓' if not task_completion else ''
+            yes_mark = '✓' if task_completion and task_completion.is_completed else ''
+            no_mark = '✓' if task_completion and not task_completion.is_completed else ''
             data.append([
                 str(i),
                 Paragraph(task.description, styles['Normal']),  # Wrap long text in a paragraph
                 yes_mark,
                 no_mark,
-                ''  # Empty remarks column for editing
+                task_completion.remark if task_completion else ''
             ])
 
         # Create table with adjusted column widths
@@ -3045,15 +3078,16 @@ def generate_editable_doc(maintenance_records, report_type, from_date, to_date):
         for i, task in enumerate(tasks, start=1):
             # Check if the task was completed
             task_completion = TaskCompletion.objects.filter(maintenance_record=record, task=task).first()
-            yes_mark = '✓' if task_completion else ''
-            no_mark = '✓' if not task_completion else ''
+            yes_mark = '✓' if task_completion and task_completion.is_completed else ''
+            no_mark = '✓' if task_completion and not task_completion.is_completed else ''
             
             row_cells = table.add_row().cells
             row_cells[0].text = str(i)
             row_cells[1].text = task.description
             row_cells[2].text = yes_mark
             row_cells[3].text = no_mark
-            row_cells[4].text = ''  # Empty remarks column for editing
+            remarks = task_completion.remark if task_completion and task_completion.remark else ''
+            row_cells[4].text = str(remarks)
 
         space_paragraph = doc.add_paragraph()
         space_paragraph.paragraph_format.space_after = Pt(0.1)  # Adjust the space as needed
@@ -3379,14 +3413,14 @@ def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_da
             for i, task in enumerate(tasks, start=1):
                 # Check if the task was completed
                 task_completion = TaskCompletion.objects.filter(maintenance_record=record, task=task).first()
-                yes_mark = '✓' if task_completion else ''
-                no_mark = '✓' if not task_completion else ''
+                yes_mark = '✓' if task_completion and task_completion.is_completed else ''
+                no_mark = '✓' if task_completion and not task_completion.is_completed else ''
                 data.append([
                     str(i),
                     Paragraph(task.description, styles['Normal']),  # Wrap long text in a paragraph
                     yes_mark,
                     no_mark,
-                    ''  # Empty remarks column for editing
+                    task_completion.remark if task_completion else ''
                 ])
 
             # Create table with adjusted column widths
@@ -3511,15 +3545,16 @@ def generate_editable_doc_all_branches(maintenance_records, report_type, from_da
             for i, task in enumerate(tasks, start=1):
                 # Check if the task was completed
                 task_completion = TaskCompletion.objects.filter(maintenance_record=record, task=task).first()
-                yes_mark = '✓' if task_completion else ''
-                no_mark = '✓' if not task_completion else ''
+                yes_mark = '✓' if task_completion and task_completion.is_completed else ''
+                no_mark = '✓' if task_completion and not task_completion.is_completed else ''
 
                 row_cells = table.add_row().cells
                 row_cells[0].text = str(i)
                 row_cells[1].text = task.description
                 row_cells[2].text = yes_mark
                 row_cells[3].text = no_mark
-                row_cells[4].text = ''  # Empty remarks column for editing
+                remarks = task_completion.remark if task_completion and task_completion.remark else ''
+                row_cells[4].text = str(remarks)
 
             # Add inspected by and approved by sections
             inspected_by = [tech.get_full_name() for tech in record.assigned_technicians.all()]
