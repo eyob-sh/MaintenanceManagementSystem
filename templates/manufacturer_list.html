@@ -21,7 +21,7 @@
         <h1><b>{{ title }}</b></h1>
         <nav>
             <ol class="breadcrumb">
-              <li class="breadcrumb-item">Manufacturers</a></li>
+              <li class="breadcrumb-item">Manufacturer</a></li>
               <li class="breadcrumb-item active">List</li>
             </ol>
           </nav>
@@ -119,9 +119,9 @@
             { select: 2, type: "string" }, // Address
             {% if request.user.userprofile.role == 'MO' %}
             { select: 3, type: "string" }, // Site
-            { select: 4, sortable: false }, // Edit Action (not sortable)
-            { select: 5, sortable: false } // Delete Action (not sortable)
             {% endif %}
+            { select: isMO ? 4 : 3, sortable: false }, // Edit Action (not sortable)
+            { select: isMO ? 5 : 4, sortable: false }  // Delete Action (not sortable)
         ];
 
         const dataTable = new simpleDatatables.DataTable("#manufacturer-table", {
@@ -141,9 +141,12 @@
                 const filterHeaders = {
                     nodeName: "TR",
                     childNodes: tHead.childNodes[0].childNodes.map(
-                        (_th, index) => {
-                            // Skip filter input for action columns
-                            if (isMO && (index === 4 || index === 5)) {
+                        (th, index) => {
+                            // Skip filter input for action columns (Edit and Delete)
+                            // For MO: skip columns 4 and 5
+                            // For others: skip columns 3 and 4
+                            const actionColumns = isMO ? [4, 5] : [3, 4];
+                            if (actionColumns.includes(index)) {
                                 return { nodeName: "TH" }; // Return an empty header cell
                             }
                             return {

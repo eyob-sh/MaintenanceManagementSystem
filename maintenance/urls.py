@@ -114,6 +114,8 @@ path('add_maintenance_task_page/', views.add_maintenance_task_page, name = "add_
 
 
     path('dashboard', views.dashboard, name="dashboard"),
+    path('audit-logs/', views.audit_logs, name='audit_logs'),
+    path('login_events/', views.login_events, name='login_events'),
     path('maintenance_oversight_dashboard' , views.maintenance_oversight_dashboard,name ="maintenance_oversight_dashboard" ),
     path('maintenance_dashboard' , views.maintenance_dashboard,name ="maintenance_dashboard" ),
     path('client_dashboard' , views.client_dashboard,name ="client_dashboard" ),

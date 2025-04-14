@@ -20,6 +20,8 @@ import asyncio
 from django.dispatch import receiver
 from .signals import notification_created
 from django.db import models
+from django.core.paginator import Paginator
+from easyaudit.models import CRUDEvent, LoginEvent, RequestEvent
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -70,7 +72,7 @@ ROLE_CHOICES = [
     ('MD manager', 'Maintenance Department Manager'),
     ('TEC', 'Technician'),
     ('MO', 'Maintenance Oversight'),
-    ('CO', 'Chemical oversight'),
+   
     ('CL', 'Client'),
     ('AD', 'Admin'),
     
@@ -2961,7 +2963,7 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
                 Paragraph(task.description, styles['Normal']),  # Wrap long text in a paragraph
                 yes_mark,
                 no_mark,
-                task_completion.remark if task_completion else ''
+                Paragraph(task_completion.remark if task_completion else '', styles['Normal'])
             ])
 
         # Create table with adjusted column widths
@@ -2976,6 +2978,8 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align content to the top
             ('WORDWRAP', (1, 0), (1, -1), True),  # Enable word wrap for the "Inspection" column
+            ('WORDWRAP', (4, 0), (4, -1), True),  # Add this line for the "Remarks" column
+            ('ALIGN', (4, 0), (4, -1), 'LEFT'),  # Optional: Left align remarks text
         ]))
 
         elements.append(table)
@@ -3420,7 +3424,7 @@ def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_da
                     Paragraph(task.description, styles['Normal']),  # Wrap long text in a paragraph
                     yes_mark,
                     no_mark,
-                    task_completion.remark if task_completion else ''
+                    Paragraph(task_completion.remark if task_completion else '', styles['Normal'])
                 ])
 
             # Create table with adjusted column widths
@@ -3435,6 +3439,8 @@ def generate_pdf_all_branches(maintenance_records, report_type, from_date, to_da
                 ('GRID', (0, 0), (-1, -1), 1, colors.black),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align content to the top
                 ('WORDWRAP', (1, 0), (1, -1), True),  # Enable word wrap for the "Inspection" column
+                ('WORDWRAP', (4, 0), (4, -1), True),  # Add this line for the "Remarks" column
+                ('ALIGN', (4, 0), (4, -1), 'LEFT'),  # Optional: Left align remarks text
             ]))
 
             elements.append(table)
@@ -4246,3 +4252,125 @@ def notification_stream(request):
     response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
     return response
+
+
+def audit_logs(request):
+    notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
+
+    logs = CRUDEvent.objects.all().order_by('-datetime')
+    
+    # Apply filters
+    event_type = request.GET.get('event_type')
+    if event_type:
+        # Map string values to their integer equivalents
+        event_type_map = {
+            'CREATE': 1,
+            'UPDATE': 2,
+            'DELETE': 3
+        }
+        if event_type in event_type_map:
+            logs = logs.filter(event_type=event_type_map[event_type])
+    
+    user_filter = request.GET.get('user')
+    if user_filter:
+        logs = logs.filter(user__username__icontains=user_filter)
+    
+    object_type = request.GET.get('object_type')
+    if object_type:
+        logs = logs.filter(content_type__model__icontains=object_type)
+    
+    date_range = request.GET.get('date_range')
+    if date_range:
+        try:
+            date_obj = datetime.strptime(date_range, '%Y-%m-%d').date()
+            logs = logs.filter(datetime__date=date_obj)
+        except ValueError:
+            pass
+    
+    # Pagination
+    paginator = Paginator(logs, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'title': 'Audit Logs',
+        'page_obj': page_obj,
+        'active_page':'audit_log',
+        'notifications':notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
+    }
+    return render(request, 'audit_log.html', context)
+
+
+def login_events(request):
+    # Get notifications (adjust according to your notification system)
+    notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
+
+    # Get login events
+    login_events = LoginEvent.objects.all().order_by('-datetime')
+    
+    # Get logout events (approximated from RequestEvent)
+    logout_events = RequestEvent.objects.filter(
+        Q(url__contains='logout') | Q(url__contains='signout'),
+        datetime__gte=datetime.now() - timedelta(days=30)
+    ).order_by('-datetime')
+    
+    # Prepare combined events with type indicator
+    combined_events = []
+    for event in login_events:
+        combined_events.append({
+            'event': event,
+            'type': 'login',
+            'datetime': event.datetime,
+        })
+    
+    for event in logout_events:
+        combined_events.append({
+            'event': event,
+            'type': 'logout',
+            'datetime': event.datetime,
+        })
+    
+    # Sort combined events by datetime
+    combined_events.sort(key=lambda x: x['datetime'], reverse=True)
+    
+    # Apply filters
+    username = request.GET.get('username')
+    if username:
+        combined_events = [e for e in combined_events 
+                         if (e['type'] == 'login' and username.lower() in e['event'].username.lower()) or
+                            (e['type'] == 'logout' and e['event'].user and username.lower() in e['event'].user.username.lower())]
+    
+    event_type = request.GET.get('type')
+    if event_type:
+        combined_events = [e for e in combined_events if e['type'] == event_type]
+    
+    status = request.GET.get('status')
+    if status:
+        combined_events = [e for e in combined_events 
+                         if e['type'] == 'login' and 
+                         e['event'].login_type == (1 if int(status) else 0)]
+    
+    date_filter = request.GET.get('date')
+    if date_filter:
+        try:
+            filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            combined_events = [e for e in combined_events if e['datetime'].date() == filter_date]
+        except ValueError:
+            pass
+    
+    # Pagination
+    paginator = Paginator(combined_events, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'title': 'Login/Logout Events',
+        'page_obj': page_obj,
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
+        'active_page': 'login_event'
+    }
+    return render(request, 'login_events.html', context)

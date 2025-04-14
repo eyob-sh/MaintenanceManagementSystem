@@ -1,42 +1,55 @@
-# my_app/consumers.py
 import json
+import psycopg2
 from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
-from .models import Notification
+from django.conf import settings
+from asgiref.sync import sync_to_async
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.user = self.scope['user']
-        if self.user.is_authenticated:
-            self.group_name = f"notifications_{self.user.id}"
-            await self.channel_layer.group_add(self.group_name, self.channel_name)
-            await self.accept()
-            await self.send_notifications()
-        else:
+        if not self.scope["user"].is_authenticated:
             await self.close()
+            return
+
+        self.user = self.scope["user"]
+        await self.accept()
+
+        # Start PostgreSQL LISTEN in a background thread
+        await self.setup_postgres_listener()
 
     async def disconnect(self, close_code):
-        if hasattr(self, 'group_name'):
-            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        pass  # Cleanup if needed
 
-    async def send_notifications(self):
-        notifications = await self.get_notifications()
-        await self.send(text_data=json.dumps(notifications))
+    async def setup_postgres_listener(self):
+        def listen():
+            conn = psycopg2.connect(
+                dbname=settings.DATABASES['default']['NAME'],
+                user=settings.DATABASES['default']['USER'],
+                password=settings.DATABASES['default']['PASSWORD'],
+                host=settings.DATABASES['default']['HOST'],
+                port=settings.DATABASES['default']['PORT']
+            )
+            conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+            cursor = conn.cursor()
+            cursor.execute(f"LISTEN user_notifications_{self.user.id};")
 
-    @database_sync_to_async
-    def get_notifications(self):
-        notifications = Notification.objects.filter(user=self.user, is_read=False).order_by('-timestamp')[:10]
-        return [
-            {
-                'id': notification.id,
-                'type': notification.type,
-                'message': notification.message,
-                'timestamp': notification.timestamp.isoformat(),
-                'url': notification.url,
-            }
-            for notification in notifications
-        ]
+            while True:
+                conn.poll()
+                while conn.notifies:
+                    notify = conn.notifies.pop(0)
+                    # Send notification via WebSocket
+                    self.channel_layer.send(
+                        self.channel_name,
+                        {
+                            "type": "send_notification",
+                            "notification": notify.payload
+                        }
+                    )
+
+        # Run in a thread (since psycopg2 is blocking)
+        import threading
+        thread = threading.Thread(target=listen)
+        thread.daemon = True
+        thread.start()
 
     async def send_notification(self, event):
-        notification = event['notification']
-        await self.send(text_data=json.dumps([notification]))
+        await self.send(text_data=event["notification"])

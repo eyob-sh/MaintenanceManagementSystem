@@ -16,7 +16,13 @@
     <!-- End Messages Block -->
 
     <div class="pagetitle">
-        <h1>{{ title }}</h1>
+        <h1><b>{{ title }}</b></h1>
+        <nav>
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item">Branch</a></li>
+              <li class="breadcrumb-item active">List</li>
+            </ol>
+          </nav>
     </div><!-- End Page Title -->
 
     <section class="section">
@@ -28,16 +34,7 @@
 
                         <!-- Add Branch and Import/Export Buttons -->
                         <div class="d-flex justify-content-between align-items-center mb-3" style="margin-top: 20px;">
-                            <div>
-                                <!-- Export Button -->
-                                <a href="{% url 'export_data' model_name='Branch' %}" class="btn btn-link text-success">
-                                    <i class="bi bi-download"></i> Export
-                                </a>
-                                <!-- Import Button -->
-                                <a href="{% url 'import_data' model_name='Branch' %}" class="btn btn-link text-success">
-                                    <i class="bi bi-upload"></i> Import
-                                </a>
-                            </div>
+                            
 
                             <!-- Add Branch Button -->
                             <div>

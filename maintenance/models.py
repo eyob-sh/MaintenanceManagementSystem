@@ -6,8 +6,7 @@ from django.db.models import UniqueConstraint
 from django.apps import apps
 from django.db.models import JSONField
 from datetime import timedelta 
-from auditlog.registry import auditlog
-from auditlog.models import AuditlogHistoryField
+
 
 
 
@@ -37,7 +36,7 @@ class UserProfile(models.Model):
         ('MD manager', 'Maintenance Department Manager'),
         ('TEC', 'Technician'),
         ('MO', 'Maintenance Oversight'),
-        ('CO', 'Chemical Oversight'),
+       
         ('CL', 'Client'),
         ('AD', 'Admin'),
     ]
@@ -375,7 +374,7 @@ class TaskCompletion(models.Model):
     task = models.ForeignKey('Task', on_delete=models.CASCADE)
     completed_by = models.ForeignKey(User, on_delete=models.CASCADE,null=True, blank=True)
     remark = models.TextField(blank=True, null=True)  # Add this field for task remarks
-    completed_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     is_completed = models.BooleanField(default=False)  # New field
 class SparePartUsage(models.Model):
     maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE, null=True)
@@ -410,20 +409,22 @@ class DecommissionedEquipment(models.Model):
 
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
-    type = models.CharField(max_length=40, null= True)
+    type = models.CharField(max_length=255, null= True)
     message = models.CharField(max_length=255)
     timestamp = models.DateTimeField(default=timezone.now)
     is_read = models.BooleanField(default=False)
     url = models.URLField(blank=True, null=True)  # Optional: Link to a specific page
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
+    
 
     class Meta:
         ordering = ['-created_at']  # Use '-' for descending order
 
     def __str__(self):
         return f'{self.user.username} - {self.message}'
+
 
 
 
@@ -435,19 +436,3 @@ class SchedulerLock(models.Model):
         return f"Scheduler Lock (ID: {self.id}, Locked: {self.locked})"
 
 
-auditlog.register(Branch)
-auditlog.register(UserProfile)
-auditlog.register(MaintenanceTask)
-auditlog.register(TaskGroup)
-auditlog.register(Task)
-auditlog.register(Manufacturer)
-auditlog.register(Equipment)
-auditlog.register(SparePart)
-auditlog.register(RestockSparePart)
-auditlog.register(WorkOrder)
-auditlog.register(MaintenanceRecord)
-auditlog.register(TaskCompletion)
-auditlog.register(SparePartUsage)
-auditlog.register(DecommissionedEquipment)
-auditlog.register(Notification)
-auditlog.register(SchedulerLock)
