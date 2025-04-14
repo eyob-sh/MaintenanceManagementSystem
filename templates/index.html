@@ -367,6 +367,20 @@
           <span>Branch</span>
         </a>
       </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'audit_log' %}collapsed{% endif %}" href="{% url 'audit_logs' %}">
+          <i class="bi bi-journal-text"></i>
+          <span>Audit Log</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'login_event' %}collapsed{% endif %}" href="{% url 'login_events' %}">
+          <i class="bi bi-door-open"></i>
+          <span>Login Event</span>
+        </a>
+      </li>
       {% endif %}
 
       <!-- Superuser (Display All) -->
@@ -401,15 +415,7 @@
           <span>Work Order</span>
         </a>
       </li>
-      { comment }
-      <li class="nav-item">
-        <a class="nav-link {% if active_page != 'follow_up_list' %}collapsed{% endif %}"
-          href="{% url 'follow_up_list' %}">
-          <i class="bi bi-file-earmark-text"></i>
-          <span>Follow Up Tasks</span>
-        </a>
-      </li>
-      { endcomment }
+      
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'maintenance_task_list' %}collapsed{% endif %}"
           href="{% url 'maintenance_task_list' %}">
@@ -438,14 +444,7 @@
           <span>Spare Part Usage</span>
         </a>
       </li>
-      <li class="nav-heading">chemicals</li>
-      <li class="nav-item">
-        <a class="nav-link {% if active_page != 'chemical_list' %}collapsed{% endif %}"
-          href="{% url 'chemical_list' %}">
-          <i class="bi bi-droplet"></i>
-          <span>Chemicals</span>
-        </a>
-      </li>
+      
 
 
       <li class="nav-heading">Admin</li>
@@ -460,6 +459,20 @@
         <a class="nav-link {% if active_page != 'branch_list' %}collapsed{% endif %}" href="{% url 'branch_list' %}">
           <i class="bi bi-diagram-3"></i>
           <span>Branch</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'audit_log' %}collapsed{% endif %}" href="{% url 'audit_logs' %}">
+          <i class="bi bi-journal-text"></i>
+          <span>Audit Log</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'login_event' %}collapsed{% endif %}" href="{% url 'login_events' %}">
+          <i class="bi bi-door-open"></i>
+          <span>Login Event</span>
         </a>
       </li>
       {% endif %}
