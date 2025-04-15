@@ -122,6 +122,7 @@ class Manufacturer(models.Model):
 
     class Meta:
         ordering = ['-created_at']  # Use '-' for descending order
+        unique_together = ('name', 'site')
 
     def __str__(self):
         return self.name

@@ -2420,13 +2420,11 @@ def maintenance_due(request):
 #----------------------------------------------------Import Export-------------------------------------------
 def export_data(request, model_name):
     """
-    Generalized view for exporting data in Excel format (XLSX).
+    Generalized view for exporting data in Excel format (XLSX) with branch filtering.
     """
     # Map model names to their respective resources
     model_resource_map = {
-        'Equipment': EquipmentResource,  # Add more models here
-        'MaintenanceRecord':MaintenanceRecord,
-        # Example: 'Customer': CustomerResource,
+        'Equipment': EquipmentResource,
     }
 
     if model_name not in model_resource_map:
@@ -2436,15 +2434,30 @@ def export_data(request, model_name):
     resource_class = model_resource_map[model_name]
     resource = resource_class()
 
+    # Get the user's profile
+    user_profile = request.user.userprofile
+    is_mo_user = user_profile.role == 'MO'  # Maintenance Oversight user
+
+    # Apply branch filtering if user is not MO
+    if not is_mo_user:
+        if model_name == 'Equipment':
+            queryset = Equipment.objects.filter(branch=user_profile.branch)
+        elif model_name == 'MaintenanceRecord':
+            queryset = MaintenanceRecord.objects.filter(equipment__branch=user_profile.branch)
+        dataset = resource.export(queryset)
+    else:
+        # For MO users, export all data
+        dataset = resource.export()
+
     # Export the data in Excel format (XLSX)
     file_format = base_formats.XLSX()
-    dataset = resource.export()
     response = HttpResponse(
         file_format.export_data(dataset),
         content_type=file_format.get_content_type()
     )
     response['Content-Disposition'] = f'attachment; filename={model_name}_export.xlsx'
     return response
+
 #----------------------------------------------------------import--------------------------------------------------
 
 def import_data(request, model_name):
@@ -2461,6 +2474,19 @@ def import_data(request, model_name):
     if model_name not in model_resource_map:
         messages.error(request, "Model not supported.")
         return redirect('home')  # Redirect to a safe page
+    
+    try:
+        user_profile = request.user.userprofile
+        user_branch = user_profile.branch
+        is_mo_user = user_profile.role == 'MO'  # Maintenance Oversight
+    except AttributeError:
+        messages.error(request, "User profile not configured properly.")
+        return redirect('home')
+
+    # Block MO users from importing - ADDED THIS BLOCK
+    if is_mo_user:
+        messages.error(request, "You don't have permission to import data.")
+        return redirect('equipment_list')
 
     # Get the resource class
     resource_class = model_resource_map[model_name]
@@ -2482,7 +2508,7 @@ def import_data(request, model_name):
                 # Load the dataset
                 file_format = base_formats.XLSX()
                 dataset = file_format.create_dataset(file_content)
-                result = resource.import_data(dataset, dry_run=False)  # Perform the actual import
+                result = resource.import_data(dataset, dry_run=False, user_branch=user_branch)  # Perform the actual import
 
                 if not result.has_errors():
                     messages.success(request, 'Data imported successfully.')
@@ -2539,7 +2565,7 @@ def import_data(request, model_name):
 
                 # Load the dataset
                 dataset = file_format.create_dataset(file_content)
-                result = resource.import_data(dataset, dry_run=True)  # Perform a dry-run
+                result = resource.import_data(dataset, dry_run=True, user_branch=user_branch, raise_errors=False )  # Perform a dry-run
 
                 # Prepare data for the preview
                 preview_data = []
