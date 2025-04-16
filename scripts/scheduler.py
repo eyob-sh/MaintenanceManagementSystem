@@ -4,7 +4,7 @@ import os
 import django
 
 # Set up Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'MaintenanceManagementSystem.settings')  # Change to your settings module
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mmsproject.settings')  # Change to your settings module
 django.setup()
 
 def check_maintenance_due():

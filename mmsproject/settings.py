@@ -56,7 +56,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'MaintenanceManagementSystem.urls'
+ROOT_URLCONF = 'mmsproject.urls'
 
 TEMPLATES = [
     {
@@ -78,7 +78,7 @@ TEMPLATES = [
 
 # WSGI_APPLICATION = 'MaintenanceManagementSystem.wsgi.application'
 
-ASGI_APPLICATION = 'MaintenanceManagementSystem.asgi.application'
+ASGI_APPLICATION = 'mmsproject.asgi.application'
 
 
 # Database
