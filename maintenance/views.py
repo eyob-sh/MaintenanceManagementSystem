@@ -2461,6 +2461,8 @@ def export_data(request, model_name):
 #----------------------------------------------------------import--------------------------------------------------
 
 def import_data(request, model_name):
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
+
     """
     Generalized view for importing data with a preview page.
     """
@@ -2590,6 +2592,7 @@ def import_data(request, model_name):
                     'show_confirm_button': show_confirm_button,
                     'active_page': 'equipment_list',
                     'notifications': notifications,
+                    'latest_notification_id': latest_notification.id if latest_notification else 0,
                 })
 
             except Exception as e:
@@ -2600,6 +2603,7 @@ def import_data(request, model_name):
         'model_name': model_name,
         'active_page': 'equipment_list',
         'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 #------------------------------------------------------------------------------------------------------------
 
