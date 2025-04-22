@@ -1,0 +1,64 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+<main id="main" class="main">
+    <div class="pagetitle">
+        <h1>Request Part Return</h1>
+        <nav>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'issue_list' %}">Issue List</a></li>
+                <li class="breadcrumb-item active">Request Return</li>
+            </ol>
+        </nav>
+    </div>
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Return Details</h5>
+                        
+                        <div class="alert alert-info">
+                            <strong>Part:</strong> {{ tech_part.spare_part.name }}<br>
+                            <strong>Available to Return:</strong> {{ tech_part.available_quantity }}
+                        </div>
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="quantity" class="form-label">Quantity to Return</label>
+                                <input type="number" class="form-control" name="quantity" 
+                                       min="1" max="{{ tech_part.available_quantity }}" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="condition" class="form-label">Condition</label>
+                                <select class="form-select" name="condition" required>
+                                    <option value="">Select condition</option>
+                                    <option value="New">New/Unused</option>
+                                    <option value="Good">Good (Minor wear)</option>
+                                    <option value="Fair">Fair (Functional but worn)</option>
+                                    <option value="Poor">Poor (Needs repair)</option>
+                                    <option value="Damaged">Damaged</option>
+                                </select>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="{% url 'issue_list' %}" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send"></i> Submit Return Request
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}

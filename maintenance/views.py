@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.http import Http404
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q, Sum,F
 from datetime import datetime, timedelta
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
@@ -41,7 +41,8 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.http import StreamingHttpResponse
 import time
 from decimal import Decimal, InvalidOperation
-
+from django.db.models import Case, When, Value, IntegerField
+from django.db.models.functions import Coalesce
 
 
 import io
@@ -50,7 +51,7 @@ import json
 from import_export import resources
 from import_export.formats import base_formats
 from import_export.admin import ImportMixin, ExportMixin
-from .models import MaintenanceRecord, MaintenanceTask, Manufacturer, SparePart, SparePartUsage, RestockSparePart, DecommissionedEquipment,Equipment, Notification,WorkOrder,Branch,UserProfile, Task, TaskGroup, TaskCompletion
+from .models import MaintenanceRecord, MaintenanceTask, Manufacturer, SparePart, SparePartUsage, RestockSparePart, DecommissionedEquipment,Equipment, Notification,WorkOrder,Branch,UserProfile, Task, TaskGroup, TaskCompletion, SparePartRequest, SparePartTransaction, TechnicianSparePart
 
 from .forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, ManufacturerForm, WorkOrderForm, SparePartUsageForm, DecommissionedEquipmentForm, MaintenanceTaskForm,  RestockSparePartForm, BranchForm, UserProfileForm, TaskForm, TaskGroupForm
 from .resources import EquipmentResource
@@ -72,7 +73,7 @@ ROLE_CHOICES = [
     ('MD manager', 'Maintenance Department Manager'),
     ('TEC', 'Technician'),
     ('MO', 'Maintenance Oversight'),
-   
+    ('IM', 'Inventory Manager'),
     ('CL', 'Client'),
     ('AD', 'Admin'),
     
@@ -110,6 +111,8 @@ def loginPage(request):
                 return redirect('dashboard')
             elif(request.user.userprofile.role in 'CL'):
                 return redirect('client_dashboard')
+            elif(request.user.userprofile.role in 'IM'):
+                return redirect('inventory_dashboard')
         else: 
             messages.error(request, 'Incorrect Username or Password')
         
@@ -1529,14 +1532,20 @@ def add_maintenance(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
-
+    spare_parts = SparePart.objects.filter(branch=user_branch)
+    issued_spare_parts = SparePartRequest.objects.filter(
+        technician=request.user,
+        status='Issued',
+        spare_part__branch=user_branch
+    ).values_list('spare_part_id', flat=True)
+    spare_parts = spare_parts.filter(id__in=issued_spare_parts)
     context = {
         'equipments': Equipment.objects.filter(branch=user_branch, decommissioned = False),
         'technicians': User.objects.filter(userprofile__branch=user_branch, userprofile__role='TEC'),
         'branch': user_branch,
         'maintenance_tasks': MaintenanceTask.objects.all(),
         'work_orders': WorkOrder.objects.filter(branch=user_branch),
-        'spare_parts': SparePart.objects.filter(branch=user_branch),
+        'spare_parts': spare_parts,
         'active_page': 'maintenance_list',
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
@@ -1659,8 +1668,19 @@ def edit_maintenance(request, id):
     
     # Get maintenance record and related data
     maintenance = get_object_or_404(MaintenanceRecord, id=id)
-    spare_parts = SparePart.objects.filter(branch=user_branch)
+    # spare_parts = SparePart.objects.filter(branch=user_branch)
     spare_part_usages = SparePartUsage.objects.filter(maintenance_record=maintenance)
+    # Get spare parts available to this technician
+    spare_parts = TechnicianSparePart.objects.filter(
+        technician=request.user
+    ).select_related('spare_part')
+
+    # Debug print to verify data
+    print("Technician's Spare Parts:")
+    for tsp in spare_parts:
+        print(f"{tsp.spare_part.name} - Available: {tsp.available_quantity}")
+
+    
     
     # Get tasks for this maintenance
     tasks = Task.objects.filter(
@@ -1727,9 +1747,13 @@ def edit_maintenance(request, id):
 
                 # Step 4: Handle spare parts - return old quantities first
                 for usage in spare_part_usages:
-                    spare_part = usage.spare_part
-                    spare_part.quantity += usage.quantity_used
-                    spare_part.save()
+                    tech_spare = TechnicianSparePart.objects.get(
+                        technician=request.user,
+                        spare_part=usage.spare_part
+                    )
+                    # spare_part = usage.spare_part
+                    tech_spare.used_quantity -= usage.quantity_used
+                    tech_spare.save()
 
                 # Step 5: Process new spare part quantities
                 for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
@@ -1740,26 +1764,39 @@ def edit_maintenance(request, id):
                     quantity_used = int(quantity_used)
                     spare_part = SparePart.objects.get(id=spare_part_id)
 
+                    tech_spare = TechnicianSparePart.objects.get(
+                        technician=request.user,
+                        spare_part=spare_part
+                    )
+                    # request_info = spare_part_info.get(spare_part_id)
                     # Validate quantity
-                    if spare_part.quantity < quantity_used:
-                        messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
+                    if tech_spare.available_quantity < quantity_used:
+                        messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {tech_spare.available_quantity}')
                         # Rollback old quantities
                         for usage in spare_part_usages:
-                            spare_part = usage.spare_part
-                            spare_part.quantity -= usage.quantity_used
-                            spare_part.save()
+                            # spare_part = usage.spare_part
+                            tech_spare.used_quantity += usage.quantity_used
+                            tech_spare.save()
                         return redirect(f'{request.path}?equipment={equipment_id}&maintenance_task={maintenance_task.id}&error=1')
 
                     # Update spare part quantity
-                    spare_part.quantity -= quantity_used
-                    spare_part.save()
-                    check_low_spare_parts(spare_part)
+                    tech_spare.used_quantity += quantity_used
+                    tech_spare.save()
+                    
 
                     # Create/update usage record
                     SparePartUsage.objects.update_or_create(
                         maintenance_record=maintenance,
                         spare_part=spare_part,
                         defaults={'quantity_used': quantity_used},
+                    )
+                    req = tech_spare.request
+                    SparePartTransaction.objects.update_or_create(
+                       request = req, 
+                       transaction_type='Usage',
+                    user=request.user,
+                    quantity=quantity_used,
+                    notes=f'Used in maintenance #{maintenance}'
                     )
 
                 # Step 6: Clean up unused spare parts
@@ -2236,6 +2273,8 @@ def mark_notification_as_read(request, notification_id):
                 return redirect('expired_chemical.html')
             elif notification.type == 'maintenance_due':
                 return redirect('maintenance_due')
+            elif notification.type == 'spare_part_request':
+                return redirect('issue_list')
             
         except Notification.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Notification not found'})
@@ -2759,6 +2798,9 @@ def maintenance_dashboard(request):
 
 #----------------------------------------------------------------------------------------
 
+def inventory_dashboard(request):
+    return render(request, 'inventory_dashboard.html')
+#----------------------------------------------------------------------------------------
 # In your views.py
 def equipment_maintenance_types_api(request):
     try:
@@ -4404,3 +4446,725 @@ def login_events(request):
         'active_page': 'login_event'
     }
     return render(request, 'login_events.html', context)
+
+
+#-----------------------------------------------------Inventory-------------------------------------------------
+
+@login_required
+def request_spare_part_page(request):
+    notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
+
+    # if request.user.userprofile.role != 'TEC':
+    #     messages.error(request, 'Only technicians can request spare parts.')
+    #     return redirect('issue_list')
+    
+    user_branch = request.user.userprofile.branch
+    spare_parts = SparePart.objects.filter(branch=user_branch, is_active=True)
+    
+    if request.method == 'POST':
+        form = request.POST
+        spare_part_id = form.get('spare_part')
+        quantity = form.get('quantity')
+        reason = form.get('reason', '')
+        attachment = request.FILES.get('attachment')
+        
+        try:
+            quantity = int(quantity)
+            if quantity <= 0:
+                raise ValueError("Quantity must be positive")
+                
+            spare_part = SparePart.objects.get(id=spare_part_id)
+            
+            # Check available quantity
+            available = spare_part.get_available_quantity()
+            if available < quantity:
+                messages.error(request, f'Not enough available quantity. Only {available} available.')
+                return redirect('request_spare_part_page')
+            
+            # Create request
+            request_obj = SparePartRequest(
+                technician=request.user,
+                spare_part=spare_part,
+                quantity_requested=quantity,
+                reason=reason,
+                status='Requested'
+            )
+            
+            # Handle attachment
+            if attachment:
+                request_obj.attachment = attachment
+            
+            request_obj.save()
+            
+            # Notify inventory managers
+            inventory_managers = User.objects.filter(
+                userprofile__role='IM',
+                userprofile__branch=user_branch
+            )
+            for manager in inventory_managers:
+                Notification.objects.create(
+                    user=manager,
+                    type="spare_part_request",
+                    message=f'New spare part request for {spare_part.name} ({quantity}) from {request.user}.',
+                )
+            
+            messages.success(request, 'Spare part request submitted successfully!')
+            return redirect('issue_list')
+            
+        except ValueError as e:
+            messages.error(request, f'Invalid quantity: {str(e)}')
+        except Exception as e:
+            messages.error(request, f'Error submitting request: {str(e)}')
+    
+    context = {
+        'spare_parts': spare_parts,
+        'active_page': 'issue_list',
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
+    }
+    return render(request, 'request_spare_part_page.html', context)
+
+@login_required
+def request_spare_part(request):
+    notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
+
+    if request.method == 'POST':
+        spare_part_id = request.POST.get('spare_part')
+        quantity = int(request.POST.get('quantity'))
+        reason = request.POST.get('reason', '')
+        
+        spare_part = get_object_or_404(SparePart, id=spare_part_id)
+        
+        # Check available quantity
+        if spare_part.get_available_quantity() < quantity:
+            messages.error(request, f'Not enough available quantity. Only {spare_part.get_available_quantity()} available.')
+            return redirect('spare_part_list')
+        
+        # Create request
+        SparePartRequest.objects.create(
+            technician=request.user,
+            spare_part=spare_part,
+            quantity_requested=quantity,
+            reason=reason,
+            status='Requested'
+        )
+        
+        # Notify inventory managers
+        inventory_managers = User.objects.filter(userprofile__role='IM')
+        for manager in inventory_managers:
+            Notification.objects.create(
+                user=manager,
+                type="spare_part_request",
+                message=f'New spare part request for {spare_part.name} (quantity : {quantity}) from {request.user}.',
+            )
+        
+        messages.success(request, 'Spare part request submitted successfully!')
+        return redirect('issue_list')
+    
+    return redirect('spare_part_list')
+
+@login_required
+def approve_spare_part_request(request, id):
+    if not request.user.userprofile.role == 'IM':
+        messages.error(request, 'You are not authorized to approve requests.')
+        return redirect('home')
+    
+    spare_part_request = get_object_or_404(SparePartRequest, id=id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'approve':
+            # Check available quantity again (in case it changed)
+            if spare_part_request.spare_part.get_available_quantity() < spare_part_request.quantity_requested:
+                messages.error(request, 'Not enough available quantity now.')
+                return redirect('pending_spare_part_requests')
+            
+            spare_part_request.status = 'Approved'
+            spare_part_request.inventory_manager = request.user
+            spare_part_request.approval_date = timezone.now()
+            spare_part_request.save()
+            
+            # Create transaction record
+            SparePartTransaction.objects.create(
+                request=spare_part_request,
+                transaction_type='Approval',
+                user=request.user,
+                quantity=spare_part_request.quantity_requested,
+                notes='Request approved'
+            )
+            
+            # Notify technician
+            Notification.objects.create(
+                user=spare_part_request.technician,
+                type="spare_part_request",
+                message=f'Your request for {spare_part_request.spare_part.name} has been approved.',
+            )
+            
+            messages.success(request, 'Request approved successfully!')
+        
+        elif action == 'reject':
+            rejection_reason = request.POST.get('rejection_reason', '')
+            spare_part_request.status = 'Rejected'
+            spare_part_request.inventory_manager = request.user
+            spare_part_request.rejection_reason = rejection_reason
+            spare_part_request.save()
+            
+            # Create transaction record
+            SparePartTransaction.objects.create(
+                request=spare_part_request,
+                transaction_type='Rejection',
+                user=request.user,
+                quantity=spare_part_request.quantity_requested,
+                notes=f'Request rejected: {rejection_reason}'
+            )
+            
+            # Notify technician
+            Notification.objects.create(
+                user=spare_part_request.technician,
+                type="spare_part_request",
+                message=f'Your request for {spare_part_request.spare_part.name} has been rejected.',
+            )
+            
+            messages.success(request, 'Request rejected.')
+    
+    return redirect('issue_list')
+
+@login_required
+def issue_spare_part(request, id):
+    spare_part_request = get_object_or_404(SparePartRequest, id=id, status='Approved')
+    
+    if request.user.userprofile.role == 'IM':
+        # Inventory manager issues the part
+        spare_part = spare_part_request.spare_part
+        
+        # Check quantity again
+        if spare_part.quantity < spare_part_request.quantity_requested:
+            messages.error(request, 'Not enough quantity in stock now.')
+            return redirect('pending_spare_part_issues')
+        
+        # Update spare part quantity (reserve it)
+        spare_part.quantity -= spare_part_request.quantity_requested
+        spare_part.save()
+        
+        # Update request status
+        spare_part_request.status = 'Issued'
+        spare_part_request.issue_date = timezone.now()
+        spare_part_request.save()
+        
+        # Create transaction record
+        SparePartTransaction.objects.create(
+            request=spare_part_request,
+            transaction_type='Issuance',
+            user=request.user,
+            quantity=spare_part_request.quantity_requested,
+            notes='Parts issued to technician'
+        )
+        check_low_spare_parts(spare_part)
+        
+        # Notify technician
+        Notification.objects.create(
+            user=spare_part_request.technician,
+            type="spare_part_request",
+            message=f'{spare_part_request.spare_part.name} has been issued to you.',
+        )
+        
+        messages.success(request, 'Spare parts issued successfully!')
+    
+    return redirect('issue_list')
+
+@login_required
+def use_spare_part(request, request_id, usage_type, record_id):
+    spare_part_request = get_object_or_404(SparePartRequest, id=request_id, status='Issued', technician=request.user)
+    
+    if usage_type == 'maintenance':
+        record = get_object_or_404(MaintenanceRecord, id=record_id)
+    elif usage_type == 'work_order':
+        record = get_object_or_404(WorkOrder, id=record_id)
+    else:
+        messages.error(request, 'Invalid usage type.')
+        return redirect('technician_dashboard')
+    
+    if request.method == 'POST':
+        quantity_used = int(request.POST.get('quantity_used'))
+        
+        if quantity_used > spare_part_request.quantity_requested:
+            messages.error(request, 'Cannot use more than issued quantity.')
+            return redirect('use_spare_part', request_id=request_id, usage_type=usage_type, record_id=record_id)
+        
+        # Create usage record
+        if usage_type == 'maintenance':
+            usage = SparePartUsage.objects.create(
+                maintenance_record=record,
+                spare_part=spare_part_request.spare_part,
+                quantity_used=quantity_used,
+                request=spare_part_request
+            )
+        else:
+            usage = SparePartUsage.objects.create(
+                work_order=record,
+                spare_part=spare_part_request.spare_part,
+                quantity_used=quantity_used,
+                request=spare_part_request
+            )
+        
+        # Update request status if all quantity is used
+        remaining_quantity = spare_part_request.quantity_requested - quantity_used
+        
+        if remaining_quantity <= 0:
+            spare_part_request.status = 'Used'
+            spare_part_request.use_date = timezone.now()
+            spare_part_request.save()
+        else:
+            # Create a new request for remaining quantity
+            new_request = SparePartRequest.objects.create(
+                technician=request.user,
+                spare_part=spare_part_request.spare_part,
+                quantity_requested=remaining_quantity,
+                status='Issued',
+                inventory_manager=spare_part_request.inventory_manager,
+                reason=f'Remaining from request #{spare_part_request.id}'
+            )
+            spare_part_request.quantity_requested = quantity_used
+            spare_part_request.status = 'Used'
+            spare_part_request.use_date = timezone.now()
+            spare_part_request.save()
+        
+        # Create transaction record
+        SparePartTransaction.objects.create(
+            request=spare_part_request,
+            transaction_type='Usage',
+            user=request.user,
+            quantity=quantity_used,
+            notes=f'Used for {usage_type} #{record_id}'
+        )
+        
+        messages.success(request, 'Spare parts usage recorded successfully!')
+        return redirect('view_maintenance', id=record_id) if usage_type == 'maintenance' else redirect('view_work_order', id=record_id)
+    
+    context = {
+        'request': spare_part_request,
+        'record': record,
+        'usage_type': usage_type,
+    }
+    return render(request, 'use_spare_part.html', context)
+
+@login_required
+def request_return_page(request):
+    """Display the return request form for a specific part"""
+    notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(
+        user=request.user, 
+        is_read=False
+    ).order_by('-id').first()
+    
+    tech_part = get_object_or_404(
+        TechnicianSparePart.objects.annotate(
+            available_quantity=F('received_quantity') - F('used_quantity')
+        ),
+        # id=part_id,
+        technician=request.user,
+        available_quantity__gt=0
+    )
+    
+    return render(request, 'request_return_page.html', {
+        'tech_part': tech_part,
+        'active_page': 'issue_list',
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
+    })
+
+
+@login_required
+def request_part_return(request, id):
+    """Technician requests to return spare parts"""
+    tech_part = get_object_or_404(TechnicianSparePart, id=id, technician=request.user)
+    
+    if request.method == 'POST':
+        return_quantity = int(request.POST.get('quantity'))
+        condition = request.POST.get('condition', '')
+        
+        if return_quantity > tech_part.available_quantity:
+            messages.error(request, f'You only have {tech_part.available_quantity} available to return')
+            return redirect('technician_inventory')
+        
+        # Create return request
+        return_request = SparePartRequest.objects.create(
+            technician=request.user,
+            spare_part=tech_part.spare_part,
+            quantity_requested=return_quantity,
+            status='Return_Requested',
+            is_return_request=True,
+            return_condition=condition,
+            return_request_date=timezone.now()
+        )
+        
+        # Create transaction
+        SparePartTransaction.objects.create(
+            request=return_request,
+            transaction_type='Return_Request',
+            user=request.user,
+            quantity=return_quantity,
+            notes=f'Return requested. Condition: {condition}'
+        )
+        
+        messages.success(request, 'Return request submitted!')
+        return redirect('issue_list')
+    
+    return render(request, 'issue_list.html')
+
+@login_required 
+def accept_return_request(request, id):
+    """IM accepts the return request"""
+    if not request.user.userprofile.role == 'IM':
+        messages.error(request, 'Unauthorized')
+        return redirect('home')
+        
+    return_request = get_object_or_404(
+        SparePartRequest, 
+        id=id, 
+        status='Return_Requested',
+        is_return_request=True
+    )
+    
+    # Update status
+    return_request.status = 'Return_Accepted'
+    return_request.inventory_manager = request.user
+    return_request.return_accepted_date = timezone.now()
+    return_request.save()
+    
+    # Create transaction
+    SparePartTransaction.objects.create(
+        request=return_request,
+        transaction_type='Return_Acceptance',
+        user=request.user,
+        quantity=return_request.quantity_requested,
+        notes='Return approved by inventory'
+    )
+    
+    messages.success(request, 'Return request accepted')
+    return redirect('issue_list')
+
+@login_required
+def complete_return(request, id):
+    """Final step when parts are physically returned to inventory"""
+    if not request.user.userprofile.role == 'IM':
+        messages.error(request, 'Unauthorized')
+        return redirect('home')
+        
+    return_request = get_object_or_404(
+        SparePartRequest,
+        id=id,
+        status='Return_Accepted',
+        is_return_request=True
+    )
+    
+    # 1. Update main inventory
+    spare_part = return_request.spare_part
+    spare_part.quantity += return_request.quantity_requested
+    spare_part.save()
+    
+    # 2. Update technician's inventory
+    tech_part = TechnicianSparePart.objects.get(
+        technician=return_request.technician,
+        spare_part=spare_part
+    )
+    tech_part.received_quantity -= return_request.quantity_requested
+    tech_part.save()
+    
+    # 3. Mark return complete
+    return_request.status = 'Returned'
+    return_request.return_completed_date = timezone.now()
+    return_request.save()
+    
+    # 4. Create transaction
+    SparePartTransaction.objects.create(
+        request=return_request,
+        transaction_type='Return_Completed',
+        user=request.user,
+        quantity=return_request.quantity_requested,
+        notes='Parts returned to inventory'
+    )
+    
+    messages.success(request, f'{return_request.quantity_requested} {spare_part.name} returned to inventory')
+    return redirect('issue_list')
+
+
+@login_required
+def cancel_spare_part_request(request, id):
+    spare_part_request = get_object_or_404(SparePartRequest, id=id)
+    
+    # Check permissions
+    if not (request.user == spare_part_request.technician or 
+            request.user.userprofile.role == 'IM'):
+        messages.error(request, 'You are not authorized to cancel this request.')
+        return redirect('spare_part_requests')
+    
+    # Check if request can be canceled
+    if spare_part_request.status not in ['Requested', 'Approved']:
+        messages.error(request, 'Only requested or approved requests can be canceled.')
+        return redirect('issue_list', id=id)
+    
+    if request.method == 'POST':
+        cancel_reason = request.POST.get('cancel_reason', '')
+        
+        # Update request status
+        spare_part_request.status = 'Canceled'
+        spare_part_request.cancel_reason = cancel_reason
+        spare_part_request.canceled_by = request.user
+        spare_part_request.cancel_date = timezone.now()
+        spare_part_request.save()
+        
+        # Create transaction record
+        SparePartTransaction.objects.create(
+            request=spare_part_request,
+            transaction_type='Cancellation',
+            user=request.user,
+            quantity=spare_part_request.quantity_requested,
+            notes=f'Request canceled. Reason: {cancel_reason}'
+        )
+        
+        # Notify relevant users
+        if request.user == spare_part_request.technician:
+            # Notify inventory manager if technician canceled
+            if spare_part_request.inventory_manager:
+                Notification.objects.create(
+                    user=spare_part_request.inventory_manager,
+                    type="spare_part_request",
+                    message=f'Request #{spare_part_request.id} was canceled by technician.',
+                )
+        else:
+            # Notify technician if inventory manager canceled
+            Notification.objects.create(
+                user=spare_part_request.technician,
+                type="spare_part_request",
+                message=f'Your request #{spare_part_request.id} was canceled by inventory manager.',
+            )
+        
+        messages.success(request, 'Request canceled successfully!')
+        return redirect('spare_part_requests')
+    
+    # GET request - show cancel confirmation form
+    context = {
+        'request': spare_part_request,
+        'active_page': 'spare_part_requests',
+        'notifications': get_notifications(request.user),
+        'latest_notification': Notification.objects.filter(
+            user=request.user, is_read=False
+        ).order_by('-id').first(),
+    }
+    return render(request, 'cancel_spare_part_request.html', context)
+
+@login_required
+def issue_list(request):
+    notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
+
+    user = request.user
+    user_branch = user.userprofile.branch
+    role = user.userprofile.role
+    
+    # Base queryset with all needed relationships
+    requests = SparePartRequest.objects.select_related(
+        'spare_part', 
+        'technician', 
+        'technician__userprofile',
+        'inventory_manager'
+    ).order_by('-request_date')
+    
+    # Role-based filtering
+    if role == 'TEC':
+        requests = requests.filter(technician=user)
+        page_title = "My Spare Part Requests"
+    elif role == 'IM':
+        requests = requests.filter(spare_part__branch=user_branch)
+        page_title = f"Inventory Requests - {user_branch.name}"
+    elif role == 'MD manager':
+        requests = requests.filter(
+            Q(technician__userprofile__branch=user_branch) |
+            Q(spare_part__branch=user_branch)
+        )
+        page_title = f"Branch Requests - {user_branch.name}"
+    else:
+        requests = requests.none()
+        page_title = "Spare Part Requests"
+    
+    # Status filtering
+    status_filter = request.GET.get('status')
+    if status_filter:
+        requests = requests.filter(status=status_filter)
+    
+    context = {
+        'requests': requests,  # Changed from 'all_requests' to match template
+        'page_title': page_title,
+        'active_page': 'issue_list',  # Updated to match
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
+        'status_choices': SparePartRequest.STATUS_CHOICES,
+        'current_status_filter': status_filter,
+        'user_role': role,
+    }
+    
+    return render(request, 'issue_list.html', context)
+
+
+@login_required
+def edit_request(request, id):
+    notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
+
+    spare_part_request = get_object_or_404(SparePartRequest, id=id)
+    user = request.user
+    user_role = user.userprofile.role
+    
+    # Check permissions
+    if not (user == spare_part_request.technician or 
+            user_role in ['IM', 'MD manager'] or
+            user.is_superuser):
+        messages.error(request, 'You are not authorized to edit this request.')
+        return redirect('issue_list')
+    
+    if request.method == 'POST':
+        form = request.POST
+        files = request.FILES
+        
+        # Handle different actions based on user role and request status
+        if 'update_request' in form and user == spare_part_request.technician and spare_part_request.status == 'Requested':
+            # Technician updating their own pending request
+            spare_part_request.quantity_requested = form.get('quantity')
+            spare_part_request.reason = form.get('reason')
+            if 'attachment' in files:
+                spare_part_request.attachment = files['attachment']
+            spare_part_request.save()
+            messages.success(request, 'Request updated successfully!')
+            return redirect('issue_list')
+        
+        elif 'approve_request' in form and user_role == 'IM' and spare_part_request.status == 'Requested':
+            # IM approving request
+            spare_part_request.status = 'Approved'
+            spare_part_request.inventory_manager = user
+            spare_part_request.approval_date = timezone.now()
+            spare_part_request.save()
+            
+            SparePartTransaction.objects.create(
+                request=spare_part_request,
+                transaction_type='Approval',
+                user=user,
+                quantity=spare_part_request.quantity_requested,
+                notes='Request approved'
+            )
+            
+            messages.success(request, 'Request approved successfully!')
+            return redirect('issue_list')
+        
+        # Add similar handlers for other actions (reject, issue, etc.)
+    
+    # Get available spare parts for dropdown (if needed)
+    spare_parts = SparePart.objects.filter(branch=user.userprofile.branch, is_active=True)
+    
+    context = {
+        'request_obj': spare_part_request,
+        'spare_parts': spare_parts,
+        'active_page': 'issue_list',
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
+        'user_role': user_role,
+        'transactions': spare_part_request.transactions.all().order_by('-timestamp'),
+    }
+    return render(request, 'edit_request.html', context)
+
+
+@login_required
+def reject_spare_part_request(request, id):
+    notifications = get_notifications(request.user)
+    latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
+
+    # Get the request object or return 404
+    spare_part_request = get_object_or_404(SparePartRequest, id=id)
+    user = request.user
+    
+    # Permission check - only IM can reject requests
+    if user.userprofile.role != 'IM':
+        messages.error(request, 'You are not authorized to reject requests.')
+        return redirect('issue_list')
+    
+    # Check if request is in a rejectable state
+    if spare_part_request.status != 'Requested':
+        messages.error(request, 'Only requested items can be rejected.')
+        return redirect('issue_list')
+    
+    # Check if the request belongs to the IM's branch
+    if spare_part_request.spare_part.branch != user.userprofile.branch:
+        messages.error(request, 'You can only reject requests from your branch.')
+        return redirect('issue_list')
+    
+    if request.method == 'POST':
+        # Process rejection form
+        rejection_reason = request.POST.get('rejection_reason', '').strip()
+        
+        if not rejection_reason:
+            messages.error(request, 'Please provide a reason for rejection.')
+            return redirect('reject_spare_part_request', id=id)
+        
+        try:
+            # Update request status
+            spare_part_request.status = 'Rejected'
+            spare_part_request.inventory_manager = user
+            spare_part_request.rejection_reason = rejection_reason
+            spare_part_request.save()
+            
+            # Create transaction record
+            SparePartTransaction.objects.create(
+                request=spare_part_request,
+                transaction_type='Rejection',
+                user=user,
+                quantity=spare_part_request.quantity_requested,
+                notes=f'Request rejected. Reason: {rejection_reason}'
+            )
+            
+            # Notify the technician
+            Notification.objects.create(
+                user=spare_part_request.technician,
+                type="spare_part_request",
+                message=f'Your request for {spare_part_request.spare_part.name} has been rejected. Reason: {rejection_reason}',
+            )
+            
+            messages.success(request, 'Request has been rejected successfully.')
+            return redirect('issue_list')
+        
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            return redirect('reject_spare_part_request', id=id)
+    
+    # GET request - show rejection form
+    context = {
+        'request': spare_part_request,
+        'active_page': 'issue_list',
+        'notifications': notifications,
+        'latest_notification_id': latest_notification.id if latest_notification else 0,
+    }
+    return render(request, 'reject_spare_part_request.html', context)
+
+@login_required
+def accept_issued_part(request, id):
+    spare_part_request = get_object_or_404(SparePartRequest, id=id, status='Issued', technician=request.user)
+    
+    # Remove the GET handling completely
+    spare_part_request.status = 'Received'
+    spare_part_request.save()
+    spare_part = spare_part_request.spare_part
+   
+    spare_part.quantity -= spare_part_request.quantity_requested
+    spare_part.save()
+    SparePartTransaction.objects.create(
+        request=spare_part_request,
+        transaction_type='Receipt',
+        user=request.user,
+        quantity=spare_part_request.quantity_requested,
+        notes='Requester received the parts'
+    )
+    
+    messages.success(request, 'Spare parts received successfully!')
+    return redirect('issue_list')

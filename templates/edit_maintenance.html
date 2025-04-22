@@ -114,11 +114,11 @@
                                                 <div class="col-md-6">
                                                     <select class="form-select spare-part-select" name="spare_parts[]">
                                                         <option value="">Select Spare Part</option>
-                                                        {% for spare_part in spare_parts %}
-                                                        <option value="{{ spare_part.id }}"
-                                                            data-quantity="{{ spare_part.quantity }}" 
-                                                            {% if usage.spare_part.id == spare_part.id %}selected{% endif %}>
-                                                            {{ spare_part.name }} ({{ spare_part.quantity }} available)
+                                                        {% for tsp in spare_parts %}
+                                                        <option value="{{ tsp.spare_part.id }}"
+                                                            data-quantity="{{ tsp.available_quantity }}" 
+                                                            {% if usage.spare_part.id == tsp.spare_part.id %}selected{% endif %}>
+                                                            {{ tsp.spare_part.name }} ({{ tsp.available_quantity }} available)
                                                         </option>
                                                         {% endfor %}
                                                     </select>
@@ -305,8 +305,8 @@
                 <select class="form-select spare-part-select" name="spare_parts[]">
                     <option value="">Select Spare Part</option>
                     {% for spare_part in spare_parts %}
-                    <option value="{{ spare_part.id }}" data-quantity="{{ spare_part.quantity }}">
-                        {{ spare_part.name }} ({{ spare_part.quantity }} available)
+                    <option value="{{ spare_part.spare_part.id }}" data-quantity="{{ spare_part.available_quantity }}">
+                        {{ spare_part.spare_part.name }} ({{ spare_part.available_quantity }} available)
                     </option>
                     {% endfor %}
                 </select>

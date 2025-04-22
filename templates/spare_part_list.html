@@ -37,8 +37,9 @@
                         <!-- Add Spare Part Button and Import/Export Buttons -->
                         <!-- <div class="d-flex justify-content-between align-items-center mb-3"> -->
                             
-                            {% if request.user.userprofile.role == "MD manager" or request.user.userprofile.role == "TEC" %}
+                            {% if request.user.userprofile.role == "IM" %}
                             <!-- Add Spare Part Button -->
+                             
                             <div class="d-flex justify-content-end mb-3">
                                 <a href="{% url 'add_spare_part' %}" class="btn btn-success bg-success custom-btn">
                                     <i class="bi bi-plus"></i> Add Spare Part

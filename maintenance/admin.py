@@ -1,6 +1,19 @@
 from django.contrib import admin
 from .models import  *
-from .models import DecommissionedEquipment, MaintenanceTask ,MaintenanceRecord, WorkOrder, SparePartUsage, Notification, RestockSparePart, Task, TaskGroup,TaskCompletion, SchedulerLock
+from .models import( DecommissionedEquipment, 
+                    MaintenanceTask ,
+                    MaintenanceRecord,
+                      WorkOrder, 
+                      SparePartUsage, 
+                      Notification, 
+                      RestockSparePart, 
+                      Task, 
+                      TaskGroup,
+                      TaskCompletion, 
+                      SchedulerLock, 
+                      SparePartTransaction, 
+                      SparePartRequest,
+                      TechnicianSparePart)
 
 # Register your models here.
 admin.site.register(Branch)
@@ -19,6 +32,10 @@ admin.site.register(SparePartUsage)
 admin.site.register(Notification)
 admin.site.register(RestockSparePart)
 admin.site.register(SchedulerLock)
+admin.site.register(SparePartRequest)
+admin.site.register(SparePartTransaction)
+admin.site.register(TechnicianSparePart)
+
 
 
 @admin.register(Equipment)

@@ -1,0 +1,273 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="pagetitle">
+        <h1><b>{{ page_title }}</b></h1>
+        <nav>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                <li class="breadcrumb-item active">Issue List</li>
+            </ol>
+        </nav>
+    </div>
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-body">
+                        <!-- Header with Title and New Request Button -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">Spare Part Requests</h5>
+                            {% if user_role == 'TEC' or user_role == 'MD manager' %}
+                            <a href="{% url 'request_spare_part_page' %}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-1"></i> New Request
+                            </a>
+                            <a href="{% url 'request_return_page' %}" class="btn btn-warning">
+                                <i class="bi bi-arrow-return-left me-1"></i> Return Parts
+                            </a>
+                            {% endif %}
+                        </div>
+
+                        <!-- Enhanced Status Filter -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="btn-group flex-wrap" role="group">
+                                    <a href="{% url 'issue_list' %}" 
+                                       class="btn btn-sm btn-outline-secondary {% if not current_status_filter %}active{% endif %}">
+                                        All
+                                    </a>
+                                    {% for status, display in status_choices %}
+                                    <a href="{% url 'issue_list' %}?status={{ status }}" 
+                                       class="btn btn-sm btn-outline-secondary {% if current_status_filter == status %}active{% endif %}">
+                                        {{ display }}
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Request Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Spare Part</th>
+                                        <th>Quantity</th>
+                                        <th>Status</th>
+                                        <th>Request Date</th>
+                                        {% if user_role == 'IM' or user_role == 'MD manager' %}
+                                        <th>Requester</th>
+                                        {% endif %}
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for req in requests %}
+                                    <tr>
+                                        <td>REQ-{{ req.id|stringformat:"04d" }}</td>
+                                        <td>
+                                            <a href="{% url 'edit_request' req.id %}" class="text-primary">
+                                                {{ req.spare_part.name }}
+                                                <small class="d-block text-muted">Part #: {{ req.spare_part.part_number }}</small>
+                                            </a>
+                                        </td>
+                                        <td>{{ req.quantity_requested }}</td>
+                                        <td>
+                                            <span class="badge rounded-pill 
+                                                {% if req.status == 'Requested' %}bg-warning text-dark
+                                                {% elif req.status == 'Approved' %}bg-primary
+                                                {% elif req.status == 'Rejected' %}bg-danger
+                                                {% elif req.status == 'Issued' %}bg-info
+                                                {% elif req.status == 'Used' %}bg-success
+                                                {% elif req.status == 'Returned' %}bg-secondary
+                                                {% elif req.status == 'Canceled' %}bg-dark
+                                                {% elif req.status == 'Received' %}bg-success
+                                                {% endif %}"
+                                                style="font-weight: 500; letter-spacing: 0.5px; min-width: 80px;">
+                                                {{ req.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="d-block">{{ req.request_date|date:"M d, Y" }}</span>
+                                            <small class="text-muted">{{ req.request_date|timesince }} ago</small>
+                                        </td>
+                                        {% if user_role == 'IM' or user_role == 'MD manager' %}
+                                        <td>
+                                            {{ req.technician.get_full_name }}
+                                            <small class="d-block text-muted">{{ req.technician.userprofile.branch.name }}</small>
+                                        </td>
+                                        {% endif %}
+                                        <td>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                <!-- View Button -->
+                                                <a href="{% url 'edit_request' req.id %}" 
+                                                   class="btn btn-sm btn-outline-primary" title="View Details">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                
+                                                <!-- Role-specific actions -->
+                                                {% if req.status == 'Requested' and user == req.technician %}
+                                                <a href="{% url 'cancel_spare_part_request' req.id %}" 
+                                                class="btn btn-sm btn-outline-dark" title="Cancel Request">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </a>
+
+                                                {% endif %}
+                                                {% if req.status == 'Requested' and user_role == 'IM' %}
+                                                <a href="{% url 'approve_spare_part_request' req.id %}" 
+                                                   class="btn btn-sm btn-outline-success" title="Approve">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </a>
+                                                <a href="{% url 'reject_spare_part_request' req.id %}" 
+                                                   class="btn btn-sm btn-outline-danger" title="Reject">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </a>
+                                                {% endif %}
+                                                
+                                                {% if req.status == 'Approved' and user_role == 'IM' %}
+                                                <a href="{% url 'issue_spare_part' req.id %}" 
+                                                   class="btn btn-sm btn-outline-info" title="Issue">
+                                                    <i class="bi bi-box-seam"></i>
+                                                </a>
+                                                {% endif %}
+                                                
+                                                {% if req.status == 'Issued' and user == req.technician %}
+                                                {% comment %}
+                                                <a href="{% url 'use_spare_part' req.id %}" 
+                                                   class="btn btn-sm btn-outline-success" title="Mark as Used">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </a>
+                                                {% endcomment %}
+                                                <a href="{% url 'accept_issued_part' req.id %}" 
+                                                class="btn btn-sm btn-outline-success" title="Receive">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </a>
+                                                <a href="{% url 'cancel_spare_part_request' req.id %}" 
+                                                class="btn btn-sm btn-outline-dark" title="Cancel Request">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </a>
+                                                {% endif %}
+                                                
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if user_role == 'IM' or user_role == 'MD manager' %}7{% else %}6{% endif %}" 
+                                            class="text-center py-4">
+                                            No requests found.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        {% if is_paginated %}
+                        <div class="d-flex justify-content-center mt-3">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination">
+                                    {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}" aria-label="First">
+                                            <span aria-hidden="true">&laquo;&laquo;</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}">{{ num }}</a></li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}" aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}" aria-label="Last">
+                                            <span aria-hidden="true">&raquo;&raquo;</span>
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<style>
+    /* Enhanced badge styling */
+    /* .status-badge {
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        min-width: 80px;
+    } */
+    
+    /* Hover effects for table rows */
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Compact action buttons */
+    .btn-sm {
+        min-width: 30px;
+        padding: 0.25rem;
+    }
+    
+    /* Responsive table container */
+    .table-responsive {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    /* Filter buttons */
+    .btn-group .btn {
+        margin-bottom: 0.25rem;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+
+{% endblock %}

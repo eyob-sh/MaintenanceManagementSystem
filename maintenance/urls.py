@@ -110,8 +110,32 @@ path('add_maintenance_task_page/', views.add_maintenance_task_page, name = "add_
 
         path('add-task/<str:frequency>/', views.add_task, name='add_task'),
     path('delete-task/<int:task_id>/', views.delete_task, name='delete_task'),
+#-----------------------------------------inventory-----------------------------------------------------------
+
+path('requests/', views.issue_list, name='issue_list'),
+path('requests/<int:id>/edit/', views.edit_request, name='edit_request'),
+path('request/<int:id>/approve/', views.approve_spare_part_request, name='approve_spare_part_request'),
+path('request/<int:id>/reject/', views.reject_spare_part_request, name='reject_spare_part_request'),
+path('request/<int:id>/issue/', views.issue_spare_part, name='issue_spare_part'),
+path('request/<int:id>/cancel/', views.cancel_spare_part_request, name='cancel_spare_part_request'),
+# path('request/<int:id>/return/', views.return_spare_part, name='return_spare_part'),
+path('request/<int:id>/use/', views.use_spare_part, name='use_spare_part'),
+path('request/<int:id>/accept/', views.accept_issued_part, name='accept_issued_part'),
 
 
+# path('request/<int:id>/accept-return/', views.accept_returned_part, name='accept_returned_part'),
+path('request/', views.request_spare_part, name='request_spare_part'),
+path('request_page/', views.request_spare_part_page, name='request_spare_part_page'),
+
+#----------------------------------------------returns------------------------------------------------------------
+path('return/', views.request_return_page, name='request_return_page'),
+
+
+path('returns/<int:id>/request/', views.request_part_return, name='request_part_return'),
+# path('returns/<int:id>/edit/', views.edit_return, name='edit_return'),
+path('returns/<int:id>/accept/', views.accept_return_request, name='accept_return'),
+path('returns/<int:id>/complete/', views.complete_return, name='complete_return'),
+# path('returns/<int:id>/reject/', views.reject_return_request, name='reject_return'),
 #----------------------------------------------------------------------------------------------------------------
 
 
@@ -121,6 +145,8 @@ path('add_maintenance_task_page/', views.add_maintenance_task_page, name = "add_
     path('maintenance_oversight_dashboard' , views.maintenance_oversight_dashboard,name ="maintenance_oversight_dashboard" ),
     path('maintenance_dashboard' , views.maintenance_dashboard,name ="maintenance_dashboard" ),
     path('client_dashboard' , views.client_dashboard,name ="client_dashboard" ),
+    path('inventory_dashboard' , views.inventory_dashboard,name ="inventory_dashboard" ),
+    
     path('export-maintenance-pdf/', views.export_maintenance_report_pdf, name='export_maintenance_pdf'),
     path('generate_report', views.generate_report,name= 'generate_report'),
     path('api/equipment-maintenance-types/', views.equipment_maintenance_types_api, name='equipment-maintenance-types'),

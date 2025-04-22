@@ -1,0 +1,137 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <div class="pagetitle">
+        <h1>New Spare Part Request</h1>
+        <nav>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'issue_list' %}">Issue List</a></li>
+                <li class="breadcrumb-item active">New Request</li>
+            </ol>
+        </nav>
+    </div>
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Request Details</h5>
+                        
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            
+                            <!-- Requester Field (readonly) -->
+                            <div class="mb-3">
+                                <label for="requester" class="form-label">Requester</label>
+                                <input type="text" class="form-control" id="requester" 
+                                       value="{{ request.user.get_full_name }}" readonly>
+                            </div>
+                            
+                            <!-- Spare Part Selection -->
+                            <div class="mb-3">
+                                <label for="spare_part" class="form-label">Spare Part *</label>
+                                <select class="form-select" id="spare_part" name="spare_part" required>
+                                    <option value="" selected disabled>Select a spare part</option>
+                                    {% for part in spare_parts %}
+                                    <option value="{{ part.id }}" 
+                                            data-available="{{ part.get_available_quantity }}">
+                                        {{ part.name }} (Available: {{ part.get_available_quantity }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <!-- Quantity -->
+                            <div class="mb-3">
+                                <label for="quantity" class="form-label">Quantity *</label>
+                                <input type="number" class="form-control" id="quantity" 
+                                       name="quantity" min="1" required>
+                                <div class="form-text">Available: <span id="available-quantity">0</span></div>
+                            </div>
+                            
+                            <!-- Reason -->
+                            <div class="mb-3">
+                                <label for="reason" class="form-label">Reason for Request *</label>
+                                <textarea class="form-control" id="reason" name="reason" 
+                                          rows="3" required></textarea>
+                            </div>
+                            
+                            <!-- Attachment -->
+                            <div class="mb-3">
+                                <label for="attachment" class="form-label">Attachment (Optional)</label>
+                                <input class="form-control" type="file" id="attachment" name="attachment">
+                                <div class="form-text">Upload supporting documents if needed</div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'issue_list' %}" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left me-1"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send me-1"></i> Submit Request
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Request Guidelines</h5>
+                        <div class="alert alert-light">
+                            <ul class="mb-0">
+                                <li>Select the correct spare part from the list</li>
+                                <li>Check available quantity before requesting</li>
+                                <li>Provide clear reason for the request</li>
+                                <li>Attach supporting documents if necessary</li>
+                                <li>Requests will be reviewed by inventory manager</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update available quantity when spare part changes
+    const sparePartSelect = document.getElementById('spare_part');
+    const availableQuantitySpan = document.getElementById('available-quantity');
+    const quantityInput = document.getElementById('quantity');
+    
+    sparePartSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const available = selectedOption.getAttribute('data-available') || 0;
+        availableQuantitySpan.textContent = available;
+        
+        // Set max attribute for quantity input
+        quantityInput.setAttribute('max', available);
+    });
+    
+    // Initialize available quantity if a part is already selected
+    if (sparePartSelect.value) {
+        sparePartSelect.dispatchEvent(new Event('change'));
+    }
+});
+</script>
+
+<style>
+    .form-select, .form-control {
+        margin-bottom: 1rem;
+    }
+    .form-text {
+        font-size: 0.875em;
+    }
+</style>
+
+{% endblock %}

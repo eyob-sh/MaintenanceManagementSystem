@@ -6,7 +6,7 @@ from django.db.models import UniqueConstraint
 from django.apps import apps
 from django.db.models import JSONField
 from datetime import timedelta 
-
+from django.db.models import Sum
 
 
 
@@ -36,6 +36,7 @@ class UserProfile(models.Model):
         ('MD manager', 'Maintenance Department Manager'),
         ('TEC', 'Technician'),
         ('MO', 'Maintenance Oversight'),
+        ('IM', 'Inventory Manager'),
        
         ('CL', 'Client'),
         ('AD', 'Admin'),
@@ -233,7 +234,20 @@ class SparePart(models.Model):
     last_restock_date = models.DateTimeField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    min_quantity = models.IntegerField(default=0)  # Minimum quantity threshold for alerts
+    is_active = models.BooleanField(default=True)  # To mark parts as active/inactive
+    
+    def get_available_quantity(self):
+        """Returns quantity available after considering pending requests"""
+        # Get all pending requests for this spare part
+        pending_requests = SparePartRequest.objects.filter(
+            spare_part=self,
+            status__in=['Requested', 'Approved', 'Issued']
+        ).aggregate(total=Sum('quantity_requested'))['total'] or 0
+        
+        return self.quantity - pending_requests
 
+    
 
     class Meta:
         ordering = ['-created_at']  # Use '-' for descending order
@@ -377,18 +391,153 @@ class TaskCompletion(models.Model):
     remark = models.TextField(blank=True, null=True)  # Add this field for task remarks
     completed_at = models.DateTimeField(null=True, blank=True)
     is_completed = models.BooleanField(default=False)  # New field
+
+#---------------------------------------------added for inventory------------------------------------------
+
+class SparePartRequest(models.Model):
+    STATUS_CHOICES = [
+        ('Requested', 'Requested'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+        ('Issued', 'Issued'),
+        ('Received', 'Received'),
+        ('canceled', 'canceled'),
+        # ('Used', 'Used'),
+        ('Return_Request', 'Return Request'),  # New status
+        ('Return_Accepted', 'Accepted Returns'),    # New status
+       
+        ('Returned', 'Returned'),
+        
+    ]
+    
+    technician = models.ForeignKey(User, on_delete=models.CASCADE, related_name='spare_part_requests')
+    inventory_manager = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_spare_part_requests')
+    spare_part = models.ForeignKey(SparePart, on_delete=models.CASCADE)
+    quantity_requested = models.IntegerField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Requested')
+    request_date = models.DateTimeField(auto_now_add=True)
+    approval_date = models.DateTimeField(null=True, blank=True)
+    issue_date = models.DateTimeField(null=True, blank=True)
+    use_date = models.DateTimeField(null=True, blank=True)
+    return_date = models.DateTimeField(null=True, blank=True)
+    reason = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True)
+    return_condition = models.TextField(blank=True)
+    return_accepted = models.BooleanField(default=False)
+    canceled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='canceled_requests')
+    cancel_reason = models.TextField(blank=True)
+    cancel_date = models.DateTimeField(null=True, blank=True)
+    is_return_request = models.BooleanField(default=False)
+    return_request_date = models.DateTimeField(null=True, blank=True)
+    return_accepted_date = models.DateTimeField(null=True, blank=True)
+    return_completed_date = models.DateTimeField(null=True, blank=True)
+    @property
+    def quantity_remaining(self):
+        if self.status == 'Received':
+            return self.quantity_requested - sum(
+                transaction.quantity 
+                for transaction in self.transactions.filter(
+                    transaction_type__in=['Usage', 'Return']
+                )
+            )
+        return 0
+    
+    def save(self, *args, **kwargs):
+        # When status changes to Received, update TechnicianSparePart
+        if self.pk:  # Only for existing instances
+            old_status = SparePartRequest.objects.get(pk=self.pk).status
+            if old_status != 'Received' and self.status == 'Received':
+                tech_part, created = TechnicianSparePart.objects.get_or_create(
+                    technician=self.technician,
+                    spare_part=self.spare_part,
+                    defaults={'received_quantity': self.quantity_requested, 'request': self}
+                )
+                if not created:
+                    tech_part.received_quantity += self.quantity_requested
+                    tech_part.save()
+        super().save(*args, **kwargs)
+    
+    class Meta:
+        ordering = ['-request_date']
+    
+    def __str__(self):
+        return f"{self.spare_part.name} - {self.quantity_requested} ({self.status})"
+
+class SparePartTransaction(models.Model):
+    TRANSACTION_TYPES = [
+        ('Request', 'Request'),
+        ('Approval', 'Approval'),
+        ('Issuance', 'Issuance'),
+        ('Usage', 'Usage'),
+        ('Return', 'Return'),
+        ('cancellation', 'cancellation'),
+        ('Receipt', 'Receipt'),
+    ]
+    
+    request = models.ForeignKey(SparePartRequest, on_delete=models.CASCADE, related_name='transactions')
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    quantity = models.IntegerField()
+    notes = models.TextField(blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+    
+    def __str__(self):
+        return f"{self.get_transaction_type_display()} - {self.request.spare_part.name}"
+    
+    def save(self, *args, **kwargs):
+        # When usage is recorded, update TechnicianSparePart
+        if self.transaction_type == 'Usage':
+            tech_part = TechnicianSparePart.objects.get(
+                technician=self.request.technician,
+                spare_part=self.request.spare_part
+            )
+            tech_part.used_quantity += self.quantity
+            tech_part.save()
+        super().save(*args, **kwargs)
+
+
+#----------------------------------------------------------------------------------------------------------
+
+
+
 class SparePartUsage(models.Model):
     maintenance_record = models.ForeignKey(MaintenanceRecord, on_delete=models.CASCADE, null=True)
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, null=True)
     spare_part = models.ForeignKey(SparePart, on_delete=models.CASCADE)
     quantity_used = models.IntegerField()  # Quantity of the spare part used
+    request = models.ForeignKey(SparePartRequest, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 
     class Meta:
         ordering = ['-created_at']  # Use '-' for descending order
+
+
+class TechnicianSparePart(models.Model):
+    technician = models.ForeignKey(User, on_delete=models.CASCADE)
+    spare_part = models.ForeignKey(SparePart, on_delete=models.CASCADE)
+    received_quantity = models.IntegerField(default=0)
+    used_quantity = models.IntegerField(default=0)
+    request = models.ForeignKey(  # Add this
+        SparePartRequest, 
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='technician_inventory_records'
+    )
     
+    @property
+    def available_quantity(self):
+        return self.received_quantity - self.used_quantity
+
+    class Meta:
+        unique_together = ('technician', 'spare_part')
+
+
 
 class DecommissionedEquipment(models.Model):
     equipment = models.OneToOneField('Equipment', on_delete=models.CASCADE)

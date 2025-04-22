@@ -1,0 +1,333 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block content %}
+
+<main id="main" class="main">
+
+    <!-- Messages Block -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} text-center mb-2">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <!-- End Messages Block -->
+
+    <div class="pagetitle">
+        <h1><b>Spare Part Requests</b></h1>
+        <nav>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">Inventory</a></li>
+                <li class="breadcrumb-item active">Request List</li>
+            </ol>
+        </nav>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+        <div class="row">
+            <div class="col-lg-12">
+
+                <div class="card">
+                    <div class="card-body">
+                        <!-- New Request Button -->
+                        <div class="d-flex justify-content-between mb-3">
+                            <div>
+                                <h5 class="card-title">Spare Part Requests</h5>
+                                <p class="card-subtitle">Manage all spare part requests</p>
+                            </div>
+                            <div>
+                                {% if request.user.userprofile.role == "TEC" %}
+                                <a href="{% url 'request_spare_part' %}" class="btn btn-primary">
+                                    <i class="bi bi-plus"></i> New Request
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Enhanced Status Filter Tabs -->
+                        <ul class="nav nav-tabs nav-tabs-bordered mb-4" id="statusTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                                    All Requests
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                                    <i class="bi bi-hourglass-split me-1"></i>Pending
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab">
+                                    <i class="bi bi-lightning-charge me-1"></i>Active
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">
+                                    <i class="bi bi-check-circle me-1"></i>Completed
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="canceled-tab" data-bs-toggle="tab" data-bs-target="#canceled" type="button" role="tab">
+                                    <i class="bi bi-x-circle me-1"></i>Canceled
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Request List Table -->
+                        <div class="tab-content pt-2" id="statusTabsContent">
+                            <div class="tab-pane fade show active" id="all" role="tabpanel">
+                                <div class="table-responsive">
+                                    <table id="all-requests-table" class="table table-hover table-striped" style="width:100%">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Spare Part</th>
+                                                <th>Technician</th>
+                                                <th>Qty</th>
+                                                <th>Status</th>
+                                                <th>Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for req in all_requests %}
+                                            <tr>
+                                                <td>REQ-{{ req.id|stringformat:"04d" }}</td>
+                                                <td>
+                                                    <a href="{% url 'edit_request' req.id %}" class="text-primary">
+                                                        {{ req.spare_part.name }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ req.technician.get_full_name }}</td>
+                                                <td>{{ req.quantity_requested }}</td>
+                                                <td>
+                                                    <span class="badge rounded-pill 
+                                                        {% if req.status == 'Requested' %}bg-warning text-dark
+                                                        {% elif req.status == 'Approved' %}bg-primary
+                                                        {% elif req.status == 'Rejected' %}bg-danger
+                                                        {% elif req.status == 'Issued' %}bg-info
+                                                        {% elif req.status == 'Used' %}bg-success
+                                                        {% elif req.status == 'Returned' %}bg-secondary
+                                                        {% elif req.status == 'Canceled' %}bg-dark
+                                                        {% endif %}">
+                                                        {{ req.get_status_display }}
+                                                    </span>
+                                                    {% if req.status == 'Canceled' %}
+                                                    <small class="d-block text-muted">Reason: {{ req.cancel_reason|truncatechars:30 }}</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="d-block">{{ req.request_date|date:"M d, Y" }}</span>
+                                                    <small class="text-muted">{{ req.request_date|timesince }} ago</small>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        <a href="{% url 'view_spare_part_request' req.id %}" class="btn btn-sm btn-outline-primary" title="View" data-bs-toggle="tooltip">
+                                                            <i class="bi bi-eye"></i>
+                                                        </a>
+                                                        
+                                                        {% if req.status == 'Requested' %}
+                                                            {% if request.user.userprofile.role == 'IM' %}
+                                                            <button class="btn btn-sm btn-outline-success approve-btn" data-id="{{ req.id }}" title="Approve" data-bs-toggle="tooltip">
+                                                                <i class="bi bi-check-lg"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-outline-danger reject-btn" data-id="{{ req.id }}" title="Reject" data-bs-toggle="tooltip">
+                                                                <i class="bi bi-x-lg"></i>
+                                                            </button>
+                                                            {% endif %}
+                                                            {% if request.user == req.technician %}
+                                                            <a href="{% url 'cancel_spare_part_request' req.id %}" class="btn btn-sm btn-outline-dark" title="Cancel" data-bs-toggle="tooltip">
+                                                                <i class="bi bi-slash-circle"></i>
+                                                            </a>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                        
+                                                        {% if req.status == 'Approved' %}
+                                                            {% if request.user.userprofile.role == 'IM' %}
+                                                            <button class="btn btn-sm btn-outline-info issue-btn" data-id="{{ req.id }}" title="Issue" data-bs-toggle="tooltip">
+                                                                <i class="bi bi-box-seam"></i>
+                                                            </button>
+                                                            <a href="{% url 'cancel_spare_part_request' req.id %}" class="btn btn-sm btn-outline-dark" title="Cancel" data-bs-toggle="tooltip">
+                                                                <i class="bi bi-slash-circle"></i>
+                                                            </a>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                        
+                                                        {% if req.status == 'Issued' and request.user == req.technician %}
+                                                        <button class="btn btn-sm btn-outline-success use-btn" data-id="{{ req.id }}" title="Use" data-bs-toggle="tooltip">
+                                                            <i class="bi bi-check-circle"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-warning return-btn" data-id="{{ req.id }}" title="Return" data-bs-toggle="tooltip">
+                                                            <i class="bi bi-arrow-return-left"></i>
+                                                        </button>
+                                                        {% endif %}
+                                                        
+                                                        {% if req.status == 'Returned' and request.user.userprofile.role == 'IM' %}
+                                                        <button class="btn btn-sm btn-outline-secondary accept-return-btn" data-id="{{ req.id }}" title="Accept Return" data-bs-toggle="tooltip">
+                                                            <i class="bi bi-check-circle"></i>
+                                                        </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="7" class="text-center py-4">No requests found.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Other tab panes would follow similar structure -->
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Include all necessary modals here (approve, reject, issue, etc.) -->
+
+    <!-- Cancel Request Modal -->
+    <div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cancel Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <p>Are you sure you want to cancel this request?</p>
+                        <div class="mb-3">
+                            <label for="cancelReason" class="form-label">Reason for cancellation:</label>
+                            <textarea class="form-control" id="cancelReason" name="cancel_reason" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-dark">Confirm Cancellation</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<!-- JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DataTables
+    const allRequestsTable = new simpleDatatables.DataTable("#all-requests-table", {
+        perPage: 10,
+        perPageSelect: [10, 25, 50, 100],
+        columns: [
+            { select: 0, type: "string" },
+            { select: 1, type: "string" },
+            { select: 2, type: "string" },
+            { select: 3, type: "number" },
+            { select: 4, type: "string" },
+            { select: 5, type: "date", format: "YYYY-MM-DD" },
+            { select: 6, sortable: false }
+        ],
+        labels: {
+            placeholder: "Search requests...",
+            searchTitle: "Search within table",
+            perPage: "requests per page",
+            noRows: "No requests found",
+            info: "Showing {start} to {end} of {rows} requests"
+        }
+    });
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Cancel button handler
+    document.querySelectorAll('a[href*="cancel_spare_part_request"]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const cancelModal = new bootstrap.Modal(document.getElementById('cancelModal'));
+            const form = cancelModal._element.querySelector('form');
+            form.action = this.href;
+            cancelModal.show();
+        });
+    });
+
+    // Tab filtering
+    const tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    tabEls.forEach(tabEl => {
+        tabEl.addEventListener('shown.bs.tab', function (event) {
+            const target = event.target.getAttribute('data-bs-target');
+            
+            // Clear any existing filters
+            allRequestsTable.clearFilters();
+            
+            // Apply new filter based on tab
+            if (target === '#pending') {
+                allRequestsTable.filter('Status', 'Requested');
+            } else if (target === '#active') {
+                allRequestsTable.filter(function(data) {
+                    return ['Approved', 'Issued'].includes(data[4]);
+                });
+            } else if (target === '#completed') {
+                allRequestsTable.filter(function(data) {
+                    return ['Used', 'Returned', 'Rejected'].includes(data[4]);
+                });
+            } else if (target === '#canceled') {
+                allRequestsTable.filter('Status', 'Canceled');
+            }
+        });
+    });
+});
+</script>
+
+<style>
+    /* Enhanced badge styling */
+    .badge {
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Hover effects for table rows */
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Compact action buttons */
+    .btn-sm {
+        min-width: 30px;
+        padding: 0.25rem;
+    }
+    
+    /* Tab styling */
+    .nav-tabs-bordered .nav-link {
+        border: none;
+        padding: 0.75rem 1.25rem;
+    }
+    
+    .nav-tabs-bordered .nav-link.active {
+        border-bottom: 3px solid #0d6efd;
+        color: #0d6efd;
+    }
+    
+    /* Responsive table container */
+    .table-responsive {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+</style>
+
+{% endblock %}

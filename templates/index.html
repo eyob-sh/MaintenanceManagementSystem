@@ -261,6 +261,15 @@
           <span>Dashboard</span>
         </a>
       </li>
+
+      {% elif request.user.userprofile.role in "IM" and not request.user.is_superuser %}
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'dashboard' %}collapsed{% endif %}" href="{% url 'inventory_dashboard' %}">
+          <i class="bi bi-grid"></i>
+          <span>Dashboard</span>
+        </a>
+      </li>
       {% endif %}
       <!-- Maintenance Department Manager, Technician, Maintenance Oversight -->
        
@@ -331,6 +340,14 @@
           <span>Restock Spare Part</span>
         </a>
       </li>
+      
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'issue_list' %}collapsed{% endif %}" href="{% url 'issue_list' %}">
+          <i class="bi bi-box"></i>
+          <span>Issue</span>
+        </a>
+      </li>
+
       <li class="nav-heading">Alerts & Monitoring</li>
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'maintenance_due' %}collapsed{% endif %}"
@@ -350,6 +367,40 @@
       {% endif %}
 
       
+      <!-- Inventory Manager -->
+      {% if request.user.userprofile.role == 'IM' %}
+      <li class="nav-heading">Inventory</li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'spare_part_list' %}collapsed{% endif %}"
+          href="{% url 'spare_part_list' %}">
+          <i class="bi bi-gear"></i>
+          <span>Spare Parts</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'spare_part_usage_list' %}collapsed{% endif %}"
+          href="{% url 'spare_part_usage_list' %}">
+          <i class="bi bi-gear-wide"></i>
+          <span>Spare Part Usage</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'restock_list' %}collapsed{% endif %}" href="{% url 'restock_list' %}">
+          <i class="bi bi-box"></i>
+          <span>Restock Spare Part</span>
+        </a>
+      </li>
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'issue_list' %}collapsed{% endif %}" href="{% url 'issue_list' %}">
+          <i class="bi bi-box"></i>
+          <span>Issue</span>
+        </a>
+      </li>
+      {% endif %}
+
+
+
       
       <!-- Admin -->
       {% if request.user.userprofile.role == 'AD' %}
