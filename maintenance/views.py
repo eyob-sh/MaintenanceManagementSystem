@@ -4753,7 +4753,7 @@ def use_spare_part(request, request_id, usage_type, record_id):
 
 @login_required
 def request_return_page(request):
-    """Handle both display and submission of spare part return requests"""
+    """Handle spare part return requests using get_available_quantity() method"""
     # Common context setup
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(
@@ -4761,14 +4761,13 @@ def request_return_page(request):
         is_read=False
     ).order_by('-id').first()
     
-    # Get available parts for the technician
+    # Get all parts assigned to technician
     tech_parts = TechnicianSparePart.objects.filter(
         technician=request.user
-    ).annotate(
-        available_quantity=F('received_quantity') - F('used_quantity')
-    ).filter(
-        available_quantity__gt=0
     ).select_related('spare_part')
+    
+    # Filter parts with available quantity > 0
+    tech_parts = [part for part in tech_parts if part.get_available_quantity() > 0]
     
     # Handle POST request (form submission)
     if request.method == 'POST':
@@ -4777,9 +4776,12 @@ def request_return_page(request):
             messages.error(request, 'Please select a spare part')
             return redirect('request_return_page')
             
-        tech_part = get_object_or_404(TechnicianSparePart, id=part_id, technician=request.user)
-        
         try:
+            tech_part = TechnicianSparePart.objects.get(
+                id=part_id,
+                technician=request.user
+            )
+            
             return_quantity = int(request.POST.get('return_quantity', 0))
             condition = request.POST.get('condition', '')
             notes = request.POST.get('notes', '')
@@ -4788,8 +4790,9 @@ def request_return_page(request):
                 messages.error(request, 'Quantity must be greater than 0')
                 return redirect('request_return_page')
                 
-            if return_quantity > tech_part.available_quantity:
-                messages.error(request, f'You only have {tech_part.available_quantity} available to return')
+            available_qty = tech_part.get_available_quantity()
+            if return_quantity > available_qty:
+                messages.error(request, f'You only have {available_qty} available to return')
                 return redirect('request_return_page')
             
             # Create return request
@@ -4797,10 +4800,9 @@ def request_return_page(request):
                 technician=request.user,
                 spare_part=tech_part.spare_part,
                 quantity_requested=return_quantity,
-                status='Return_Requested',
+                status='Return_Request',
                 is_return_request=True,
                 return_condition=condition,
-                return_notes=notes,
                 return_request_date=timezone.now()
             )
             
@@ -4818,16 +4820,25 @@ def request_return_page(request):
                 notes=f'Return requested. Condition: {condition}'
             )
             
+            # Notify inventory managers
+            inventory_managers = User.objects.filter(
+                userprofile__role='IM',
+                userprofile__branch=request.user.userprofile.branch
+            )
+            for manager in inventory_managers:
+                Notification.objects.create(
+                    user=manager,
+                    type="spare_part_request",
+                    message=f'New return request for {tech_part.spare_part.name} ({return_quantity}) from {request.user}.',
+                )
+            
             messages.success(request, 'Return request submitted successfully!')
             return redirect('issue_list')
             
+        except TechnicianSparePart.DoesNotExist:
+            messages.error(request, 'Selected spare part not found')
         except Exception as e:
             messages.error(request, f'Error processing return: {str(e)}')
-            return redirect('request_return_page')
-    
-    # Handle GET request (form display)
-    if not tech_parts.exists():
-        messages.info(request, "You don't have any spare parts available for return.")
     
     return render(request, 'request_return_page.html', {
         'tech_parts': tech_parts,
@@ -4835,82 +4846,141 @@ def request_return_page(request):
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
-@login_required 
-def accept_return_request(request, id):
-    """IM accepts the return request"""
-    if not request.user.userprofile.role == 'IM':
-        messages.error(request, 'Unauthorized')
-        return redirect('home')
+
+@login_required
+def edit_return(request, id):
+    """
+    Edit a return request
+    """
+    return_request = get_object_or_404(SparePartRequest, id=id, is_return_request=True)
+    
+    if request.method == 'POST':
+        form = request.POST
+        return_request.return_condition = form.get('condition', return_request.return_condition)
+        return_request.return_notes = form.get('notes', return_request.return_notes)
         
-    return_request = get_object_or_404(
-        SparePartRequest, 
-        id=id, 
-        status='Return_Requested',
-        is_return_request=True
+        # Handle quantity update if needed
+        try:
+            new_quantity = int(form.get('quantity', return_request.quantity_requested))
+            if new_quantity <= 0:
+                messages.error(request, 'Quantity must be positive')
+            else:
+                return_request.quantity_requested = new_quantity
+        except ValueError:
+            messages.error(request, 'Invalid quantity value')
+        
+        # Handle attachment update
+        if 'attachment' in request.FILES:
+            return_request.return_attachment = request.FILES['attachment']
+        
+        return_request.save()
+        messages.success(request, 'Return request updated successfully')
+        return redirect('issue_list')
+    
+    context = {
+        'request_obj': return_request,
+        'active_page': 'issue_list',
+    }
+    return render(request, 'edit_return.html', context)
+
+@login_required
+def approve_return_request(request, id):
+    return_request = get_object_or_404(SparePartRequest, id=id, is_return_request=True)
+    
+    if request.user.userprofile.role not in ['IM', 'MD manager']:
+        messages.error(request, "Only inventory managers can approve returns")
+        return redirect('issue_list')
+    
+    return_request.status = 'Return_Accepted'
+    return_request.return_accepted = True
+    return_request.return_accepted_date = timezone.now()
+    return_request.inventory_manager = request.user
+    return_request.save()
+    
+    # Create transaction record
+    SparePartTransaction.objects.create(
+        request=return_request,
+        transaction_type='Approval',
+        user=request.user,
+        quantity=return_request.quantity_requested,
+        notes=f'Return approved by {request.user.get_full_name()}'
     )
     
-    # Update status
-    return_request.status = 'Return_Accepted'
-    return_request.inventory_manager = request.user
-    return_request.return_accepted_date = timezone.now()
+    messages.success(request, 'Return request approved successfully')
+    return redirect('issue_list')
+
+@login_required
+def reject_return_request(request, id):
+    return_request = get_object_or_404(SparePartRequest, id=id, is_return_request=True)
+    
+    if request.user.userprofile.role not in ['IM', 'MD manager']:
+        messages.error(request, "Only inventory managers can reject returns")
+        return redirect('issue_list')
+    
+    if request.method == 'POST':
+        reason = request.POST.get('rejection_reason', '')
+        if not reason:
+            messages.error(request, "Please provide a rejection reason")
+            return redirect('edit_return', id=id)
+            
+        return_request.status = 'Rejected'
+        return_request.rejection_reason = reason
+        return_request.inventory_manager = request.user
+        return_request.save()
+        
+        SparePartTransaction.objects.create(
+            request=return_request,
+            transaction_type='cancellation',
+            user=request.user,
+            quantity=return_request.quantity_requested,
+            notes=f'Return rejected: {reason}'
+        )
+        
+        messages.success(request, 'Return request rejected')
+        return redirect('issue_list')
+    
+    return render(request, 'reject_return.html', {'return_request': return_request})
+
+@login_required
+def complete_return(request, id):
+    return_request = get_object_or_404(SparePartRequest, id=id, is_return_request=True)
+    
+    if request.user.userprofile.role not in ['IM', 'MD manager']:
+        messages.error(request, "Only inventory managers can complete returns")
+        return redirect('issue_list')
+    
+    if return_request.status != 'Return_Accepted':
+        messages.error(request, "Only accepted returns can be completed")
+        return redirect('issue_list')
+    
+    # Update technician's spare part record
+    tech_part = TechnicianSparePart.objects.get(
+        technician=return_request.technician,
+        spare_part=return_request.spare_part
+    )
+    tech_part.used_quantity -= return_request.quantity_requested
+    tech_part.save()
+    
+    # Update inventory
+    return_request.spare_part.quantity_in_stock += return_request.quantity_requested
+    return_request.spare_part.save()
+    
+    # Update request status
+    return_request.status = 'Returned'
+    return_request.return_completed_date = timezone.now()
     return_request.save()
     
     # Create transaction
     SparePartTransaction.objects.create(
         request=return_request,
-        transaction_type='Return_Acceptance',
+        transaction_type='Return',
         user=request.user,
         quantity=return_request.quantity_requested,
-        notes='Return approved by inventory'
+        notes='Return completed and inventory updated'
     )
     
-    messages.success(request, 'Return request accepted')
+    messages.success(request, 'Return completed successfully')
     return redirect('issue_list')
-
-@login_required
-def complete_return(request, id):
-    """Final step when parts are physically returned to inventory"""
-    if not request.user.userprofile.role == 'IM':
-        messages.error(request, 'Unauthorized')
-        return redirect('home')
-        
-    return_request = get_object_or_404(
-        SparePartRequest,
-        id=id,
-        status='Return_Accepted',
-        is_return_request=True
-    )
-    
-    # 1. Update main inventory
-    spare_part = return_request.spare_part
-    spare_part.quantity += return_request.quantity_requested
-    spare_part.save()
-    
-    # 2. Update technician's inventory
-    tech_part = TechnicianSparePart.objects.get(
-        technician=return_request.technician,
-        spare_part=spare_part
-    )
-    tech_part.received_quantity -= return_request.quantity_requested
-    tech_part.save()
-    
-    # 3. Mark return complete
-    return_request.status = 'Returned'
-    return_request.return_completed_date = timezone.now()
-    return_request.save()
-    
-    # 4. Create transaction
-    SparePartTransaction.objects.create(
-        request=return_request,
-        transaction_type='Return_Completed',
-        user=request.user,
-        quantity=return_request.quantity_requested,
-        notes='Parts returned to inventory'
-    )
-    
-    messages.success(request, f'{return_request.quantity_requested} {spare_part.name} returned to inventory')
-    return redirect('issue_list')
-
 
 @login_required
 def cancel_spare_part_request(request, id):

@@ -131,14 +131,11 @@ path('request_page/', views.request_spare_part_page, name='request_spare_part_pa
 path('request_return_page/', views.request_return_page, name='request_return_page'),
 
 
-# path('returns/<int:id>/request/', views.request_part_return, name='request_part_return'),
+path('returns/<int:id>/edit/', views.edit_return, name='edit_return'),
 
-path('returns/<int:id>/accept/', views.accept_return_request, name='accept_return'),
+path('returns/<int:id>/approve/', views.approve_return_request, name='approve_return'),
+path('returns/<int:id>/reject/', views.reject_return_request, name='reject_return'),
 path('returns/<int:id>/complete/', views.complete_return, name='complete_return'),
-
-
-# path('returns/<int:id>/edit/', views.edit_return, name='edit_return'),
-# path('returns/<int:id>/reject/', views.reject_return_request, name='reject_return'),
 #----------------------------------------------------------------------------------------------------------------
 
 

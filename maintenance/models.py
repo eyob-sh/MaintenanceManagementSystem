@@ -478,7 +478,7 @@ class SparePartTransaction(models.Model):
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     quantity = models.IntegerField()
-    notes = models.TextField(blank=True)
+    notes = models.TextField(blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -497,6 +497,7 @@ class SparePartTransaction(models.Model):
             tech_part.used_quantity += self.quantity
             tech_part.save()
         super().save(*args, **kwargs)
+
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -532,6 +533,9 @@ class TechnicianSparePart(models.Model):
     
     @property
     def available_quantity(self):
+        return self.received_quantity - self.used_quantity
+    
+    def get_available_quantity(self):
         return self.received_quantity - self.used_quantity
 
     class Meta:

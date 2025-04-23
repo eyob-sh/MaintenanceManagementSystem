@@ -99,6 +99,9 @@
                                                 {% elif req.status == 'Returned' %}bg-secondary
                                                 {% elif req.status == 'Canceled' %}bg-dark
                                                 {% elif req.status == 'Received' %}bg-success
+                                                {% elif req.status == 'Return_Request' %}bg-warning text-dark
+                                                {% elif req.status == 'Return_Accepted' %}bg-info
+                                                {% elif req.status == 'Returned' %}bg-success
                                                 {% endif %}"
                                                 style="font-weight: 500; letter-spacing: 0.5px; min-width: 80px;">
                                                 {{ req.get_status_display }}
@@ -117,11 +120,13 @@
                                         <td>
                                             <div class="d-flex flex-wrap gap-1">
                                                 <!-- View Button -->
-                                                <a href="{% url 'edit_request' req.id %}" 
-                                                   class="btn btn-sm btn-outline-primary" title="View Details">
-                                                    <i class="bi bi-eye"></i>
+                                                <a href="{% if req.is_return_request %}{% url 'edit_return' req.id %}{% else %}{% url 'edit_request' req.id %}{% endif %}" 
+                                                    class="btn btn-sm btn-outline-primary" title="{% if req.is_return_request %}Edit Return{% else %}View Details{% endif %}">
+                                                        <i class="bi bi-eye"></i>
                                                 </a>
+
                                                 
+
                                                 <!-- Role-specific actions -->
                                                 {% if req.status == 'Requested' and user == req.technician %}
                                                 <a href="{% url 'cancel_spare_part_request' req.id %}" 

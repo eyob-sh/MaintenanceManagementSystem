@@ -59,8 +59,8 @@
         <option value="" selected disabled>Select a spare part</option>
         {% for part in tech_parts %}
         <option value="{{ part.id }}" 
-                data-available="{{ part.available_quantity }}">
-            {{ part.spare_part.name }} (Available: {{ part.available_quantity }})
+                data-available="{{ part.get_available_quantity }}">
+            {{ part.spare_part.name }} (Available: {{ part.get_available_quantity }})
         </option>
         {% endfor %}
     </select>
