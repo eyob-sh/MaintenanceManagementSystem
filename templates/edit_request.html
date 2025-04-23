@@ -2,13 +2,15 @@
 {% load static %}
 
 {% block content %}
+
 <main id="main" class="main">
+
     <div class="pagetitle">
-        <h1>Request Part Return</h1>
+        <h1>Edit Request #REQ-{{ request.id|stringformat:"04d" }}</h1>
         <nav>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{% url 'issue_list' %}">Issue List</a></li>
-                <li class="breadcrumb-item active">Request Return</li>
+                <li class="breadcrumb-item active">Edit Request</li>
             </ol>
         </nav>
     </div>
@@ -18,47 +20,196 @@
             <div class="col-lg-8">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Return Details</h5>
+                        <h5 class="card-title">Request Details</h5>
                         
-                        <div class="alert alert-info">
-                            <strong>Part:</strong> {{ tech_part.spare_part.name }}<br>
-                            <strong>Available to Return:</strong> {{ tech_part.available_quantity }}
-                        </div>
-                        
-                        <form method="post">
+                        <form method="post" enctype="multipart/form-data">
                             {% csrf_token %}
                             
+                            <!-- Status Display -->
                             <div class="mb-3">
-                                <label for="quantity" class="form-label">Quantity to Return</label>
-                                <input type="number" class="form-control" name="quantity" 
-                                       min="1" max="{{ tech_part.available_quantity }}" required>
+                                <label class="form-label">Current Status</label>
+                                <div class="alert 
+                                    {% if request_obj.status == 'Requested' %}alert-warning
+                                    {% elif request_obj.status == 'Approved' %}alert-primary
+                                    {% elif request_obj.status == 'Rejected' %}alert-danger
+                                    {% elif request_obj.status == 'Issued' %}alert-info
+                                    {% elif request_obj.status == 'Used' %}alert-success
+                                    {% elif request_obj.status == 'Returned' %}alert-secondary
+                                    {% elif request_obj.status == 'Canceled' %}alert-dark
+                                    {% endif %}" role="alert">
+                                    <strong>{{ request_obj.get_status_display }}</strong>
+                                    {% if request_obj.status == 'Approved' %}
+                                        <br>Approved by: {{ request_obj.inventory_manager.get_full_name }}
+                                    {% endif %}
+                                </div>
                             </div>
                             
+                            <!-- Spare Part Info -->
                             <div class="mb-3">
-                                <label for="condition" class="form-label">Condition</label>
-                                <select class="form-select" name="condition" required>
-                                    <option value="">Select condition</option>
-                                    <option value="New">New/Unused</option>
-                                    <option value="Good">Good (Minor wear)</option>
-                                    <option value="Fair">Fair (Functional but worn)</option>
-                                    <option value="Poor">Poor (Needs repair)</option>
-                                    <option value="Damaged">Damaged</option>
+                                <label class="form-label">Spare Part</label>
+                                {% if request_obj.status == 'Requested' and user_role == 'TEC' %}
+                                <select class="form-select" name="spare_part" required>
+                                    {% for part in spare_parts %}
+                                    <option value="{{ part.id }}" {% if part.id == request_obj.spare_part.id %}selected{% endif %}>
+                                        {{ part.name }} (Available: {{ part.quantity }})
+                                    </option>
+                                    {% endfor %}
                                 </select>
+                                {% else %}
+                                <input type="text" class="form-control" value="{{ request_obj.spare_part.name }}" readonly>
+                                {% endif %}
                             </div>
                             
+                            <!-- Quantity -->
+                            <div class="mb-3">
+                                <label for="quantity" class="form-label">Quantity</label>
+                                {% if request_obj.status == 'Requested' and user_role == 'TEC' %}
+                                <input type="number" class="form-control" name="quantity" 
+                                       value="{{ request_obj.quantity_requested }}" min="1" required>
+                                {% else %}
+                                <input type="text" class="form-control" value="{{ request_obj.quantity_requested }}" readonly>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Reason -->
+                            <div class="mb-3">
+                                <label for="reason" class="form-label">Reason</label>
+                                {% if request_obj.status == 'Requested' and user_role == 'TEC' %}
+                                <textarea class="form-control" name="reason" rows="3" required>{{ request_obj.reason }}</textarea>
+                                {% else %}
+                                <div class="card">
+                                    <div class="card-body">
+                                        {{ request_obj.reason|linebreaks }}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Attachment -->
+                            <div class="mb-3">
+                                <label class="form-label">Attachment</label>
+                                {% if request_obj.attachment %}
+                                <div class="mb-2">
+                                    <a href="{{ request_obj.attachment.url }}" class="btn btn-outline-primary" target="_blank">
+                                        <i class="bi bi-file-earmark"></i> View Current Attachment
+                                    </a>
+                                </div>
+                                {% endif %}
+                                {% if request_obj.status == 'Requested' and user_role == 'TEC' %}
+                                <input class="form-control" type="file" name="attachment">
+                                <div class="form-text">Upload new attachment if needed</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Action Buttons -->
                             <div class="d-flex justify-content-between mt-4">
                                 <a href="{% url 'issue_list' %}" class="btn btn-secondary">
-                                    <i class="bi bi-arrow-left"></i> Cancel
+                                    <i class="bi bi-arrow-left"></i> Back to List
                                 </a>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-send"></i> Submit Return Request
+                                
+                                {% if request_obj.status == 'Requested' and user_role == 'TEC' %}
+                                <button type="submit" name="update_request" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Update Request
                                 </button>
+                                {% endif %}
+                                
+                                {% if request_obj.status == 'Requested' and user_role == 'IM' %}
+                                <button type="submit" name="approve_request" class="btn btn-success">
+                                    <i class="bi bi-check-circle"></i> Approve
+                                </button>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                    <i class="bi bi-x-circle"></i> Reject
+                                </button>
+                                {% endif %}
+                                
+                                <!-- Add more action buttons for other statuses/roles -->
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
+            
+            <div class="col-lg-4">
+                <!-- Request History -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Request History</h5>
+                        
+                        <div class="timeline">
+                            {% for transaction in transactions %}
+                            <div class="timeline-item">
+                                <div class="timeline-point
+                                    {% if transaction.transaction_type == 'Approval' %}bg-success
+                                    {% elif transaction.transaction_type == 'Rejection' %}bg-danger
+                                    {% elif transaction.transaction_type == 'Issuance' %}bg-info
+                                    {% else %}bg-secondary{% endif %}">
+                                </div>
+                                <div class="timeline-content">
+                                    <h6>{{ transaction.get_transaction_type_display }}</h6>
+                                    <small class="text-muted">
+                                        {{ transaction.timestamp|date:"M d, Y H:i" }} by 
+                                        {{ transaction.user.get_full_name }}
+                                    </small>
+                                    {% if transaction.notes %}
+                                    <p class="mt-2">{{ transaction.notes }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
+
+    <!-- Reject Modal -->
+    <div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reject Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="{% url 'edit_request' request_obj.id %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <p>Please provide a reason for rejecting this request:</p>
+                        <textarea class="form-control" name="rejection_reason" rows="3" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" name="reject_request" class="btn btn-danger">Confirm Rejection</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 </main>
+
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 1.5rem;
+    }
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1.5rem;
+    }
+    .timeline-point {
+        position: absolute;
+        left: -0.5rem;
+        top: 0;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background-color: #0d6efd;
+    }
+    .timeline-content {
+        padding-left: 1rem;
+    }
+</style>
+
 {% endblock %}
+

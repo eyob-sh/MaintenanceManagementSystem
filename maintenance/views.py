@@ -4753,68 +4753,88 @@ def use_spare_part(request, request_id, usage_type, record_id):
 
 @login_required
 def request_return_page(request):
-    """Display the return request form for a specific part"""
+    """Handle both display and submission of spare part return requests"""
+    # Common context setup
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(
         user=request.user, 
         is_read=False
     ).order_by('-id').first()
     
-    tech_part = get_object_or_404(
-        TechnicianSparePart.objects.annotate(
-            available_quantity=F('received_quantity') - F('used_quantity')
-        ),
-        # id=part_id,
-        technician=request.user,
+    # Get available parts for the technician
+    tech_parts = TechnicianSparePart.objects.filter(
+        technician=request.user
+    ).annotate(
+        available_quantity=F('received_quantity') - F('used_quantity')
+    ).filter(
         available_quantity__gt=0
-    )
+    ).select_related('spare_part')
+    
+    # Handle POST request (form submission)
+    if request.method == 'POST':
+        part_id = request.POST.get('spare_part')
+        if not part_id:
+            messages.error(request, 'Please select a spare part')
+            return redirect('request_return_page')
+            
+        tech_part = get_object_or_404(TechnicianSparePart, id=part_id, technician=request.user)
+        
+        try:
+            return_quantity = int(request.POST.get('return_quantity', 0))
+            condition = request.POST.get('condition', '')
+            notes = request.POST.get('notes', '')
+            
+            if return_quantity <= 0:
+                messages.error(request, 'Quantity must be greater than 0')
+                return redirect('request_return_page')
+                
+            if return_quantity > tech_part.available_quantity:
+                messages.error(request, f'You only have {tech_part.available_quantity} available to return')
+                return redirect('request_return_page')
+            
+            # Create return request
+            return_request = SparePartRequest.objects.create(
+                technician=request.user,
+                spare_part=tech_part.spare_part,
+                quantity_requested=return_quantity,
+                status='Return_Requested',
+                is_return_request=True,
+                return_condition=condition,
+                return_notes=notes,
+                return_request_date=timezone.now()
+            )
+            
+            # Handle file attachment if present
+            if 'attachment' in request.FILES:
+                attachment = request.FILES['attachment']
+                return_request.return_attachment.save(attachment.name, attachment)
+            
+            # Create transaction
+            SparePartTransaction.objects.create(
+                request=return_request,
+                transaction_type='Return_Request',
+                user=request.user,
+                quantity=return_quantity,
+                notes=f'Return requested. Condition: {condition}'
+            )
+            
+            messages.success(request, 'Return request submitted successfully!')
+            return redirect('issue_list')
+            
+        except Exception as e:
+            messages.error(request, f'Error processing return: {str(e)}')
+            return redirect('request_return_page')
+    
+    # Handle GET request (form display)
+    if not tech_parts.exists():
+        messages.info(request, "You don't have any spare parts available for return.")
     
     return render(request, 'request_return_page.html', {
-        'tech_part': tech_part,
+        'tech_parts': tech_parts,
         'active_page': 'issue_list',
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
-
-
-@login_required
-def request_part_return(request, id):
-    """Technician requests to return spare parts"""
-    tech_part = get_object_or_404(TechnicianSparePart, id=id, technician=request.user)
-    
-    if request.method == 'POST':
-        return_quantity = int(request.POST.get('quantity'))
-        condition = request.POST.get('condition', '')
-        
-        if return_quantity > tech_part.available_quantity:
-            messages.error(request, f'You only have {tech_part.available_quantity} available to return')
-            return redirect('technician_inventory')
-        
-        # Create return request
-        return_request = SparePartRequest.objects.create(
-            technician=request.user,
-            spare_part=tech_part.spare_part,
-            quantity_requested=return_quantity,
-            status='Return_Requested',
-            is_return_request=True,
-            return_condition=condition,
-            return_request_date=timezone.now()
-        )
-        
-        # Create transaction
-        SparePartTransaction.objects.create(
-            request=return_request,
-            transaction_type='Return_Request',
-            user=request.user,
-            quantity=return_quantity,
-            notes=f'Return requested. Condition: {condition}'
-        )
-        
-        messages.success(request, 'Return request submitted!')
-        return redirect('issue_list')
-    
-    return render(request, 'issue_list.html')
-
 @login_required 
 def accept_return_request(request, id):
     """IM accepts the return request"""
