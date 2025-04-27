@@ -20,8 +20,8 @@
         <h1><b>{{ page_title }}</b></h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
-                <li class="breadcrumb-item active">Issue List</li>
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inventory Request</a></li>
+                <li class="breadcrumb-item active">List</li>
             </ol>
         </nav>
     </div>
@@ -32,17 +32,18 @@
                 <div class="card">
                     <div class="card-body">
                         <!-- Header with Title and New Request Button -->
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="card-title mb-0">Spare Part Requests</h5>
+                        <div class="d-flex justify-content-start align-items-center mb-4 gap-3">
                             {% if user_role == 'TEC' or user_role == 'MD manager' %}
-                            <a href="{% url 'request_spare_part_page' %}" class="btn btn-primary">
-                                <i class="bi bi-plus-circle me-1"></i> New Request
+                            <a href="{% url 'request_spare_part_page' %}" class="btn btn-success bg-success custom-btn">
+                                <i class="bi bi-plus"></i> New Request
                             </a>
-                            <a href="{% url 'request_return_page' %}" class="btn btn-warning">
-                                <i class="bi bi-arrow-return-left me-1"></i> Return
+                            &nbsp; &nbsp;
+                            <a href="{% url 'request_return_page' %}" class="btn btn-warning bg-warning custom-btn">
+                                <i class="bi bi-arrow-return-left"></i> Return
                             </a>
                             {% endif %}
                         </div>
+                        
 
                         <!-- Enhanced Status Filter -->
                         <div class="row mb-3">
@@ -124,9 +125,37 @@
                                                     class="btn btn-sm btn-outline-primary" title="{% if req.is_return_request %}Edit Return{% else %}View Details{% endif %}">
                                                         <i class="bi bi-eye"></i>
                                                 </a>
+                                                {% if req.is_return_request %}
+                                                <!-- Technician can cancel pending return -->
+                                                {% if req.status == 'Return_Request' and user == req.technician %}
+                                                <a href="{% url 'cancel_spare_part_request' req.id %}" 
+                                                class="btn btn-sm btn-outline-dark" title="Cancel Return">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </a>
+                                                {% endif %}
 
+                                                 <!-- IM can approve/reject pending returns -->
+                                                {% if req.status == 'Return_Request' and user_role == 'IM' %}
+                                                <a href="{% url 'approve_return' req.id %}" 
+                                                class="btn btn-sm btn-outline-success" title="Approve Return">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        data-bs-toggle="modal" data-bs-target="#rejectReturnModal{{ req.id }}"
+                                                        title="Reject Return">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                                {% endif %}
+
+                                                <!-- IM can complete accepted returns -->
+                                                {% if req.status == 'Return_Accepted' and user_role == 'IM' %}
+                                                <a href="{% url 'complete_return' req.id %}" 
+                                                class="btn btn-sm btn-outline-info" title="Complete Return">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </a>
+                                                {% endif %}
+                                                {% else %}
                                                 
-
                                                 <!-- Role-specific actions -->
                                                 {% if req.status == 'Requested' and user == req.technician %}
                                                 <a href="{% url 'cancel_spare_part_request' req.id %}" 
@@ -135,16 +164,27 @@
                                                 </a>
 
                                                 {% endif %}
+
+
                                                 {% if req.status == 'Requested' and user_role == 'IM' %}
-                                                <a href="{% url 'approve_spare_part_request' req.id %}" 
-                                                   class="btn btn-sm btn-outline-success" title="Approve">
-                                                    <i class="bi bi-check-lg"></i>
-                                                </a>
-                                                <a href="{% url 'reject_spare_part_request' req.id %}" 
-                                                   class="btn btn-sm btn-outline-danger" title="Reject">
-                                                    <i class="bi bi-x-lg"></i>
-                                                </a>
+                                                <form method="post" action="{% url 'approve_spare_part_request' req.id %}" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="approve">
+                                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Approve">
+                                                        <i class="bi bi-check-lg"></i>
+                                                    </button>
+                                                </form>
+                                                <form method="post" action="{% url 'approve_spare_part_request' req.id %}" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="reject">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Reject">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </button>
+                                                </form>
                                                 {% endif %}
+
+
+
                                                 
                                                 {% if req.status == 'Approved' and user_role == 'IM' %}
                                                 <a href="{% url 'issue_spare_part' req.id %}" 
@@ -169,8 +209,33 @@
                                                     <i class="bi bi-x-circle"></i>
                                                 </a>
                                                 {% endif %}
-                                                
+                                                {% endif %}
                                             </div>
+
+                                            <!-- Reject Return Modal -->
+    {% if req.is_return_request and req.status == 'Return_Request' and user_role == 'IM' %}
+    <div class="modal fade" id="rejectReturnModal{{ req.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reject Return Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="{% url 'reject_return' req.id %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <p>Reason for rejecting this return:</p>
+                        <textarea class="form-control" name="rejection_reason" rows="3" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Confirm Rejection</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
                                         </td>
                                     </tr>
                                     {% empty %}

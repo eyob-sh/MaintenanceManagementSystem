@@ -343,8 +343,8 @@
       
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'issue_list' %}collapsed{% endif %}" href="{% url 'issue_list' %}">
-          <i class="bi bi-box"></i>
-          <span>Issue</span>
+          <i class="bi bi-clipboard2-check"></i>
+          <span>Inventory Request</span>
         </a>
       </li>
 
@@ -387,14 +387,23 @@
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'restock_list' %}collapsed{% endif %}" href="{% url 'restock_list' %}">
           <i class="bi bi-box"></i>
-          <span>Restock Spare Part</span>
+          <span>Restock</span>
         </a>
       </li>
 
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'issue_list' %}collapsed{% endif %}" href="{% url 'issue_list' %}">
-          <i class="bi bi-box"></i>
-          <span>Issue</span>
+          <i class="bi bi-clipboard2-check"></i>
+          <span>Inventory Request</span>
+        </a>
+      </li>
+
+
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'low_spare_part' %}collapsed{% endif %}"
+          href="{% url 'low_spare_part' %}">
+          <i class="bi bi-exclamation-triangle text-danger"></i>
+          <span>Low Spare Part</span>
         </a>
       </li>
       {% endif %}
@@ -527,7 +536,7 @@
         </a>
       </li>
       {% endif %}
-
+      
       <!-- Logout (Visible to Everyone) -->
       <li class="nav-item">
         <a class="nav-link collapsed" href="{% url 'logout' %}">

@@ -4,11 +4,11 @@
 {% block content %}
 <main id="main" class="main">
     <div class="pagetitle">
-        <h1>Process Return #REQ-{{ request_obj.id|stringformat:"04d" }}</h1>
+        <h1>Return #REQ-{{ request_obj.id|stringformat:"04d" }}</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'issue_list' %}">Issue List</a></li>
-                <li class="breadcrumb-item active">Process Return</li>
+                <li class="breadcrumb-item">Inventory Request</li>
+                <li class="breadcrumb-item active">Return</li>
             </ol>
         </nav>
     </div>
@@ -83,8 +83,8 @@
                             <div class="timeline-item">
                                 <div class="timeline-point
                                     {% if transaction.transaction_type == 'Return_Request' %}bg-warning
-                                    {% elif transaction.transaction_type == 'Return_Acceptance' %}bg-success
-                                    {% elif transaction.transaction_type == 'Return_Completed' %}bg-primary
+                                    {% elif transaction.transaction_type == 'Approval' %}bg-success
+                                    {% elif transaction.transaction_type == 'Return' %}bg-primary
                                     {% endif %}">
                                 </div>
                                 <div class="timeline-content">
@@ -146,6 +146,7 @@
         width: 1rem;
         height: 1rem;
         border-radius: 50%;
+        background-color: #0d6efd; /* Add this line */
     }
     .timeline-content {
         padding-left: 1rem;

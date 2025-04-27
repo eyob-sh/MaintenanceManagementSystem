@@ -401,7 +401,7 @@ class SparePartRequest(models.Model):
         ('Rejected', 'Rejected'),
         ('Issued', 'Issued'),
         ('Received', 'Received'),
-        ('canceled', 'canceled'),
+        ('Canceled', 'Canceled'),
         # ('Used', 'Used'),
         ('Return_Request', 'Return Request'),  # New status
         ('Return_Accepted', 'Accepted Returns'),    # New status
@@ -470,7 +470,7 @@ class SparePartTransaction(models.Model):
         ('Issuance', 'Issuance'),
         ('Usage', 'Usage'),
         ('Return', 'Return'),
-        ('cancellation', 'cancellation'),
+        ('Cancellation', 'Cancellation'),
         ('Receipt', 'Receipt'),
     ]
     

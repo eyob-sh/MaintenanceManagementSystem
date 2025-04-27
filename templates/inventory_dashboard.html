@@ -5,12 +5,370 @@
 <main id="main" class="main">
     <div class="pagetitle">
         <h1><b>Dashboard</b></h1>
-        <br>
-        
     </div><!-- End Page Title -->
+    <br>
 
+    <section class="section dashboard">
+        <div class="row">
+            <!-- Total Spare Parts Card -->
+            <div class="col-xxl-3 col-md-4">
+                <div class="card info-card sales-card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Total Spare Parts</h5>
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon rounded-circle d-flex align-items-center justify-content-center" style="font-size: 14px;">
+                                <i class="bi bi-box-seam"></i>
+                            </div>
+                            <div class="ps-3">
+                                <h6>{{ total_spare_parts }}</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- End Total Spare Parts Card -->
 
+            <!-- Low Stock Card -->
+            <div class="col-xxl-3 col-md-4">
+                <div class="card info-card revenue-card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Low Stock Items</h5>
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon rounded-circle d-flex align-items-center justify-content-center" style="font-size: 14px;">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+                            <div class="ps-3">
+                                <h6>{{ low_stock_parts }}</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- End Low Stock Card -->
 
-    </main>
+            <!-- Out of Stock Card -->
+            <div class="col-xxl-3 col-md-4">
+                <div class="card info-card customers-card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Out of Stock</h5>
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon rounded-circle d-flex align-items-center justify-content-center" style="font-size: 14px;">
+                                <i class="bi bi-x-circle"></i>
+                            </div>
+                            <div class="ps-3">
+                                <h6>{{ out_of_stock_parts }}</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- End Out of Stock Card -->
 
-    {% endblock %}
+            <!-- Pending Requests Card -->
+            <div class="col-xxl-3 col-md-4">
+                <div class="card info-card sales-card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Pending Requests</h5>
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon rounded-circle d-flex align-items-center justify-content-center" style="font-size: 14px;">
+                                <i class="bi bi-clipboard"></i>
+                            </div>
+                            <div class="ps-3">
+                                <h6>{{ pending_requests }}</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- End Pending Requests Card -->
+        </div>
+
+        <!-- Charts Section -->
+        <div class="row mt-4">
+            <!-- Monthly Requests Chart -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Monthly Requests</h5>
+                        <canvas id="monthlyRequestsChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div><!-- End Monthly Requests Chart -->
+
+            <!-- Request Status Distribution -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Request Status Distribution</h5>
+                        <canvas id="statusDistributionChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div><!-- End Request Status Distribution -->
+        </div>
+
+        <!-- Most Requested Parts by Month -->
+        <div class="row mt-4">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Most Requested Parts by Month</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>1st Most Requested</th>
+                                        <th>2nd Most Requested</th>
+                                        <th>3rd Most Requested</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for month_data in most_requested_by_month %}
+                                    <tr>
+                                        <td>{{ month_data.month }}</td>
+                                        {% for part in month_data.parts %}
+                                        <td>
+                                            {{ part.spare_part__name }} 
+                                            <span class="badge bg-primary">{{ part.total_requested }} units</span>
+                                        </td>
+                                        {% endfor %}
+                                        {% if month_data.parts|length < 3 %}
+                                            {% for i in "xx"|make_list %}
+                                                {% if forloop.counter > month_data.parts|length %}
+                                                    <td>-</td>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endif %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- End Most Requested Parts by Month -->
+
+        <!-- Restock Alerts and Recent Requests -->
+        <div class="row mt-4">
+            <!-- Restock Alerts -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Restock Alerts</h5>
+                        {% if restock_alerts %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Part Name</th>
+                                        <th>Available Qty</th>
+                                        <th>Min Qty</th>
+                                        <th>Store</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for part in restock_alerts %}
+                                    <tr>
+                                        <td>{{ part.name }}</td>
+                                        <td>{{ part.get_available_quantity }}</td>
+                                        <td>{{ part.min_quantity }}</td>
+                                        <td>{{ part.store }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-success">No restock alerts at this time.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div><!-- End Restock Alerts -->
+
+            <!-- Recent Requests -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Recent Requests</h5>
+                        {% if recent_requests %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Part</th>
+                                        <th>Technician</th>
+                                        <th>Qty</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for request in recent_requests %}
+                                    <tr>
+                                        <td>{{ request.spare_part.name }}</td>
+                                        <td>{{ request.technician.username }}</td>
+                                        <td>{{ request.quantity_requested }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if request.status == 'Requested' %}bg-warning
+                                                {% elif request.status == 'Approved' %}bg-primary
+                                                {% elif request.status == 'Issued' %}bg-info
+                                                {% elif request.status == 'Received' %}bg-success
+                                                {% elif request.status == 'Rejected' %}bg-danger
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ request.status }}
+                                            </span>
+                                        </td>
+                                        <td>{{ request.request_date|date:"Y-m-d H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">No recent requests found.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div><!-- End Recent Requests -->
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="row mt-4">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-size: 14px;">Recent Transactions</h5>
+                        {% if recent_transactions %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Part</th>
+                                        <th>Qty</th>
+                                        <th>User</th>
+                                        <th>Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for transaction in recent_transactions %}
+                                    <tr>
+                                        <td>{{ transaction.get_transaction_type_display }}</td>
+                                        <td>{{ transaction.request.spare_part.name }}</td>
+                                        <td>{{ transaction.quantity }}</td>
+                                        <td>{{ transaction.user.username }}</td>
+                                        <td>{{ transaction.timestamp|date:"Y-m-d H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">No recent transactions found.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div><!-- End Recent Transactions -->
+    </section>
+</main><!-- End #main -->
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Monthly Requests Chart
+    const monthlyCtx = document.getElementById('monthlyRequestsChart');
+    if (monthlyCtx) {
+        new Chart(monthlyCtx, {
+            type: 'line',
+            data: {
+                labels: [
+                    {% for month in monthly_requests %}
+                        "{{ month.month|date:'M Y' }}",
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Number of Requests',
+                    data: [
+                        {% for month in monthly_requests %}
+                            {{ month.count }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Requests'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Status Distribution Chart
+    const statusCtx = document.getElementById('statusDistributionChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    {% for status in status_distribution %}
+                        "{{ status.status }}",
+                    {% endfor %}
+                ],
+                datasets: [{
+                    data: [
+                        {% for status in status_distribution %}
+                            {{ status.count }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: [
+                        '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796'
+                    ],
+                    hoverBackgroundColor: [
+                        '#2e59d9', '#17a673', '#2c9faf', '#dda20a', '#be2617', '#656774'
+                    ],
+                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                }],
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                cutout: '70%',
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

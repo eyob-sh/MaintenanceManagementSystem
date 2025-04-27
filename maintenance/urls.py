@@ -119,7 +119,6 @@ path('request/<int:id>/reject/', views.reject_spare_part_request, name='reject_s
 path('request/<int:id>/issue/', views.issue_spare_part, name='issue_spare_part'),
 path('request/<int:id>/cancel/', views.cancel_spare_part_request, name='cancel_spare_part_request'),
 # path('request/<int:id>/return/', views.return_spare_part, name='return_spare_part'),
-path('request/<int:id>/use/', views.use_spare_part, name='use_spare_part'),
 path('request/<int:id>/accept/', views.accept_issued_part, name='accept_issued_part'),
 
 

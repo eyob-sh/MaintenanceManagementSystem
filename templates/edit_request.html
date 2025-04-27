@@ -6,7 +6,7 @@
 <main id="main" class="main">
 
     <div class="pagetitle">
-        <h1>Edit Request #REQ-{{ request.id|stringformat:"04d" }}</h1>
+        <h1>Edit Request #REQ-{{ request_obj.id|stringformat:"04d" }}</h1>
         <nav>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{% url 'issue_list' %}">Issue List</a></li>
