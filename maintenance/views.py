@@ -590,7 +590,9 @@ def edit_work_order(request, id):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
-    spare_parts = SparePart.objects.filter(branch=user_branch)
+    spare_parts = TechnicianSparePart.objects.filter(
+        technician=request.user
+    ).select_related('spare_part')
     work_order = get_object_or_404(WorkOrder, id=id)
     assigned_technician_ids = work_order.assigned_technicians.values_list('id', flat=True)
     equipments = Equipment.objects.filter(branch=user_branch)
@@ -660,9 +662,14 @@ def edit_work_order(request, id):
                 # Step 3: Add back the old quantities to the spare parts
                 spare_part_usages = SparePartUsage.objects.filter(work_order=work_order)
                 for usage in spare_part_usages:
-                    spare_part = usage.spare_part
-                    spare_part.quantity += usage.quantity_used
-                    spare_part.save()
+                    tech_spare = TechnicianSparePart.objects.get(
+                        technician=request.user,
+                        spare_part=usage.spare_part
+                    )
+                    # spare_part = usage.spare_part
+                    tech_spare.used_quantity -= usage.quantity_used
+                    tech_spare.save()
+
 
                 # Step 4: Process the new spare parts and quantities (only for Technician and if not approved)
                 if request.user.userprofile.role == 'TEC' and work_order.status != 'Approved':
@@ -686,20 +693,24 @@ def edit_work_order(request, id):
                         # Get the spare part
                         spare_part = SparePart.objects.get(id=spare_part_id)
 
+                        tech_spare = TechnicianSparePart.objects.get(
+                        technician=request.user,
+                        spare_part=spare_part
+                    )
+
                         # Check if the new quantity exceeds the available stock
-                        if spare_part.quantity < quantity_used:
+                        if tech_spare.available_quantity < quantity_used:
                             messages.error(request, f'Not enough quantity for {spare_part.name}. Available: {spare_part.quantity}')
                             # Rollback the old quantities
                             for usage in spare_part_usages:
-                                spare_part = usage.spare_part
-                                spare_part.quantity -= usage.quantity_used
-                                spare_part.save()
+                                tech_spare.used_quantity += usage.quantity_used
+                                tech_spare.save()
                             return redirect('edit_work_order', id=work_order.id)
 
                         # Deduct the new quantity from the spare part
-                        spare_part.quantity -= quantity_used
-                        spare_part.save()
-                        check_low_spare_parts(spare_part)
+                        # spare_part.quantity -= quantity_used
+                        # spare_part.save()
+                        # check_low_spare_parts(spare_part)
 
                         # Create or update the SparePartUsage record
                         SparePartUsage.objects.update_or_create(
@@ -707,6 +718,15 @@ def edit_work_order(request, id):
                             spare_part=spare_part,
                             defaults={'quantity_used': quantity_used},
                         )
+
+                        req = tech_spare.request
+                    SparePartTransaction.objects.update_or_create(
+                       request = req, 
+                       transaction_type='Usage',
+                    user=request.user,
+                    quantity=quantity_used,
+                    notes=f'Used in work order #{work_order}'
+                    )
 
                     # Step 5: Delete any remaining spare part usages that were not in the form
                     SparePartUsage.objects.filter(work_order=work_order).exclude(
@@ -1780,8 +1800,9 @@ def edit_maintenance(request, id):
                         return redirect(f'{request.path}?equipment={equipment_id}&maintenance_task={maintenance_task.id}&error=1')
 
                     # Update spare part quantity
-                    tech_spare.used_quantity += quantity_used
-                    tech_spare.save()
+                    #-------------------the double subtraction i was encountering
+                    # tech_spare.used_quantity += quantity_used
+                    # tech_spare.save()
                     
 
                     # Create/update usage record
