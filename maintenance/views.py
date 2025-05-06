@@ -57,6 +57,25 @@ from .forms import EquipmentForm, SparePartForm, MaintenanceRecordForm, Manufact
 from .resources import EquipmentResource
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.contrib.auth.decorators import user_passes_test
+
+def is_md(user):
+    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'MD manager'
+
+def is_tec(user):
+    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'TEC'
+
+def is_mo(user):
+    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'MO'
+
+def is_im(user):
+    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'IM'
+
+def is_cl(user):
+    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'CL'
+
+def is_ad(user):
+    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'AD'
 
 
 # Create your views here.
@@ -169,7 +188,7 @@ def my_profile(request):
         
     })
 
-
+@user_passes_test(lambda u: is_ad(u), login_url=None)
 def user_profile_list(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -185,6 +204,7 @@ def user_profile_list(request):
     }
     return render(request, 'user_profile_list.html', context)
 
+@user_passes_test(lambda u: is_ad(u), login_url=None)
 def add_user_profile_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -206,7 +226,7 @@ def add_user_profile_page(request):
     }
     return render(request, 'add_user_profile.html', context)
 
-
+@user_passes_test(lambda u: is_ad(u), login_url=None)
 def add_user_profile(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -294,6 +314,7 @@ def check_username(request):
     exists = User.objects.filter(username=username).exists()
     return JsonResponse({'exists': exists})
 
+@user_passes_test(lambda u: is_ad(u), login_url=None)
 def branch_list(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -309,6 +330,7 @@ def branch_list(request):
     }
     return render(request, 'branch_list.html', context)
 
+@user_passes_test(lambda u: is_ad(u), login_url=None)
 def add_branch_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -317,7 +339,7 @@ def add_branch_page(request):
 
 
 
-
+@user_passes_test(lambda u: is_ad(u), login_url=None)
 def add_branch(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -334,6 +356,7 @@ def add_branch(request):
     # Render the form in the template
     return render(request, 'add_branch.html', {'form': form,  'active_page': 'branch_list','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
 
+@user_passes_test(lambda u: is_ad(u), login_url=None)
 def edit_branch(request, id):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -353,7 +376,7 @@ def get_notifications(user):
     return Notification.objects.filter(user=user, is_read=False).order_by('-timestamp')[:10]
 
 
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u), login_url=None)
 def manufacturer_list(request):
     user_branch = request.user.userprofile.branch
     
@@ -377,6 +400,7 @@ def manufacturer_list(request):
     }
     return render(request, 'manufacturer_list.html', context)
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
 def add_manufacturer_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -387,6 +411,7 @@ def add_manufacturer_page(request):
     
     return render(request, 'add_manufacturer.html', context)
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u), login_url=None)
 def add_manufacturer(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -432,6 +457,7 @@ def add_manufacturer(request):
 
     return render(request, 'add_manufacturer.html', {'active_page': 'manufacturer_list', 'branch': branch, 'notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u), login_url=None)
 def edit_manufacturer(request, id):
     manufacturer = get_object_or_404(Manufacturer, id=id)
     branch = request.user.userprofile.branch
@@ -459,6 +485,8 @@ def edit_manufacturer(request, id):
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
+
+@user_passes_test(lambda u: is_tec(u) or is_md(u), login_url=None)
 def delete_manufacturer(request, id):
     manufacturer = get_object_or_404(Manufacturer, id=id)
     notifications = get_notifications(request.user)
@@ -496,7 +524,7 @@ def delete_manufacturer(request, id):
 
 
 #----------------------------------------------------------------------------------
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) or is_cl(u), login_url=None)
 def work_order_list(request):
     user_branch = request.user.userprofile.branch
     
@@ -520,7 +548,7 @@ def work_order_list(request):
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'work_order_list.html', context)
-
+@user_passes_test(lambda u: is_md(u) or is_cl(u),  login_url=None)
 def add_work_order_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -536,7 +564,7 @@ def add_work_order_page(request):
         'latest_notification_id': latest_notification.id if latest_notification else 0,
 
     })
-
+@user_passes_test(lambda u: is_md(u) or is_cl(u),  login_url=None)
 def add_work_order(request):
     notifications = get_notifications(request.user)
 
@@ -548,7 +576,7 @@ def add_work_order(request):
         remark = request.POST.get('remark')
         status = 'Pending'  # Default status
         if(request.user.userprofile.role == 'MD manager'):
-            status = 'Accepted'
+            status = 'Price_Confirmed'
 
         if not branch or not description:
             messages.error(request, 'Please fill out all required fields.')
@@ -578,7 +606,7 @@ def add_work_order(request):
                         message=f'New work order: {work_order.location}.',
                     )
                     notification_created.send(sender=Notification)
-
+            
             return redirect('work_order_list')
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
@@ -586,6 +614,7 @@ def add_work_order(request):
 
     return redirect('add_work_order_page')
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_cl(u) or is_mo(u),  login_url=None)
 def edit_work_order(request, id):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
@@ -720,13 +749,13 @@ def edit_work_order(request, id):
                         )
 
                         req = tech_spare.request
-                    SparePartTransaction.objects.update_or_create(
-                       request = req, 
-                       transaction_type='Usage',
-                    user=request.user,
-                    quantity=quantity_used,
-                    notes=f'Used in work order #{work_order}'
-                    )
+                        SparePartTransaction.objects.update_or_create(
+                        request = req, 
+                        transaction_type='Usage',
+                        user=request.user,
+                        quantity=quantity_used,
+                        notes=f'Used ({quantity_used}) in work order #{work_order}'
+                        )
 
                     # Step 5: Delete any remaining spare part usages that were not in the form
                     SparePartUsage.objects.filter(work_order=work_order).exclude(
@@ -761,7 +790,7 @@ def edit_work_order(request, id):
 #------------------------------------------------------------------------------------
 
 
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) or is_im(u), login_url=None)
 def spare_part_usage_list(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -784,6 +813,7 @@ def spare_part_usage_list(request):
     }
     return render(request, 'spare_part_usage_list.html', context)
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) or is_im(u), login_url=None)
 def add_spare_part_usage_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -799,6 +829,7 @@ def add_spare_part_usage_page(request):
     'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) or is_im(u), login_url=None)
 def add_spare_part_usage(request):
     if request.method == 'POST':
         maintenance_record_id = request.POST.get('maintenance_record')
@@ -823,6 +854,7 @@ def add_spare_part_usage(request):
 
     return redirect('add_spare_part_usage_page')
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) or is_im(u), login_url=None)
 def edit_spare_part_usage(request, id):
     spare_part_usage = get_object_or_404(SparePartUsage, id=id)
     notifications = get_notifications(request.user)
@@ -844,6 +876,7 @@ def edit_spare_part_usage(request, id):
     return render(request, 'edit_spare_part_usage.html', {'form': form, 'spare_part_usage': spare_part_usage, 'active_page': 'spare_part_usage_list', 'notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
 
 #------------------------------------------------------------------------------------
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u), login_url=None)
 def decommissioned_equipment_list(request):
     user_branch = request.user.userprofile.branch
     if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
@@ -864,6 +897,7 @@ def decommissioned_equipment_list(request):
     }
     return render(request, 'decommissioned_equipment_list.html', context)
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
 def add_decommissioned_equipment_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -872,6 +906,7 @@ def add_decommissioned_equipment_page(request):
         'equipments': equipments,'active_page': 'decommissioned_equipment_list','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
 def add_decommissioned_equipment(request):
     if request.method == 'POST':
         equipment_id = request.POST.get('equipment')
@@ -901,7 +936,7 @@ def add_decommissioned_equipment(request):
 
     return redirect('add_decommissioned_equipment_page')
 
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) , login_url=None)
 def edit_decommissioned_equipment(request, id):
     decommissioned_equipment = get_object_or_404(DecommissionedEquipment, id=id)
     notifications = get_notifications(request.user)
@@ -925,6 +960,7 @@ def edit_decommissioned_equipment(request, id):
 
 
 #--------------------------------------------------------------------------------------
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u), login_url=None)
 def maintenance_task_list(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
@@ -943,6 +979,7 @@ def maintenance_task_list(request):
     }
     return render(request, 'maintenance_task_list.html', context)
 
+@user_passes_test(lambda u: is_mo(u), login_url=None)
 def add_maintenance_task_page(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
@@ -953,7 +990,7 @@ def add_maintenance_task_page(request):
 })
 
 
-
+@user_passes_test(lambda u: is_mo(u), login_url=None)
 def add_maintenance_task(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
@@ -985,6 +1022,8 @@ def add_maintenance_task(request):
         'maintenance_task_form': maintenance_task_form,
         'frequencies': ['daily', 'weekly', 'monthly', 'biannual', 'annual'],
     })
+@user_passes_test(lambda u: is_mo(u) or is_md(u) or is_tec(u), login_url=None)
+
 def edit_maintenance_task(request, id):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
@@ -1047,6 +1086,8 @@ def edit_maintenance_task(request, id):
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
+
+@user_passes_test(lambda u: is_mo(u), login_url=None)
 def delete_maintenance_task(request, id):
     # Fetch the MaintenanceTask instance or return a 404 error if not found
     maintenancetask = get_object_or_404(MaintenanceTask, id=id)
@@ -1170,8 +1211,7 @@ def delete_task(request, task_id):
     return JsonResponse({'success': False})
 #--------------------------------------------------------------------------------------------
 
-
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u), login_url=None)
 def equipment_list(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
@@ -1201,6 +1241,7 @@ def equipment_list(request):
         'equipment_types': equipment_types,
     }
     return render(request, 'equipment_list.html', context)
+@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
 def add_equipment_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1220,7 +1261,7 @@ def add_equipment_page(request):
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
 def add_equipment(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1321,6 +1362,8 @@ def add_equipment(request):
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'equipment.html', context)
+
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) , login_url=None)
 def edit_equipment(request, id):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1360,7 +1403,7 @@ def edit_equipment(request, id):
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
 def delete_equipment(request, id):
     equipment = get_object_or_404(Equipment, id=id)
     notifications = get_notifications(request.user)
@@ -1397,7 +1440,7 @@ def delete_equipment(request, id):
     })
 
 #-----------------------------------------------------------------------------------------------
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) , login_url=None)
 def spare_part_list(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1420,6 +1463,7 @@ def spare_part_list(request):
     }
     return render(request, 'spare_part_list.html', context)
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
 def add_spare_part_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1435,6 +1479,7 @@ def add_spare_part_page(request):
 
             })
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
 def add_spare_part(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1494,6 +1539,7 @@ def add_spare_part(request):
     # For GET requests, render the form with branches
     return render(request, 'add_spare_part.html', context)
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u), login_url=None)
 def edit_spare_part(request, id):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1525,7 +1571,7 @@ def edit_spare_part(request, id):
         
 
     
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u), login_url=None)
 def add_maintenance_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1548,6 +1594,7 @@ def add_maintenance_page(request):
     }
     return render(request, 'add_maintenance.html', context)
 
+@user_passes_test(lambda u: is_tec(u) or is_md(u), login_url=None)
 def add_maintenance(request):
     user_branch = request.user.userprofile.branch
     notifications = get_notifications(request.user)
@@ -1650,6 +1697,8 @@ def add_maintenance(request):
             return render(request, 'add_maintenance.html', context)
 
     return render(request, 'add_maintenance.html', context)
+
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u), login_url=None)
 def maintenance_list(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1675,11 +1724,7 @@ def maintenance_list(request):
 #-----------------------------------------------------------------
 
 
-
-
-
-
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u), login_url=None)
 def edit_maintenance(request, id):
     # Get notifications and user info
     notifications = get_notifications(request.user)
@@ -1817,7 +1862,7 @@ def edit_maintenance(request, id):
                        transaction_type='Usage',
                     user=request.user,
                     quantity=quantity_used,
-                    notes=f'Used in maintenance #{maintenance}'
+                    notes=f'Used ({quantity_used}) in maintenance #{maintenance}'
                     )
 
                 # Step 6: Clean up unused spare parts
@@ -1890,6 +1935,7 @@ def edit_maintenance(request, id):
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 #------------------------------------------------------------delete maintenance------------------------------------------
+@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
 def delete_maintenance(request, id):
     # Fetch the MaintenanceRecord instance or return a 404 error if not found
     maintenance_record = get_object_or_404(MaintenanceRecord, id=id)
@@ -2356,7 +2402,7 @@ def low_spare_part(request):
     return render(request, 'low_spare_part.html', context)
 
 
-
+@user_passes_test(lambda u: is_im(u), login_url=None)
 def restock_spare_part(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -2397,6 +2443,8 @@ def restock_spare_part(request):
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     }
     return render(request, 'restock_spare_part.html', context)
+
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) or is_im(u), login_url=None)
 def restock_list(request):
     # Get the user's branch
     user_branch = request.user.userprofile.branch
@@ -2423,7 +2471,7 @@ def restock_list(request):
 
     return render(request, 'restock_list.html', context)
 
-
+@user_passes_test(lambda u: is_im(u), login_url=None)
 def restock_spare_part_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -2666,7 +2714,7 @@ def import_data(request, model_name):
         'latest_notification_id': latest_notification.id if latest_notification else 0,
     })
 #------------------------------------------------------------------------------------------------------------
-
+@user_passes_test(lambda u: is_tec(u) or is_md(u), login_url=None)
 def maintenance_dashboard(request):
     user = request.user
     notifications = get_notifications(request.user)
@@ -2818,7 +2866,9 @@ def maintenance_dashboard(request):
     return render(request, 'maintenance_dashboard.html', context)
 
 #----------------------------------------------------------------------------------------
+
 @login_required
+@user_passes_test(lambda u: is_im(u), login_url=None)
 def inventory_dashboard(request):
     # Spare part statistics
     notifications = get_notifications(request.user)
@@ -4057,6 +4107,7 @@ def generate_editable_doc_work_order_all_branches(work_orders, from_date, to_dat
 
     return response
 #--------------------------------------------------------------------------------------------------------
+@user_passes_test(lambda u: is_mo(u), login_url=None)
 def maintenance_oversight_dashboard(request):
     user = request.user
     notifications = get_notifications(request.user)
@@ -4270,7 +4321,7 @@ def export_maintenance_report_pdf(request):
 
 
 
-
+@user_passes_test(lambda u: is_ad(u), login_url=None)
 def dashboard(request):
     # Check if the user is an admin (AD)
     if request.user.userprofile.role != 'AD':
@@ -4329,6 +4380,7 @@ def dashboard(request):
 
     return render(request, 'dashboard.html', context)
 
+@user_passes_test(lambda u: is_cl(u), login_url=None)
 def client_dashboard(request):
     user = request.user
     notifications = get_notifications(request.user)
@@ -4462,7 +4514,7 @@ def notification_stream(request):
     response['Cache-Control'] = 'no-cache'
     return response
 
-
+@user_passes_test(lambda u: is_ad(u), login_url=None)
 def audit_logs(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -4511,7 +4563,7 @@ def audit_logs(request):
     }
     return render(request, 'audit_log.html', context)
 
-
+@user_passes_test(lambda u: is_ad(u), login_url=None)
 def login_events(request):
     # Get notifications (adjust according to your notification system)
     notifications = get_notifications(request.user)

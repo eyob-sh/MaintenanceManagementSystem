@@ -228,7 +228,7 @@ class SparePart(models.Model):
     quantity = models.IntegerField()              # Quantity left in stock
     description = models.TextField(blank=True)    # Description of the spare part
     part_number = models.CharField(max_length=100)  # Unique part identifier
-    price = models.DecimalField(max_digits=10, decimal_places=2)  # Price of the spare part
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Price of the spare part
     date_added = models.DateField(auto_now_add=True)  # Date when the part was added
     last_updated = models.DateField(auto_now=True)  # Date when the part was last updated
     last_restock_date = models.DateTimeField(null=True)
