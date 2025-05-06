@@ -183,7 +183,8 @@ def my_profile(request):
     return render(request, 'my_profile.html', {
         'user_profile': user_profile,
                 'active_page': 'profile',
-                'notifications':notifications
+                'notifications':notifications,
+                'latest_notification_id': latest_notification.id if latest_notification else 0,
 
         
     })
