@@ -1441,7 +1441,7 @@ def delete_equipment(request, id):
     })
 
 #-----------------------------------------------------------------------------------------------
-@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) , login_url=None)
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) or is_im(u) , login_url=None)
 def spare_part_list(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1464,7 +1464,7 @@ def spare_part_list(request):
     }
     return render(request, 'spare_part_list.html', context)
 
-@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
+@user_passes_test(lambda u: is_im(u), login_url=None)
 def add_spare_part_page(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1480,7 +1480,7 @@ def add_spare_part_page(request):
 
             })
 
-@user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
+@user_passes_test(lambda u: is_im(u) , login_url=None)
 def add_spare_part(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1540,7 +1540,7 @@ def add_spare_part(request):
     # For GET requests, render the form with branches
     return render(request, 'add_spare_part.html', context)
 
-@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u), login_url=None)
+@user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u) or is_im(u), login_url=None)
 def edit_spare_part(request, id):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
@@ -1550,7 +1550,7 @@ def edit_spare_part(request, id):
     form = SparePartForm(instance=spare_part)
 
     if request.method == 'POST':
-        if request.user.userprofile.role in ["MD manager", "TEC"]:
+        if request.user.userprofile.role in ["IM"]:
             form = SparePartForm(request.POST, instance=spare_part)
             if form.is_valid():
                 form.save()  # Save the changes to the database

@@ -87,20 +87,46 @@ class SparePartForm(forms.ModelForm):
             'price',
             'description',
             'last_restock_date',
-
         ]
 
     def __init__(self, *args, **kwargs):
         super(SparePartForm, self).__init__(*args, **kwargs)
-        # Loop through the fields and add the 'form-control' class
+        
+        # Add Bootstrap class to all fields
         for field in self.fields.values():
-            field.widget.attrs.update({'class': 'form-control'})  # Add the Bootstrap class
+            field.widget.attrs.update({'class': 'form-control'})
             
-        if self.instance and self.instance.pk:  # Check if the form is for an existing instance
-            self.fields['branch'].disabled = True  # Disable the field
-            self.fields['branch'].widget.attrs['readonly'] = True  # Make it read-only
+        if self.instance and self.instance.pk:
+            # Instead of disabling, make them readonly and set required=False
+            self.fields['branch'].widget.attrs['readonly'] = True
+            self.fields['branch'].required = False
+            
             self.fields['quantity'].widget.attrs['readonly'] = True
+            self.fields['quantity'].required = False
+            
             self.fields['last_restock_date'].widget.attrs['readonly'] = True
+            self.fields['last_restock_date'].required = False
+
+    def clean_branch(self):
+        """Ensure branch field gets its value from instance when readonly"""
+        instance = getattr(self, 'instance', None)
+        if instance and instance.pk:
+            return instance.branch
+        return self.cleaned_data.get('branch')
+
+    def clean_quantity(self):
+        """Ensure quantity field gets its value from instance when readonly"""
+        instance = getattr(self, 'instance', None)
+        if instance and instance.pk:
+            return instance.quantity
+        return self.cleaned_data.get('quantity')
+
+    def clean_last_restock_date(self):
+        """Ensure last_restock_date field gets its value from instance when readonly"""
+        instance = getattr(self, 'instance', None)
+        if instance and instance.pk:
+            return instance.last_restock_date
+        return self.cleaned_data.get('last_restock_date')
 
 class RestockSparePartForm(forms.ModelForm):
     class Meta:

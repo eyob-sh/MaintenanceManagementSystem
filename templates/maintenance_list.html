@@ -37,18 +37,16 @@
                         <!-- Add Maintenance Button and Import/Export Buttons -->
                         <!-- <div class="d-flex justify-content-between align-items-center mb-3"> -->
                             
-                            <div class="button-group-container mb-4" style="margin-top: 1rem;">
-                                {% if user_role == 'TEC' or user_role == 'MD manager' %}
-                                <div class="d-flex align-items-center gap-2">
-                                    <a href="{% url 'request_spare_part_page' %}" class="btn btn-success btn-sm py-1 px-3" style="border-radius: 4px;">
-                                        <i class="bi bi-plus-circle me-1"></i> New Request
-                                    </a>
-                                    <a href="{% url 'request_return_page' %}" class="btn btn-outline-secondary btn-sm py-1 px-3" style="border-radius: 4px;">
-                                        <i class="bi bi-arrow-return-left me-1"></i> Return
-                                    </a>
-                                </div>
-                                {% endif %}
+                            {% if request.user.userprofile.role in "MD manager" %}
+                            <!-- Add Maintenance Button -->
+                            <div class="d-flex justify-content-end mb-3">
+                                <a href="{% url 'add_maintenance' %}" class="btn btn-success bg-success custom-btn">
+                                    <i class="bi bi-plus"></i> Add Maintenance
+                                </a>
                             </div>
+                            {% endif %}
+                        <!-- </div> -->
+
                         <!-- </div> -->
 
                         <!-- Maintenance List Table -->

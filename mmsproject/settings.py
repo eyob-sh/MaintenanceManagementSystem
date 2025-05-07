@@ -26,6 +26,10 @@ SECRET_KEY = 'django-insecure-7&dufb4c)q2x8k69iq-t!0-ptr#6$2%rwzw9cs%2%f$85p#2ex
 DEBUG = False
 
 ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = [
+    'http://mms.ipdc.gov.et:8081',  # Add your exact domain + port
+    'https://mms.ipdc.gov.et',      # Include if using HTTPS later
+]
 
 # Application definition
 
