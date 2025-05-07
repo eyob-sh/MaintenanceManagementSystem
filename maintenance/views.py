@@ -58,6 +58,8 @@ from .resources import EquipmentResource
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import user_passes_test
+from django.views.decorators.cache import never_cache
+
 
 def is_md(user):
     return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'MD manager'
@@ -104,7 +106,7 @@ def custom_404_view(request, exception):
 def custom_403_view(request, exception):
     return render(request, '404.html', status=403)
 
-
+@never_cache
 def loginPage(request):
 
     if request.method == 'POST':
@@ -138,7 +140,7 @@ def loginPage(request):
     context = {}
     return render(request, 'login_page.html', context)
 
-
+@never_cache
 def logoutUser(request):
     logout(request)
     return redirect('login')
