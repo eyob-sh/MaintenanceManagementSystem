@@ -122,7 +122,7 @@ def loginPage(request):
 
         user = authenticate(request, username = username, password = password)
 
-        if user is not None:
+        if user is not None and not user.is_superuser:
             login(request, user)
             if (request.user.userprofile.role in 'MD manager, TEC'):
                 return redirect('maintenance_dashboard')
@@ -2783,7 +2783,7 @@ def maintenance_dashboard(request):
     ).count()
     completed_work_orders = WorkOrder.objects.filter(
         branch=user_branch,
-        status='Complete',
+        status='Approved',
         created_at__range=[from_date, to_date]
     ).count()
 
@@ -2817,7 +2817,7 @@ def maintenance_dashboard(request):
             branch=user_branch,
             created_at__month=i,
             created_at__year=datetime.now().year,
-            status='Complete'
+            status='Approved'
         ).count()
         pending_work_orders_by_month.append(pending_count)
         completed_work_orders_by_month.append(completed_count)

@@ -235,10 +235,16 @@
 
 
       <li class="nav-heading">Reports and Analytics</li>
+      
+      {% if request.user.userprofile.role in "CL" and not request.user.is_superuser %}
+        <li class="nav-item">
+        <a class="nav-link {% if active_page != 'dashboard' %}collapsed{% endif %}" href="{% url 'client_dashboard' %}">
+          <i class="bi bi-grid"></i>
+          <span>Dashboard</span>
+        </a>
+      </li>
 
-
-
-      {% if request.user.userprofile.role in "MD manager TEC" and not request.user.is_superuser %}
+      {% elif request.user.userprofile.role in "MD manager TEC" and not request.user.is_superuser %}
 
       <li class="nav-item">
         <a class="nav-link {% if active_page != 'dashboard' %}collapsed{% endif %}" href="{% url 'maintenance_dashboard' %}">
@@ -536,6 +542,20 @@
         </a>
       </li>
       {% endif %}
+
+      {% if request.user.userprofile.role in "CL" and not request.user.is_superuser %}
+
+      <li class="nav-heading">Work Order</li>
+      <li class="nav-item">
+        <a class="nav-link {% if active_page != 'work_order_list' %}collapsed{% endif %}"
+          href="{% url 'work_order_list' %}">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>Work Order</span>
+        </a>
+      </li>
+      {% endif %}
+
+
       
       <!-- Logout (Visible to Everyone) -->
       <li class="nav-item">
