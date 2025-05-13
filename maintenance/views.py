@@ -1662,7 +1662,7 @@ def add_maintenance(request):
 
             # Step 5: Process spare parts
             for spare_part_id, quantity_used in zip(spare_parts, spare_part_quantities):
-                if not spare_part_id or not quantity_used:
+                if not spare_part_id.strip() or not quantity_used.strip():
                     continue
 
                 spare_part = SparePart.objects.get(id=spare_part_id)
@@ -1825,7 +1825,7 @@ def edit_maintenance(request, id):
 
                 # Step 5: Process new spare part quantities
                 for spare_part_id, quantity_used in zip(spare_parts_post, spare_part_quantities):
-                    if not spare_part_id or not quantity_used:
+                    if not str(spare_part_id).strip() or not str(quantity_used).strip():
                         continue
 
                     spare_part_id = int(spare_part_id)
@@ -3178,7 +3178,7 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
 
     doc = SimpleDocTemplate(response, pagesize=letter)
     elements = []
-    doc.title = f"{report_type} Maintenance Report {maintenance_records[0].branch.name}"
+    
 
     # Add title
     styles = getSampleStyleSheet()
@@ -3190,7 +3190,7 @@ def generate_pdf(maintenance_records, report_type, from_date, to_date):
         elements.append(Paragraph("No maintenance records found for the selected date range and report type.", styles['Normal']))
         doc.build(elements)
         return response
-
+    doc.title = f"{report_type} Maintenance Report {maintenance_records[0].branch.name}"
     # Add branch and date range
     elements.append(Paragraph(f"Branch: {maintenance_records[0].branch.name}", styles['Normal']))
     elements.append(Paragraph(f"From  {from_date}  to  {to_date}", styles['Normal']))
@@ -3407,7 +3407,7 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
 
     doc = SimpleDocTemplate(response, pagesize=letter)
     elements = []
-    doc.title = f"Work Order Report {work_orders[0].branch.name}"
+    
 
     # Add title
     styles = getSampleStyleSheet()
@@ -3418,7 +3418,7 @@ def generate_pdf_work_order(work_orders, report_type, from_date, to_date):
         elements.append(Paragraph("No work order records found for the selected date range.", styles['Normal']))
         doc.build(elements)
         return response
-
+    doc.title = f"Work Order Report {work_orders[0].branch.name}"
     # Add branch and date range
     elements.append(Paragraph(f"Branch: {work_orders[0].branch.name}", styles['Normal']))
     elements.append(Paragraph(f"From  {from_date}  to  {to_date}", styles['Normal']))
