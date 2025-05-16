@@ -158,12 +158,12 @@ def my_profile(request):
     
     if request.method == 'POST':
         # Handle email update
-        new_email = request.POST.get('email')
-        if new_email and new_email != request.user.email:
+        new_email = request.POST.get('email').strip()
+        if new_email != request.user.email:
             # Update the user's email
-            request.user.email = new_email
+            request.user.email = new_email if new_email else ''  # Allow empty email
             request.user.save()
-            messages.success(request, 'Email updated successfully! Please log in again with your new password.')
+            messages.success(request, 'Email updated successfully!')
 
         # Handle password update
         password = request.POST.get('password')
@@ -173,7 +173,7 @@ def my_profile(request):
                 # Update the user's password
                 request.user.password = make_password(password)
                 request.user.save()
-                messages.success(request, 'Password updated successfully!')
+                messages.success(request, 'Password updated successfully! Please log in again with your new password.')
             else:
                 messages.error(request, 'Passwords do not match!')
                 return redirect('my_profile')
