@@ -31,6 +31,9 @@ CSRF_TRUSTED_ORIGINS = [
     'https://mms.ipdc.gov.et',      # Include if using HTTPS later
 ]
 
+LOGIN_URL = 'login'  # Your custom login route (name='login')
+LOGOUT_REDIRECT_URL = 'login'  # After logout
+
 # Application definition
 
 INSTALLED_APPS = [

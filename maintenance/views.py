@@ -163,7 +163,7 @@ def my_profile(request):
             # Update the user's email
             request.user.email = new_email
             request.user.save()
-            messages.success(request, 'Email updated successfully!')
+            messages.success(request, 'Email updated successfully! Please log in again with your new password.')
 
         # Handle password update
         password = request.POST.get('password')
@@ -176,11 +176,10 @@ def my_profile(request):
                 messages.success(request, 'Password updated successfully!')
             else:
                 messages.error(request, 'Passwords do not match!')
-                return redirect('my_profile', {'notifications':notifications})
+                return redirect('my_profile')
         
-        messages.success(request, 'Profile updated successfully!')
-        return redirect('my_profile', { 'active_page': 'profile','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,
-})
+        # messages.success(request, 'Profile updated successfully!')
+        return redirect('my_profile')
     
     return render(request, 'my_profile.html', {
         'user_profile': user_profile,
@@ -248,7 +247,7 @@ def add_user_profile(request):
         # Check if the username already exists
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username already exists')
-            return redirect('add_user_profile_page', { 'active_page': 'user_profile_list','notifications':notifications})
+            return redirect('add_user_profile_page')
 
         # Create the User
         user = User.objects.create_user(
@@ -301,7 +300,7 @@ def edit_user_profile(request, id):
 
             form.save()  # Save the UserProfile model
             messages.success(request, 'User Profile updated successfully!')
-            return redirect('user_profile_list', { 'active_page': 'user_profile_list',})
+            return redirect('user_profile_list')
     else:
         form = UserProfileForm(instance=user_profile)
     
@@ -370,7 +369,7 @@ def edit_branch(request, id):
         if form.is_valid():
             form.save()
             messages.success(request, 'Branch updated successfully!')
-            return redirect('branch_list',{ 'active_page': 'branch_list','notifications':notifications})
+            return redirect('branch_list')
     else:
         form = BranchForm(instance=branch)
     return render(request, 'edit_branch.html', {'form': form, 'branch': branch, 'active_page': 'branch_list','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
