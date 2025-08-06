@@ -171,7 +171,7 @@ path('returns/<int:id>/complete/', views.complete_return, name='complete_return'
     #-----------------------------------------------------------------------------------------------------------
     path('mark_notification_as_read/<int:notification_id>/', views.mark_notification_as_read, name='mark_notification_as_read'),
     # path('sse/notifications/', views.sse_notifications, name='sse_notifications'),
-    path('notification_stream/', views.notification_stream, name='notification_stream'),
+    # path('notification_stream/', views.notification_stream, name='notification_stream'),
 
     
     path('maintenance_due/', views.maintenance_due, name='maintenance_due'),  

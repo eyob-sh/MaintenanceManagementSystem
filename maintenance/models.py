@@ -138,7 +138,7 @@ class Equipment(models.Model):
 
     name = models.CharField(max_length=100)
     equipment_type = models.CharField(max_length=50)
-    manufacturer = models.ForeignKey('Manufacturer', on_delete=models.PROTECT)
+    manufacturer = models.CharField(max_length=50, null= True, blank=True)
     model_number = models.CharField(max_length=50)
     serial_number = models.CharField(max_length=50)
     branch = models.ForeignKey('Branch', on_delete=models.PROTECT)

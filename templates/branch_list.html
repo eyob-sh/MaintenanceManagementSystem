@@ -37,11 +37,13 @@
                             
 
                             <!-- Add Branch Button -->
+                             {% if request.user.userprofile.branch.name == "Head Office" %}
                             <div>
                                 <a href="{% url 'add_branch' %}" class="btn btn-success bg-success">
                                     <i class="bi bi-plus"></i> Add Branch
                                 </a>
                             </div>
+                            {% endif %}
                         </div>
 
                         <!-- Global Search Bar -->
@@ -52,7 +54,9 @@
                             <thead>
                                 <tr>
                                     <th>Name</th>
+                                    {% if request.user.userprofile.branch.name == "Head Office" %}
                                     <th>Actions</th>
+                                    {% endif %}
                                 </tr>
                             </thead>
                             <tbody>
@@ -61,9 +65,11 @@
                                     <td>
                                         {{ branch.name }}
                                     </td>
+                                    {% if request.user.userprofile.branch.name == "Head Office" %}
                                     <td>
                                         <a href="{% url 'edit_branch' branch.id %}"><i class="bi bi-pencil-fill"></i></a>
                                     </td>
+                                    {% endif %}
                                 </tr>
                                 {% empty %}
                                 <tr>

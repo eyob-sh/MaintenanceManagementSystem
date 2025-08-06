@@ -49,7 +49,7 @@
                                             <select class="form-select" id="equipment" name="equipment" required>
                                                 <option selected disabled value="">Select Equipment</option>
                                                 {% for equipment in equipments %}
-                                                <option value="{{ equipment.id }}">{{ equipment.name }}</option>
+                                                <option value="{{ equipment.id }}">{{ equipment.name }} - {{equipment.serial_number}} - {{equipment.location}}</option>
                                                 {% endfor %}
                                             </select>
                                             <div class="invalid-feedback">Please select an equipment.</div>

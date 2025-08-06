@@ -92,7 +92,7 @@ class EquipmentResource(resources.ModelResource):
 
     def dehydrate_manufacturer(self, equipment):
         """Format manufacturer name for export"""
-        return equipment.manufacturer.name if equipment.manufacturer else ''
+        return equipment.manufacturer if equipment.manufacturer else ''
 
     def before_import_row(self, row, **kwargs):
         """

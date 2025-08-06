@@ -59,7 +59,7 @@
                                                 {% if equipment.id == selected_equipment_id %}
                                                 selected
                                                 {% endif %}>
-                                                    {{ equipment.name }}
+                                                    {{ equipment.name }} - {{equipment.serial_number}} - {{equipment.location}}
                                                 </option>
                                                 {% endfor %}
                                             </select>

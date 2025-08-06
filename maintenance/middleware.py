@@ -1,6 +1,6 @@
 # maintenance/middleware.py
 from django.shortcuts import redirect
-from django.urls import resolve, Resolver404
+from django.urls import resolve, Resolver404, reverse
 
 class NoCacheMiddleware:
     def __init__(self, get_response):

@@ -18,7 +18,7 @@
     <!-- End Messages Block -->
 
     <div class="pagetitle">
-        <h1><b>Edit Maintenance Record : {{ maintenance.equipment.name }}</b></h1>
+        <h1><b>Edit Maintenance Record : {{ maintenance.equipment.name }} ({{maintenance.equipment.serial_number}})</b></h1>
         <nav>
             <ol class="breadcrumb">
               <li class="breadcrumb-item">Maintenance Records</a></li>
@@ -45,7 +45,7 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="id_equipment" class="form-label">Equipment</label>
-                                            <input type="text" class="form-control" value="{{ maintenance.equipment }}" readonly>
+                                            <input type="text" class="form-control" value="{{ maintenance.equipment }} - {{maintenance.equipment.location}}" readonly>
                                             <!-- Add a hidden input field for equipment_id -->
                                             <input type="hidden" name="equipment" value="{{ maintenance.equipment.id }}">
                                             <div class="invalid-feedback">Please select an equipment.</div>

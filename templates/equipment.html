@@ -70,13 +70,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label for="manufacturer" class="form-label">Manufacturer</label>
-                                            <select class="form-select" id="manufacturer" name="manufacturer" required>
-                                                <option selected disabled value="">Select Manufacturer</option>
-                                                {% for manufacturer in manufacturers %}
-                                                <option value="{{ manufacturer.id }}">{{ manufacturer.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <div class="invalid-feedback">Please select a manufacturer.</div>
+                                            <input type="text" class="form-control" id="manufacturer" name="manufacturer">
+                                            
                                         </div>
                                     </div>
 

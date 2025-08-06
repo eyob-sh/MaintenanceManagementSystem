@@ -43,6 +43,7 @@ import time
 from decimal import Decimal, InvalidOperation
 from django.db.models import Case, When, Value, IntegerField
 from django.db.models.functions import Coalesce
+from django.db import close_old_connections
 
 
 import io
@@ -195,7 +196,10 @@ def user_profile_list(request):
     notifications = get_notifications(request.user)
     latest_notification = Notification.objects.filter(user=request.user, is_read=False).order_by('-id').first()
 
-    user_profiles = UserProfile.objects.all()
+    if request.user.userprofile.branch.name == "Head Office":
+        user_profiles = UserProfile.objects.all()
+    else:
+        user_profiles = UserProfile.objects.filter(branch = request.user.userprofile.branch)
     context = {
         'active_page': 'user_profile_list',
         'title': 'User Profiles',
@@ -297,6 +301,7 @@ def edit_user_profile(request, id):
                 else:
                     messages.error(request, 'Passwords do not match!')
                     return redirect('edit_user_profile', id=id, )
+            
 
             form.save()  # Save the UserProfile model
             messages.success(request, 'User Profile updated successfully!')
@@ -375,7 +380,7 @@ def edit_branch(request, id):
     return render(request, 'edit_branch.html', {'form': form, 'branch': branch, 'active_page': 'branch_list','notifications':notifications,'latest_notification_id': latest_notification.id if latest_notification else 0,})
 
 def get_notifications(user):
-    return Notification.objects.filter(user=user, is_read=False).order_by('-timestamp')[:10]
+    return Notification.objects.filter(user=user, is_read=False).order_by('-timestamp')[:5]
 
 
 @user_passes_test(lambda u: is_tec(u) or is_md(u) or is_mo(u), login_url=None)
@@ -1277,7 +1282,7 @@ def add_equipment(request):
         # Get form data
         name = request.POST.get('name')
         equipment_type = request.POST.get('equipment_type')
-        manufacturer_id = request.POST.get('manufacturer')
+        manufacturer = request.POST.get('manufacturer')
         model_number = request.POST.get('model_number')
         serial_number = request.POST.get('serial_number')
         location = request.POST.get('location')
@@ -1290,7 +1295,7 @@ def add_equipment(request):
         remark = request.POST.get('remark')
 
         # Validate required fields
-        if not name or not equipment_type or not manufacturer_id or not model_number or not serial_number or not location or not installation_date or not status:
+        if not name or not equipment_type or not model_number or not serial_number or not location or not installation_date or not status:
             messages.error(request, 'Please fill out all required fields.')
             context = {
                 'manufacturers': manufacturers,
@@ -1316,7 +1321,7 @@ def add_equipment(request):
             Equipment.objects.create(
                 name=name,
                 equipment_type=equipment_type,
-                manufacturer_id=manufacturer_id,
+                manufacturer=manufacturer,
                 model_number=model_number,
                 serial_number=serial_number,
                 branch=user_branch,
@@ -4486,36 +4491,57 @@ def client_dashboard(request):
     return render(request, 'client_dashboard.html', context)
 
 
-@login_required
-def notification_stream(request):
-    def event_stream():
-        user = request.user
-        last_notification_id = int(request.GET.get('last_id', 0))  # Get the last notification ID from the client
+# @sync_to_async
+# def get_user_id(request):
+#     close_old_connections()
+#     return request.user.id
 
-        while True:
-            # Fetch new notifications for the user with IDs greater than last_notification_id
-            notifications = Notification.objects.filter(
-                user=user,
-                id__gt=last_notification_id,  # Only fetch new notifications
-                is_read=False
-            ).order_by('-timestamp')
+# @sync_to_async
+# def get_user_id(request):
+#     close_old_connections()
+#     return request.user.id
 
-            if notifications.exists():
-                latest_notification = notifications.first()
-                last_notification_id = latest_notification.id  # Update the last notification ID
-                yield f"data: {json.dumps({
-                    'id': latest_notification.id,
-                    'message': latest_notification.message,
-                    'timestamp': latest_notification.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                    'url': latest_notification.url,
-                })}\n\n"
+# @sync_to_async
+# def get_new_notifications(user_id, last_id):
+#     close_old_connections()
+#     return list(Notification.objects.filter(
+#         user_id=user_id,
+#         id__gt=last_id,
+#         is_read=False
+#     ).order_by('-timestamp')[:1])
 
-            time.sleep(1)  # Wait for 1 second before checking again
+# @login_required
+# async def notification_stream(request):
+#     async def event_generator():
+#         try:
+#             last_id = int(request.GET.get('last_id', 0))
+#             user_id = await get_user_id(request)
 
-    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
-    response['Cache-Control'] = 'no-cache'
-    return response
+#             while True:
+#                 notifications = await get_new_notifications(user_id, last_id)
+#                 if notifications:
+#                     notification = notifications[0]
+#                     last_id = notification.id
+#                     yield f"data: {json.dumps({
+#                         'id': notification.id,
+#                         'message': notification.message,
+#                         'timestamp': notification.timestamp.isoformat(),
+#                         'url': notification.url
+#                     })}\n\n"
 
+#                 await asyncio.sleep(1)  # Non-blocking sleep
+
+#         except asyncio.CancelledError:
+#             # Handle client disconnection
+#             pass
+#         finally:
+#             close_old_connections()
+
+#     return StreamingHttpResponse(
+#         event_generator(),
+#         content_type='text/event-stream',
+#         headers={'Cache-Control': 'no-cache'}
+#     )
 @user_passes_test(lambda u: is_ad(u), login_url=None)
 def audit_logs(request):
     notifications = get_notifications(request.user)

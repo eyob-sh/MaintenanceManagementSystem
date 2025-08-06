@@ -15,12 +15,24 @@ class BranchForm(forms.ModelForm):
 class UserProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
-        fields = ['user', 'branch',  'role']
+        fields = ['user', 'branch', 'role']
 
     def __init__(self, *args, **kwargs):
         super(UserProfileForm, self).__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.widget.attrs.update({'class': 'form-control'})
+        
+        # Make user field read-only
+        self.fields['user'].disabled = True  # Prevents modification
+        self.fields['user'].widget.attrs.update({
+            'class': 'form-control',
+            'readonly': 'readonly'  # Visual indication
+        })
+
+        
+        
+        # Style other fields
+        for field_name, field in self.fields.items():
+            if field_name != 'user':  # Already styled the user field
+                field.widget.attrs.update({'class': 'form-control'})
 
 
 class EquipmentForm(forms.ModelForm):
