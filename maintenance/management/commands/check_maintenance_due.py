@@ -22,6 +22,9 @@ class Command(BaseCommand):
             Q(next_monthly_maintenance_date__lte=due_in_5_days) &
             (Q(last_monthly_notification_sent__lt=today) | Q(last_monthly_notification_sent__isnull=True))
         ) | Equipment.objects.filter(
+            Q(next_quarterly_maintenance_date__lte=due_in_5_days) &
+            (Q(last_quarterly_notification_sent__lt=today) | Q(last_quarterly_notification_sent__isnull=True))
+        ) | Equipment.objects.filter(
             Q(next_biannual_maintenance_date__lte=due_in_5_days) &
             (Q(last_biannual_notification_sent__lt=today) | Q(last_biannual_notification_sent__isnull=True))
         ) | Equipment.objects.filter(
@@ -47,6 +50,7 @@ class Command(BaseCommand):
 
         due_dates = {
             'monthly': equipment.next_monthly_maintenance_date,
+            'quarterly': equipment.next_quarterly_maintenance_date,
             'biannual': equipment.next_biannual_maintenance_date,
             'annual': equipment.next_annual_maintenance_date,
         }

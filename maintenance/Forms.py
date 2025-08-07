@@ -52,6 +52,8 @@ class EquipmentForm(forms.ModelForm):
             'next_weekly_maintenance_date' ,
             'last_monthly_maintenance_date' ,
             'next_monthly_maintenance_date',
+            'last_quarterly_maintenance_date' ,
+            'next_quarterly_maintenance_date',
             'last_biannual_maintenance_date', 
             'next_biannual_maintenance_date' ,
             'last_annual_maintenance_date' ,
@@ -73,6 +75,8 @@ class EquipmentForm(forms.ModelForm):
             self.fields['next_weekly_maintenance_date'].widget.attrs['readonly'] = True
             self.fields['last_monthly_maintenance_date'].widget.attrs['readonly'] = True
             self.fields['next_monthly_maintenance_date'].widget.attrs['readonly'] = True
+            self.fields['last_quarterly_maintenance_date'].widget.attrs['readonly'] = True
+            self.fields['next_quarterly_maintenance_date'].widget.attrs['readonly'] = True
             self.fields['last_biannual_maintenance_date'].widget.attrs['readonly'] = True
             self.fields['last_biannual_maintenance_date'].widget.attrs['readonly'] = True
 

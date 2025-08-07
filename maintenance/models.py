@@ -84,6 +84,7 @@ class TaskGroup(models.Model):
         ('daily', 'Daily'),
         ('weekly', 'Weekly'),
         ('monthly', 'Monthly'),
+        ('quarterly', 'quarterly'),
         ('biannual', 'Biannual'),
         ('annual', 'Annual'),
     ]
@@ -151,6 +152,8 @@ class Equipment(models.Model):
     next_weekly_maintenance_date = models.DateField(null=True, blank=True)
     last_monthly_maintenance_date = models.DateField(null=True, blank=True)
     next_monthly_maintenance_date = models.DateField(null=True, blank=True)
+    last_quarterly_maintenance_date = models.DateField(null=True, blank=True)
+    next_quarterly_maintenance_date = models.DateField(null=True, blank=True)
     last_biannual_maintenance_date = models.DateField(null=True, blank=True)
     next_biannual_maintenance_date = models.DateField(null=True, blank=True)
     last_annual_maintenance_date = models.DateField(null=True, blank=True)
@@ -191,6 +194,11 @@ class Equipment(models.Model):
             # For monthly maintenance, add 1 month (approximated as 30 days)
             return today + timedelta(days=30)
         
+        elif maintenance_type == 'quarterly':
+            # For quarterly maintenance, add 3 month (approximated as 91 days)
+            return today + timedelta(days=91)
+        
+        
         elif maintenance_type == 'annual':
             # For annual maintenance, add 1 year (approximated as 365 days)
             return today + timedelta(days=365)
@@ -208,6 +216,7 @@ class Equipment(models.Model):
         if not self.pk:  # Check if the instance is being created
             self.next_weekly_maintenance_date = self.calculate_next_maintenance_date('weekly')
             self.next_monthly_maintenance_date = self.calculate_next_maintenance_date('monthly')
+            self.next_quarterly_maintenance_date = self.calculate_next_maintenance_date('quarterly')
             self.next_biannual_maintenance_date = self.calculate_next_maintenance_date('biannual')
             self.next_annual_maintenance_date = self.calculate_next_maintenance_date('annual')
 
@@ -354,6 +363,7 @@ class MaintenanceRecord(models.Model):
         ('daily', 'Daily'),
         ('weekly', 'Weekly'),
         ('monthly', 'Monthly'),
+        ('quarterly', 'quarterly'),
         ('biannual', 'Biannual'),
         ('annual', 'Annual'),
     ]

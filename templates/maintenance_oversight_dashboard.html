@@ -45,6 +45,7 @@
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
                     <option value="monthly">Monthly</option>
+                    <option value="quarterly">quarterly</option>
                     <option value="biannual">Biannual</option>
                     <option value="annual">Annual</option>
                     <option value="work_order">Work Order</option>
@@ -90,6 +91,7 @@
                                 <h6 style="font-size: 12px;">Daily: {{ daily_maintenance_count }}</h6>
                                 <h6 style="font-size: 12px;">Weekly: {{ weekly_maintenance_count }}</h6>
                                 <h6 style="font-size: 12px;">Monthly: {{ monthly_maintenance_count }}</h6>
+                                <h6 style="font-size: 12px;">quarterly: {{ quarterly_maintenance_count }}</h6>
                                 <h6 style="font-size: 12px;">Biannual: {{ biannual_maintenance_count }}</h6>
                                 <h6 style="font-size: 12px;">Annual: {{ annual_maintenance_count }}</h6>
                             </div>
@@ -360,12 +362,13 @@ if (equipmentMaintenanceCtx) {
     const maintenanceByFrequencyChart = new Chart(maintenanceByFrequencyCtx, {
         type: 'pie',
         data: {
-            labels: ['Daily', 'Weekly', 'Monthly', 'Biannual', 'Annual'],
+            labels: ['Daily', 'Weekly', 'Monthly','quarterly', 'Biannual', 'Annual'],
             datasets: [{
                 data: [
                     {{ daily_maintenance_count }},
                     {{ weekly_maintenance_count }},
                     {{ monthly_maintenance_count }},
+                    {{ quarterly_maintenance_count }},
                     {{ biannual_maintenance_count }},
                     {{ annual_maintenance_count }}
                 ],

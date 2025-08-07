@@ -63,6 +63,8 @@
                                     <td>
                                         {% if equipment.next_monthly_maintenance_date <= due_in_5_days %}
                                             Monthly
+                                        {% elif equipment.next_quarterly_maintenance_date <= due_in_5_days %}
+                                            quarterly
                                         {% elif equipment.next_biannual_maintenance_date <= due_in_5_days %}
                                             Biannual
                                         {% elif equipment.next_annual_maintenance_date <= due_in_5_days %}
@@ -72,6 +74,8 @@
                                     <td>
                                         {% if equipment.next_monthly_maintenance_date <= due_in_5_days %}
                                             {{ equipment.next_monthly_maintenance_date }}
+                                        {% elif equipment.next_quarterly_maintenance_date <= due_in_5_days %}
+                                            {{ equipment.next_quarterly_maintenance_date }}
                                         {% elif equipment.next_biannual_maintenance_date <= due_in_5_days %}
                                             {{ equipment.next_biannual_maintenance_date }}
                                         {% elif equipment.next_annual_maintenance_date <= due_in_5_days %}

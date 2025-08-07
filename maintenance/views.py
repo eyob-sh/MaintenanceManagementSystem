@@ -1008,7 +1008,7 @@ def add_maintenance_task(request):
         if maintenance_task_form.is_valid():
             maintenance_task = maintenance_task_form.save()
 
-            frequencies = ['daily', 'weekly', 'monthly', 'biannual', 'annual']
+            frequencies = ['daily', 'weekly', 'monthly','quarterly', 'biannual', 'annual']
             for frequency in frequencies:
                 task_descriptions = request.POST.getlist(f'{frequency}_tasks[]')
                 if task_descriptions:
@@ -1027,7 +1027,7 @@ def add_maintenance_task(request):
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
         'maintenance_task_form': maintenance_task_form,
-        'frequencies': ['daily', 'weekly', 'monthly', 'biannual', 'annual'],
+        'frequencies': ['daily', 'weekly', 'monthly','quarterly', 'biannual', 'annual'],
     })
 @user_passes_test(lambda u: is_mo(u) or is_md(u) or is_tec(u), login_url=None)
 
@@ -1043,7 +1043,7 @@ def edit_maintenance_task(request, id):
             maintenance_task = form.save()
 
             # Update tasks for each frequency
-            frequencies = ['daily', 'weekly', 'monthly', 'biannual', 'annual']
+            frequencies = ['daily', 'weekly', 'monthly','quarterly', 'biannual', 'annual']
             for frequency in frequencies:
                 task_descriptions = request.POST.getlist(f'{frequency}_tasks[]')
                 task_group, created = TaskGroup.objects.get_or_create(
@@ -1075,7 +1075,7 @@ def edit_maintenance_task(request, id):
         form = MaintenanceTaskForm(instance=maintenance_task)
 
     # Preprocess tasks for each frequency
-    frequencies = ['daily', 'weekly', 'monthly', 'biannual', 'annual']
+    frequencies = ['daily', 'weekly', 'monthly','quarterly', 'biannual', 'annual']
     task_groups = {}
     for frequency in frequencies:
         task_group = maintenance_task.task_groups.filter(frequency=frequency).first()
@@ -2095,6 +2095,11 @@ def approve_maintenance(request, maintenance_id):
             equipment.last_monthly_maintenance_date = timezone.now().date()
             equipment.next_monthly_maintenance_date = calculate_next_maintenance_date(maintenance_type)
             equipment.save()
+        elif maintenance_type == 'quarterly':
+            equipment = maintenance.equipment
+            equipment.last_quarterly_maintenance_date = timezone.now().date()
+            equipment.next_quarterly_maintenance_date = calculate_next_maintenance_date(maintenance_type)
+            equipment.save()
         elif maintenance_type == 'annual':
             equipment = maintenance.equipment
             equipment.last_annual_maintenance_date = timezone.now().date()
@@ -2314,6 +2319,10 @@ def calculate_next_maintenance_date(maintenance_type):
         # For monthly maintenance, add 1 month (approximated as 30 days)
         return today + timedelta(days=30)
     
+    elif maintenance_type == 'quarterly':
+        # For monthly maintenance, add 3 month (approximated as 91 days)
+        return today + timedelta(days=91)
+    
     elif maintenance_type == 'annual':
         # For annual maintenance, add 1 year (approximated as 365 days)
         return today + timedelta(days=365)
@@ -2511,7 +2520,7 @@ def maintenance_due(request):
     ) | Equipment.objects.filter(
         next_annual_maintenance_date__lte=due_in_5_days
     )
-    print(f"Due equipment before exclusion: {due_equipment}")
+    # print(f"Due equipment before exclusion: {due_equipment}")
 
     # Role-based filtering
     user_role = request.user.userprofile.role  # Assuming the user's role is stored in a `role` field on the User model
@@ -2768,6 +2777,11 @@ def maintenance_dashboard(request):
         maintenance_type='monthly',
         datetime__range=[from_date, to_date]
     ).count()
+    quarterly_maintenance_count = MaintenanceRecord.objects.filter(
+        branch=user_branch,
+        maintenance_type='quarterly',
+        datetime__range=[from_date, to_date]
+    ).count()
     biannual_maintenance_count = MaintenanceRecord.objects.filter(
         branch=user_branch,
         maintenance_type='biannual',
@@ -2853,6 +2867,7 @@ def maintenance_dashboard(request):
         'daily_maintenance_count': daily_maintenance_count,
         'weekly_maintenance_count': weekly_maintenance_count,
         'monthly_maintenance_count': monthly_maintenance_count,
+        'quarterly_maintenance_count': quarterly_maintenance_count,
         'biannual_maintenance_count': biannual_maintenance_count,
         'annual_maintenance_count': annual_maintenance_count,
         'pending_work_orders': pending_work_orders,
@@ -3025,7 +3040,7 @@ def equipment_maintenance_types_api(request):
         # Then format them as strings
         months = [date.strftime('%b %Y') for date in month_dates]
         
-        types = ['daily', 'weekly', 'monthly', 'biannual', 'annual']
+        types = ['daily', 'weekly', 'monthly','quarterly', 'biannual', 'annual']
         
         # Prepare dataset for each maintenance type
         datasets = []
@@ -3084,7 +3099,7 @@ def equipment_maintenance_types_api_MO(request):
         # Then format them as strings
         months = [date.strftime('%b %Y') for date in month_dates]
         
-        types = ['daily', 'weekly', 'monthly', 'biannual', 'annual']
+        types = ['daily', 'weekly', 'monthly','quarterly', 'biannual', 'annual']
         
         # Prepare dataset for each maintenance type
         datasets = []
@@ -3116,6 +3131,7 @@ def get_color_for_type(maint_type):
         'daily': 'rgba(255, 99, 132, 0.7)',
         'weekly': 'rgba(54, 162, 235, 0.7)',
         'monthly': 'rgba(75, 192, 192, 0.7)',
+        'quarterly':'rgba(50, 205, 50, 0.7)',
         'biannual': 'rgba(153, 102, 255, 0.7)',
         'annual': 'rgba(255, 159, 64, 0.7)'
     }
@@ -4173,6 +4189,11 @@ def maintenance_oversight_dashboard(request):
         maintenance_type='monthly',
         datetime__range=[from_date, to_date]
     ).count()
+    quarterly_maintenance_count = MaintenanceRecord.objects.filter(
+        **branch_filter,
+        maintenance_type='quarterly',
+        datetime__range=[from_date, to_date]
+    ).count()
     biannual_maintenance_count = MaintenanceRecord.objects.filter(
         **branch_filter,
         maintenance_type='biannual',
@@ -4264,6 +4285,7 @@ def maintenance_oversight_dashboard(request):
         'daily_maintenance_count': daily_maintenance_count,
         'weekly_maintenance_count': weekly_maintenance_count,
         'monthly_maintenance_count': monthly_maintenance_count,
+        'quarterly_maintenance_count': quarterly_maintenance_count,
         'biannual_maintenance_count': biannual_maintenance_count,
         'annual_maintenance_count': annual_maintenance_count,
         'pending_work_orders': pending_work_orders,
