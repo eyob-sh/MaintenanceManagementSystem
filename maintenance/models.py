@@ -165,6 +165,7 @@ class Equipment(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='operational')
     remark = models.TextField(blank=True)
     last_monthly_notification_sent = models.DateField(null=True, blank=True)
+    last_quarterly_notification_sent = models.DateField(null=True, blank=True)
     last_biannual_notification_sent = models.DateField(null=True, blank=True)
     last_annual_notification_sent = models.DateField(null=True, blank=True)
 

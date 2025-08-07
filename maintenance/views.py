@@ -2320,7 +2320,7 @@ def calculate_next_maintenance_date(maintenance_type):
         return today + timedelta(days=30)
     
     elif maintenance_type == 'quarterly':
-        # For monthly maintenance, add 3 month (approximated as 91 days)
+        # For quarterly maintenance, add 3 month (approximated as 91 days)
         return today + timedelta(days=91)
     
     elif maintenance_type == 'annual':
@@ -2515,6 +2515,8 @@ def maintenance_due(request):
     # Fetch equipment due for maintenance within the next 5 days
     due_equipment = Equipment.objects.filter(
         next_monthly_maintenance_date__lte=due_in_5_days
+    ) | Equipment.objects.filter(
+        next_quarterly_maintenance_date__lte=due_in_5_days
     ) | Equipment.objects.filter(
         next_biannual_maintenance_date__lte=due_in_5_days
     ) | Equipment.objects.filter(
