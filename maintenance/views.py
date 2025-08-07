@@ -3025,7 +3025,7 @@ def equipment_maintenance_types_api(request):
         # Get all maintenance records for this equipment
         records = MaintenanceRecord.objects.filter(
             equipment_id=equipment_id,
-            datetime__range=[from_date, to_date], 
+            datetime__date__range=[from_date, to_date], 
             status = 'Approved'
         )
         
@@ -3084,7 +3084,7 @@ def equipment_maintenance_types_api_MO(request):
         # Get all maintenance records for this equipment
         records = MaintenanceRecord.objects.filter(
             equipment_id=equipment_id,
-            datetime__range=[from_date, to_date], 
+            datetime__date__range=[from_date, to_date], 
             status = 'Approved'
         )
         

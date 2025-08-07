@@ -146,7 +146,7 @@
                                     <select class="form-select form-select-sm" id="equipmentSelect">
                                         <option selected disabled value="">Select Equipment</option>
                                         {% for equipment in equipment_list %}
-                                        <option value="{{ equipment.id }}">{{ equipment.name }}</option>
+                                        <option value="{{ equipment.id }}">{{ equipment.name }} - {{equipment.serial_number}} - {{equipment.location}}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
