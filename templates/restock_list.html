@@ -57,6 +57,7 @@
                                     <th>Branch</th> <!-- Branch Column for MO Role -->
                                     {% endif %}
                                     <th>Quantity Restocked</th>
+                                    <th>Price</th>
                                     <th>Restock Date</th>
                                     <th>Attachment</th>
                                 </tr>
@@ -71,6 +72,7 @@
                                     <td>{{ restock.spare_part.branch.name }}</td> <!-- Branch Column for MO Role -->
                                     {% endif %}
                                     <td>{{ restock.quantity }}</td>
+                                    <td>{{ restock.price }}</td>
                                     <td>{{ restock.restock_date }}</td>
                                     <td>
                                         {% if restock.attachment %}
@@ -142,6 +144,8 @@
                             if ((isMO && (index === 3 || index === 4)) || (!isMO && (index === 2 || index === 3))) {
                                 return { nodeName: "TH" }; // Return an empty header cell
                             }
+
+                            
                             return {
                                 nodeName: "TH",
                                 childNodes: [

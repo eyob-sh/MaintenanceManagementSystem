@@ -271,6 +271,13 @@ class RestockSparePart(models.Model):
     spare_part = models.ForeignKey(SparePart, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField(default=0)
     restock_date = models.DateTimeField(auto_now_add=True)
+    price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        verbose_name="Price"
+    )
     attachment = models.FileField(upload_to='restock_attachments/', null=True, blank=True)  # Optional attachment
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -334,6 +341,12 @@ class WorkOrder(models.Model):
         null=True, 
         blank=True,
         verbose_name="Price"
+    )
+    attachment = models.FileField(
+        upload_to='work_order_receipts/',  # Changed folder for clarity
+        null=True,
+        blank=True,
+        verbose_name="Payment Receipt"
     )
 
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_work_order')

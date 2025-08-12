@@ -634,7 +634,11 @@ def edit_work_order(request, id):
     equipments = Equipment.objects.filter(branch=user_branch)
 
     if request.method == 'POST':
-        if request.user.userprofile.role in ["MD manager", "TEC"]:
+        
+
+
+        if request.user.userprofile.role in ["MD manager", "TEC", "CL"]:
+            
             # Get form data
             equipment_id = request.POST.get('equipment')
             remark = request.POST.get('remark')
@@ -649,6 +653,30 @@ def edit_work_order(request, id):
                     work_order.equipment = equipment
                 work_order.remark = remark
                 work_order.save()
+                
+                if (request.user.userprofile.role == 'CL' 
+                    and work_order.status != 'Approved'
+                    and 'attachment' in request.FILES):
+                    
+                    attachment = request.FILES['attachment']
+                    
+                    # Validation
+                    if attachment.size > 5 * 1024 * 1024:
+                        messages.error(request, 'File too large (max 5MB).')
+                        return redirect('edit_work_order', id=id)
+                        
+                    valid_extensions = ['.pdf', '.jpg', '.png', '.doc', '.docx']
+                    if not any(attachment.name.lower().endswith(ext) for ext in valid_extensions):
+                        messages.error(request, 'Invalid file type. Allowed: PDF, JPG, PNG, DOC.')
+                        return redirect('edit_work_order', id=id)
+                    
+                    # Delete old attachment if exists
+                    if work_order.attachment:
+                        work_order.attachment.delete()
+                    
+                    work_order.attachment = attachment
+                    work_order.save()  # Save immediately after attachment
+                    messages.success(request, 'Receipt uploaded successfully!')
 
                 #include price estimation 
 
@@ -2428,11 +2456,21 @@ def restock_spare_part(request):
             selected_spare_part_id = request.POST.get('spare_part')  # Get the selected spare part ID
             spare_part = get_object_or_404(SparePart, id=selected_spare_part_id)  # Fetch the spare part instance
 
+            # Get price from form data
+            price = request.POST.get('price')
+            
+            
+            # Convert price to Decimal and validate
+            price = Decimal(price) if price else None
+            if price is not None and price < 0:
+                raise ValueError("Price cannot be negative")
+
             form = RestockSparePartForm(request.POST, request.FILES)
             if form.is_valid():
                 restock = form.save(commit=False)
                 restock.spare_part = spare_part  # Associate the restock with the spare part
                 restock.restock_date = timezone.now()  # Set the restock date to the current time
+                restock.price = price 
                 restock.save()
 
                 # Update the spare part quantity and last_restock_date

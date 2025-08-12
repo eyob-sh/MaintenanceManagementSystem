@@ -35,7 +35,7 @@
                         <h5 class="card-title"></h5>
 
                         <!-- General Form Elements -->
-                        <form method="POST" action="{% url 'edit_work_order' work_order.id %}" id="workOrderForm"
+                        <form method="POST" action="{% url 'edit_work_order' work_order.id %}" id="workOrderForm" enctype="multipart/form-data"
                             novalidate>
                             {% csrf_token %}
 
@@ -293,6 +293,34 @@
                                         </div>
                                     </div>
                                      {% endif %}
+    
+                                    <!-- Receipt Attachment -->
+
+<div class="row mb-3">
+    <div class="col-md-12">
+        <label class="form-label">Payment Receipt</label><br>
+        {% if work_order.attachment %}
+            <!-- Show existing receipt (all roles can view) -->
+            <a href="{{ work_order.attachment.url }}" class="btn btn-outline-primary" target="_blank">
+                <i class="bi bi-file-earmark"></i> View Receipt
+            </a>
+        {% else %}
+            <p class="text-muted">No receipt uploaded.</p>
+        {% endif %}
+
+        <!-- Allow CL to upload/edit until Approved -->
+        {% if request.user.userprofile.role == 'CL' and work_order.status != 'Approved' %}
+            <input 
+                type="file" 
+                class="form-control mt-2" 
+                id="id_attachment" 
+                name="attachment" 
+                accept=".pdf,.jpg,.png,.doc,.docx"
+            >
+            <small class="text-muted">Upload proof of payment (PDF, image, or DOC).</small>
+        {% endif %}
+    </div>
+</div>
                                     <!-- Remark -->
                                     {% if request.user.userprofile.role == 'MD manager' or work_order.status == 'Approved' or request.user.userprofile.role == 'MO' %}
                                         <!-- Read-only Remark Field -->
