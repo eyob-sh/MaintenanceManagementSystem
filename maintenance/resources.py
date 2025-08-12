@@ -1,6 +1,8 @@
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 from .models import Equipment, Branch, Manufacturer, MaintenanceTask
+from import_export import widgets
+
 
 # Custom Widget for Manufacturer with Branch Context
 class ManufacturerBranchWidget(ForeignKeyWidget):
@@ -76,6 +78,22 @@ class EquipmentResource(resources.ModelResource):
         attribute='model_number',
         column_name='Model Number'
     )
+    status = fields.Field(
+        attribute='status',
+        column_name='Status',
+        widget=widgets.CharWidget(),  # Ensures the field is treated as a string
+    )
+
+    def __init__(self):
+        super().__init__()
+        # Ensure status is properly declared as a field
+        self.fields['status'] = fields.Field(
+            attribute='status',
+            column_name='Status',
+            widget=widgets.CharWidget(),
+        )
+
+
 
     class Meta:
         model = Equipment
@@ -100,7 +118,15 @@ class EquipmentResource(resources.ModelResource):
         This runs after manufacturer/branch are resolved.
         """
         row_result = kwargs.get('row_result')  # Get row_result from kwargs
-    
+        
+        status = row.get('Status', '').strip().lower()
+        valid_statuses = [choice[0] for choice in Equipment.STATUS_CHOICES]
+        
+        if status in valid_statuses:
+            row['Status'] = status  # Force lowercase (e.g., "Operational" → "operational")
+        else:
+            row['Status'] = 'operational'  # Default if invalid
+
         equipment_type = row.get('Equipment Type')
         if equipment_type:
             valid_types = MaintenanceTask.objects.values_list(
@@ -133,4 +159,5 @@ class EquipmentResource(resources.ModelResource):
         """Skip ID field during import"""
         if 'id' in data:
             del data['id']
+        obj.status = data.get('Status', 'operational')
         super().import_obj(obj, data, dry_run)

@@ -1715,7 +1715,7 @@ def maintenance_list(request):
         maintenance_records = MaintenanceRecord.objects.all()  # Show all equipment for MO
     else:
         maintenance_records = MaintenanceRecord.objects.filter(branch = user_branch ) # Filter by branch for other roles
-   
+    
      # Fetch all maintenance records
     context = {
         'active_page': 'maintenance_list',
@@ -4365,9 +4365,9 @@ def dashboard(request):
     equipment_count = Equipment.objects.count()
     
     # Equipment status
-    operational_count = Equipment.objects.filter(status='Operational').count()
-    non_operational_count = Equipment.objects.filter(status='Non-Operational').count()
-    under_maintenance_count = Equipment.objects.filter(status='Under Maintenance').count()
+    operational_count = Equipment.objects.filter(status='operational').count()
+    non_operational_count = Equipment.objects.filter(status='non_operational').count()
+    under_maintenance_count = Equipment.objects.filter(status='under_maintenance').count()
     
     # User role distribution
     role_distribution = UserProfile.objects.values('role').annotate(count=models.Count('id'))
