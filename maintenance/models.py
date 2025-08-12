@@ -442,6 +442,7 @@ class SparePartRequest(models.Model):
     return_request_date = models.DateTimeField(null=True, blank=True)
     return_accepted_date = models.DateTimeField(null=True, blank=True)
     return_completed_date = models.DateTimeField(null=True, blank=True)
+    attachment = models.FileField(upload_to='spare_part_request_attachments/', null=True, blank=True)
     @property
     def quantity_remaining(self):
         if self.status == 'Received':
