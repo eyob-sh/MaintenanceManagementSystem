@@ -322,6 +322,7 @@
     </div>
 </div>
                                     <!-- Remark -->
+                                    {% if request.user.userprofile.role != 'CL'%}
                                     {% if request.user.userprofile.role == 'MD manager' or work_order.status == 'Approved' or request.user.userprofile.role == 'MO' %}
                                         <!-- Read-only Remark Field -->
                                         <div class="row mb-3">
@@ -338,6 +339,7 @@
                                                 <textarea class="form-control" id="remark" name="remark" rows="3">{{ work_order.remark|default:"" }}</textarea>
                                             </div>
                                         </div>
+                                    {% endif %}
                                     {% endif %}
                                     <div class="row mb-3 text-center">
                                         <div class="col-md-12">
