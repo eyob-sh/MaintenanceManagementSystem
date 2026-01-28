@@ -1258,22 +1258,75 @@ def equipment_list(request):
     # Fetch all equipment types from the MaintenanceTask model
     equipment_types = MaintenanceTask.objects.values_list('equipment_type', flat=True).distinct()
 
+    
+
+    # Get status choices from Equipment model
+    status_choices = Equipment.STATUS_CHOICES
+
+    # Get filter parameters
+    name_filter = request.GET.get('name', '')
+    type_filter = request.GET.get('equipment_type', '')
+    branch_filter = request.GET.get('branch', '')
+    manufacturer_filter = request.GET.get('manufacturer', '')
+    serial_filter = request.GET.get('serial_number', '')
+    location_filter = request.GET.get('location', '')
+    status_filter = request.GET.get('status', '')
+
     # Filter equipment based on user role
     if request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
-        equipments = Equipment.objects.filter(decommissioned = False)  # Show all equipment for MO
+        equipments = Equipment.objects.filter(decommissioned=False)  # Show all equipment for MO
     else:
-        equipments = Equipment.objects.filter(branch=user_branch, decommissioned = False)  # Filter by branch for other roles
+        equipments = Equipment.objects.filter(branch=user_branch, decommissioned=False)  # Filter by branch for other roles
+
+    # Apply filters - EXACT SAME AS DATATABLE COLUMNS
+    if name_filter:
+        equipments = equipments.filter(name__icontains=name_filter)
+    
+    if type_filter:
+        equipments = equipments.filter(equipment_type=type_filter)
+    
+    if manufacturer_filter:
+        equipments = equipments.filter(manufacturer__icontains=manufacturer_filter)
+    
+    if serial_filter:
+        equipments = equipments.filter(serial_number__icontains=serial_filter)
+    
+    if location_filter:
+        equipments = equipments.filter(location__icontains=location_filter)
+    
+    if status_filter:
+        equipments = equipments.filter(status=status_filter)
+    
+    if branch_filter and request.user.userprofile.role in ['MO', 'Maintenance Oversight']:
+        equipments = equipments.filter(branch_id=branch_filter)
+
+    # Pagination - 20 items per page
+    paginator = Paginator(equipments, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     context = {
         'active_page': 'equipment_list',
         'title': 'Equipments',
-        'item_list': equipments,
+        'item_list': page_obj,  # Changed from equipments to page_obj
+        'page_obj': page_obj,   # For pagination controls
         'edit_url': 'edit_equipment',
         'delete_url': 'delete_equipment',
         'notifications': notifications,
         'latest_notification_id': latest_notification.id if latest_notification else 0,
         'branches': branches,
         'equipment_types': equipment_types,
+        'status_choices': status_choices,
+        # Pass filter values back to template to preserve them
+        'current_filters': {
+            'name': name_filter,
+            'equipment_type': type_filter,
+            'branch': branch_filter,
+            'manufacturer': manufacturer_filter,
+            'serial_number': serial_filter,
+            'location': location_filter,
+            'status': status_filter,
+        }
     }
     return render(request, 'equipment_list.html', context)
 @user_passes_test(lambda u: is_tec(u) or is_md(u) , login_url=None)
